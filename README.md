@@ -1,6 +1,6 @@
 # CRM Comercial ARG COLOR
 
-Web app interna para el equipo comercial de **ARG COLOR S.R.L.** Reemplaza el "CRM" casero en JSON y centraliza el ciclo de cotización: lectura de mails con IA, formulario interno a Compras, armador de presupuestos con PDF, tablero compartido y handoff manual asistido con el ERP GBP.
+Web app interna para el equipo comercial de **ARG COLOR S.R.L.** centraliza el ciclo de cotización: lectura de mails con IA, formulario interno a Compras, armador de presupuestos con PDF, tablero compartido y handoff manual asistido con el ERP GBP.
 
 ## Stack
 
