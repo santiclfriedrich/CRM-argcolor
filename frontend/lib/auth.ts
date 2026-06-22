@@ -1,8 +1,12 @@
-import GoogleProvider from "next-auth/providers/google";
 import type { NextAuthOptions } from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 // Configuración de NextAuth con Google OAuth.
-// El id_token de Google se guarda en el JWT para enviarlo al backend (/auth/login).
+// Flujo: login Google -> obtenemos su id_token -> lo canjeamos en el backend
+// (/api/v1/auth/login) por un JWT propio que viaja en la sesión y se usa para
+// autenticar todas las llamadas a la API.
 export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
@@ -12,14 +16,33 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, account }) {
+      // Solo en el primer login (cuando Google devuelve la cuenta) canjeamos el token.
       if (account?.id_token) {
-        token.googleIdToken = account.id_token;
+        try {
+          const res = await fetch(`${API_URL}/api/v1/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id_token: account.id_token }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            token.backendToken = data.access_token;
+            token.usuario = data.usuario;
+            token.authError = null;
+          } else {
+            // 403 = usuario no dado de alta en la DB (whitelist).
+            token.authError = res.status === 403 ? "no_autorizado" : "error_login";
+          }
+        } catch {
+          token.authError = "backend_inaccesible";
+        }
       }
       return token;
     },
     async session({ session, token }) {
-      // @ts-expect-error - extendemos la sesión con el id_token de Google
-      session.googleIdToken = token.googleIdToken;
+      session.backendToken = token.backendToken as string | undefined;
+      session.usuario = token.usuario as Record<string, unknown> | undefined;
+      session.authError = token.authError as string | null | undefined;
       return session;
     },
   },

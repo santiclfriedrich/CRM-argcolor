@@ -265,6 +265,8 @@ crm-argcolor/
 
 ## 8. Estado actual (qué ya está hecho)
 
+> **Última actualización: junio 2026.** Fase 0 completa + login (Google OAuth) funcionando end-to-end en local.
+
 ### Configuraciones de Google Cloud (COMPLETADAS)
 - Proyecto creado en Google Cloud Console.
 - Budget alert de USD 1 configurado (no se va a cobrar nada sin alerta previa).
@@ -272,15 +274,40 @@ crm-argcolor/
 - Cloud Pub/Sub API habilitada.
 - Credenciales OAuth 2.0 creadas (Client ID + Client Secret guardados).
 - API Key de Gemini obtenida desde AI Studio (aistudio.google.com/apikey).
+- **Redirect URIs configuradas**: `http://localhost:3000/api/auth/callback/google` y origen `http://localhost:3000`. Usuario de prueba (`santiago.c@argentinacolor.com`) agregado a la pantalla de consentimiento.
+
+### Infraestructura (COMPLETADA)
+- **Supabase**: proyecto creado (free tier, región `us-east-2`). Se usa Session Pooler con driver `psycopg` (`postgresql+psycopg://...`). En desarrollo local NO se usa Supabase, se usa Postgres en Docker.
+- **GitHub**: repo privado `crm-argcolor` creado y con el código pusheado (rama `main`). Cuenta `santiclear1@hotmail.com`.
+- **Render / Vercel**: cuentas a crear cuando se haga el deploy (todavía no conectadas).
+
+### Scaffolding y entorno local (COMPLETADO en esta sesión)
+- **Monorepo completo** generado (`backend/` FastAPI + `frontend/` Next.js 14), ~68 archivos de código. Ver estructura en sección 6.
+- **Backend operativo**: 15 modelos SQLAlchemy, 16 endpoints (health, auth, CRUD de usuarios/clientes/oportunidades), capa de IA desacoplada (`AIProvider` + `GeminiProvider` stub). `pytest` pasa, `ruff` limpio.
+- **Base de datos**: Postgres 16 corriendo en Docker (puerto host **5433** → contenedor 5432, para no chocar con un Postgres local en 5432). Primera migración de Alembic generada y aplicada (`alembic/versions/234f51c692a1_init_schema.py`): las 15 tablas existen.
+- **Entorno Python**: `.venv` en `backend/` con dependencias instaladas (`pip install -e ".[dev]"`). Se agregaron al stack: `email-validator` (para `EmailStr`) y `[tool.setuptools] packages = ["app"]` en `pyproject.toml`.
+- **Login funcionando end-to-end**: NextAuth (Google) → canje del `id_token` en `POST /api/v1/auth/login` → JWT propio del backend guardado en la sesión → inyectado en axios para autenticar la API. Guard de rutas (`AuthGuard`), manejo de errores en el login, sidebar con nombre de usuario y logout.
+- **Usuario admin sembrado**: `santiago.c@argentinacolor.com` insertado en la tabla `usuarios` vía `python -m scripts.seed_user`.
+
+### Cómo levantar el entorno local (3 terminales)
+1. **Postgres**: Docker Desktop abierto + `docker compose up -d db` (desde la raíz).
+2. **Backend**: desde `backend/` → `source .venv/bin/activate` → `uvicorn app.main:app --reload` (http://localhost:8000, docs en `/docs`).
+3. **Frontend**: desde `frontend/` → `npm run dev` (http://localhost:3000).
+- Variables: `backend/.env` (DATABASE_URL en puerto 5433, SECRET_KEY) y `frontend/.env.local` (GOOGLE_CLIENT_ID/SECRET, NEXTAUTH_*). Ninguno se commitea.
 
 ### Pendientes (próximos pasos en orden)
-1. **Crear cuenta en Supabase** y proyecto nuevo (free tier).
-2. Crear repo privado en **GitHub**.
-3. Crear cuenta en **Render** y conectar el repo.
-4. Crear cuenta en **Vercel** y conectar el repo.
-5. (Opcional) Crear cuenta en **UptimeRobot** para evitar cold starts.
-6. Setup local: clonar repo, instalar dependencias, levantar `docker-compose up`.
-7. Empezar a codear desde el prompt inicial.
+1. **Fase 1 — features**: CRUD de clientes (con contactos y dominios) en el frontend conectado al backend; oportunidades; formulario interno a Compras; tablero básico con semáforos.
+2. **Deuda técnica / seguridad antes del deploy**:
+   - **Rotar el `GOOGLE_CLIENT_SECRET`** (se expuso en chat) y actualizar `frontend/.env.local`.
+   - **Actualizar Next.js** a una versión parcheada de la línea 14.2.x (la 14.2.5 tiene una vulnerabilidad de seguridad).
+   - Revisar `12 vulnerabilities` reportadas por `npm audit`.
+3. **Deploy** (cuando haya features que mostrar): Render (backend, apuntando a Supabase con Session Pooler), Vercel (frontend), variables de entorno en cada plataforma, redirect URIs de producción en Google Cloud. Opcional: UptimeRobot.
+
+### Notas técnicas para tener en cuenta
+- Se usó `timezone.utc` en vez de `datetime.UTC` por compatibilidad amplia.
+- Los enums usan `str, enum.Enum` a propósito (serializan como string); ruff tiene `UP042`/`UP017` en ignore.
+- El backend corre con `app.config.settings` que lee `.env` del **directorio actual** (por eso se ejecuta parado en `backend/`).
+- Modo debug activo → SQLAlchemy loguea todas las queries (es esperable, no es error).
 
 ---
 
@@ -388,8 +415,52 @@ El dashboard del dueño te lo marca en rojo y te genera un recordatorio: *"La op
 
 ## 14. Cómo continuar la conversación
 
-Si estás abriendo un chat nuevo (sea Claude, Cursor, ChatGPT, etc.), arrancá con:
+El proyecto ya está scaffoldeado, corriendo en local y con login funcionando (ver sección 8). El próximo paso es **Fase 1: construir features**, empezando por el CRUD de clientes.
 
-> "Hola, te paso el contexto completo del proyecto. Ya hice la configuración de Google Cloud (Gemini, Gmail API, OAuth). Mi próximo paso es [X]. Necesito que me guíes."
+Si abrís una sesión nueva (Claude Code, Cursor, etc.), usá el prompt de la sección 15.
 
-Donde **[X]** es lo que sigue según la sección 8. En este momento (junio 2026) el siguiente paso es **crear el proyecto en Supabase**.
+---
+
+## 15. Prompt para continuar en Claude Code
+
+> Pegá esto como primer mensaje en Claude Code, abierto en la carpeta raíz del proyecto (`crm-argcolor`).
+
+```
+Sos un desarrollador full-stack senior trabajando en el "CRM Comercial ARG COLOR", una web app interna para una empresa industrial argentina. Estás en la carpeta raíz del monorepo.
+
+ANTES DE EMPEZAR:
+1. Leé el archivo CRM_PROJECT_CONTEXT.md completo: tiene el contexto de negocio, el stack, el modelo de datos (15 tablas), la arquitectura y el estado actual.
+2. Revisá la estructura real del repo (backend/ FastAPI + frontend/ Next.js 14) para ver qué ya existe.
+
+ESTADO ACTUAL (resumen):
+- Fase 0 completa: monorepo scaffoldeado, 15 modelos SQLAlchemy, 16 endpoints (health, auth, CRUD básicos de usuarios/clientes/oportunidades), capa de IA desacoplada (AIProvider/GeminiProvider stub).
+- Postgres 16 en Docker (puerto host 5433). Migración inicial de Alembic ya aplicada (las 15 tablas existen).
+- Login con Google OAuth funcionando end-to-end: NextAuth canjea el id_token en POST /api/v1/auth/login por un JWT propio del backend, que se inyecta en axios. Hay AuthGuard, sidebar con logout y un usuario admin sembrado (santiago.c@argentinacolor.com).
+- Repo en GitHub (privado, rama main).
+
+CÓMO LEVANTAR EL ENTORNO (3 terminales):
+- Postgres: `docker compose up -d db` (Docker Desktop abierto).
+- Backend: desde backend/ → `source .venv/bin/activate` → `uvicorn app.main:app --reload`.
+- Frontend: desde frontend/ → `npm run dev`.
+- Variables en backend/.env (DATABASE_URL puerto 5433) y frontend/.env.local (no commiteados).
+
+LO QUE QUIERO HACER AHORA (Fase 1):
+Construir el CRUD de CLIENTES en el frontend, conectado al backend, incluyendo sus contactos (contactos_cliente) y dominios (dominios_cliente). Concretamente:
+- Backend: endpoints CRUD para contactos_cliente y dominios_cliente (anidados al cliente), con sus schemas Pydantic. Ya existe el CRUD base de clientes.
+- Frontend: página /clientes con listado (tabla shadcn/ui), alta y edición de cliente, y gestión de sus contactos y dominios. Usar React Query + el cliente axios ya configurado (lib/api.ts) que ya manda el JWT.
+
+REGLAS DE TRABAJO (respetar):
+- Tablas y columnas en español; código (funciones/variables/archivos) en inglés.
+- TypeScript estricto en el front; type hints + Pydantic v2 + SQLAlchemy 2.0 (mapped_column) en el back.
+- Nada de secrets en código (todo por variables de entorno).
+- No agregar dependencias fuera del stack sin avisar.
+- Cada vez que cambies modelos, generar migración con Alembic (`alembic revision --autogenerate -m "..."` + `alembic upgrade head`).
+- Correr pytest y ruff antes de dar por terminada una tanda de cambios.
+- Trabajar paso a paso y, cada 5-6 archivos, hacer un resumen.
+
+DEUDA TÉCNICA PENDIENTE (no urgente, pero tenerla presente):
+- Rotar el GOOGLE_CLIENT_SECRET (se expuso) y actualizar frontend/.env.local.
+- Actualizar Next.js a una versión parcheada de la línea 14.2.x (la 14.2.5 tiene una vulnerabilidad).
+
+Arrancá leyendo el contexto y proponiéndome un plan de archivos para el CRUD de clientes antes de escribir código.
+```
