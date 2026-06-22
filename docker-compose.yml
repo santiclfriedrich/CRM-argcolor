@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:16
+    container_name: argcolor_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: argcolor
+    ports:
+      # Host 5433 -> contenedor 5432, para no chocar con un Postgres local en 5432.
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: argcolor_backend
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # En local apuntamos al Postgres del compose (no a Supabase).
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/argcolor
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    image: node:20-alpine
+    container_name: argcolor_frontend
+    working_dir: /app
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    command: sh -c "corepack enable && pnpm install && pnpm dev"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

@@ -1,0 +1,60 @@
+[project]
+name = "crm-argcolor-backend"
+version = "0.1.0"
+description = "CRM Comercial ARG COLOR - Backend (FastAPI)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy>=2.0.30",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.1",
+    "pydantic[email]>=2.7",
+    "pydantic-settings>=2.3",
+    "python-jose[cryptography]>=3.3",
+    "passlib[bcrypt]>=1.7",
+    "python-multipart>=0.0.9",
+    "httpx>=0.27",
+    "google-generativeai>=0.7",
+    "google-api-python-client>=2.130",
+    "google-auth>=2.30",
+    "google-auth-oauthlib>=1.2",
+    "weasyprint>=62",
+    "qrcode[pil]>=7.4",
+    "apscheduler>=3.10",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.5",
+    "pre-commit>=3.7",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4"]
+ignore = [
+    "B008",   # FastAPI usa llamadas en defaults (Depends)
+    "UP017",  # timezone.utc en vez de datetime.UTC (compat amplia)
+    "UP042",  # str+Enum intencional (serializa como string en SQLAlchemy)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# Solo empaquetamos el paquete de la app; alembic/tests no son parte del paquete.
+packages = ["app"]

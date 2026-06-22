@@ -1,0 +1,395 @@
+# Contexto del proyecto: CRM Comercial ARG COLOR
+
+> **Para usar en una nueva conversación con Claude / Cursor / GPT.** Pegá este archivo entero como primer mensaje del chat o como contexto del proyecto. Resume todas las decisiones tomadas hasta acá y el estado actual.
+
+---
+
+## 1. Quién soy y qué empresa es
+
+- **Soy**: Santiago Claros Friedrich, santiago.c@argentinacolor.com.
+- **Empresa**: ARG COLOR S.R.L. (Argentina). Empresa industrial.
+- **Mi rol**: liderar la implementación de un CRM interno para el equipo comercial.
+
+---
+
+## 2. Problema que estoy resolviendo
+
+El equipo comercial de ARG COLOR hoy trabaja así:
+
+- Recibe pedidos de clientes por mail (Google Workspace corporativo).
+- Cotiza usando **GBP (GlobalBluePoint), un ERP**. **GBP NO tiene API utilizable**, por lo que cualquier integración técnica es inviable.
+- Lleva un "CRM" hecho con un archivo **JSON casero** que mantiene un vendedor llamado Guido. Sin interfaz, sin acceso compartido, sin recordatorios.
+- El **formulario interno a Compras** (área que decide costos) es una conversación por mail con formato fijo. Se carga campo por campo, copiando manualmente del mail del cliente.
+
+**Dolores concretos**:
+
+- Se pierden cotizaciones por falta de seguimiento.
+- Ningún vendedor sabe qué está cotizando otro.
+- No hay recordatorios automáticos ("avisame el viernes lo de Guido").
+- Carga de datos 100% manual y propensa a errores.
+- Las cotizaciones quedan dispersas entre Gmail, GBP y el JSON.
+
+---
+
+## 3. La solución que decidimos construir
+
+Una **web app interna** llamada "CRM Comercial ARG COLOR" con estos pilares:
+
+1. **Bandeja inteligente con IA**: Gemini 1.5 Flash (multimodal) lee mails entrantes con texto e imágenes, identifica al cliente por el dominio del remitente, extrae datos estructurados y crea oportunidades automáticamente. Maneja casos donde el cliente no especifica el producto (solo foto, etiqueta o descripción vaga) marcando la oportunidad como "requiere aclaración" y sugiriendo un borrador de mail al cliente.
+2. **Gestión de cuentas con múltiples contactos y dominios**: cada cliente (cuenta) tiene varios contactos con rol específico (decisor, técnico, compras, logística) y puede tener múltiples dominios de mail asociados. El sistema reconoce automáticamente quién está escribiendo y desde qué empresa.
+3. **Formulario interno a Compras (reemplazo del Google Form)**: con los mismos campos del Form actual (solicitante, cliente, requerimiento, archivos, condición de pago [15/30/45/60/120/Transferencia], importe aprox, fecha límite, ID GBP opcional). El mail a Carlos Sayegh sale con el mismo formato que hoy, en CC los destinatarios configurados por defecto (Marcos Juárez, Karen Apaza, Diego Ramirez).
+4. **Parsing automático de la respuesta de Compras**: cuando Carlos responde con la tabla habitual (Fabricante / SKU / Descripción / Cantidad / Precio Unit USD / IVA / Observaciones), la IA detecta la respuesta por el patrón del asunto, parsea la tabla y crea automáticamente un presupuesto borrador con todos los ítems pre-cargados. Cero copy-paste.
+5. **Armador de presupuestos DENTRO del CRM**: como GBP no expone API, el CRM toma el control del ciclo de cotización. Genera PDF con plantilla oficial y QR de trazabilidad, manda al cliente desde la plataforma.
+6. **Tablero compartido**: todos los vendedores ven en tiempo real qué cotiza cada uno, con semáforos: verde (esperando cliente), amarillo (esperando Compras), rojo (sin movimiento >7 días).
+7. **Dashboard del dueño**: KPIs ejecutivos (cotizaciones del mes por vendedor, tasa de cierre, oportunidades aceptadas sin cargar en GBP, tiempo promedio de respuesta).
+8. **Recordatorios inteligentes con contexto**: la IA genera mensajes accionables, no avisos genéricos. Ej: *"Hace 5 días Carlos te respondió la cotización de AEROPUERTOS ARG 2K y todavía no la mandaste al cliente"*.
+9. **Handoff bidireccional a GBP**: cuando el cliente acepta, pantalla "Listo para GBP" con el código CRM destacado para pegar en Observaciones de GBP. Después se carga el N° de pedido GBP de vuelta en el CRM. Conciliación mensual con import del reporte de GBP. **RPA con Playwright en fase 2 confirmada viable** (GBP corre en navegador).
+
+GBP queda únicamente para facturación y stock, que es donde aporta valor.
+
+---
+
+## 4. Stack técnico final (decisión cerrada)
+
+### Backend
+- **Python 3.12 + FastAPI** + SQLAlchemy 2.0 + Alembic
+- Pydantic v2 para schemas
+- APScheduler para tareas programadas (recordatorios)
+- WeasyPrint para generar PDFs
+- pytest para tests
+- ruff como linter/formatter
+- uv como gestor de paquetes
+
+### Frontend
+- **Next.js 14** (app router) + React + TypeScript estricto
+- TailwindCSS + shadcn/ui
+- NextAuth.js (login con Google OAuth)
+- TanStack React Query
+- axios
+- pnpm como gestor de paquetes
+
+### IA
+- **Google Gemini 1.5 Flash** vía AI Studio (no Vertex AI)
+- SDK: `google-generativeai`
+- Modelo: `gemini-1.5-flash`
+- Free tier: 15 req/min, 1.500 req/día
+- **Arquitectura desacoplada**: clase abstracta `AIProvider` con métodos `extract_email_data()`, `draft_quote()`, `summarize_thread()`. Implementación inicial: `GeminiProvider`. Cambiar a Claude u Ollama en el futuro debe ser solo cambiar una variable de entorno.
+
+### Integraciones
+- **Gmail API** vía `google-api-python-client` (lectura entrante + envío saliente desde el sistema)
+- **Cloud Pub/Sub** para webhooks de Gmail (mails nuevos en tiempo real)
+- **OAuth 2.0** de Google para login y permisos de Gmail
+
+### Hosting (PLAN A: 100% gratis)
+- **Frontend en Vercel** (plan Hobby free): `argcolor-crm.vercel.app`
+- **Backend en Render** (free tier, 750 hs/mes, cold start tras 15 min sin uso): `argcolor-crm-api.onrender.com`
+- **Postgres en Supabase** (free tier, 500MB, backups automáticos)
+- **Gemini en AI Studio** (free tier)
+- **Dominio**: subdominios gratuitos de Vercel y Render (no comprar dominio propio en MVP)
+- **UptimeRobot** (free) para pingear el backend cada 5 min y evitar cold starts
+
+**Costo operativo mensual: USD 0**.
+
+### Plan B (cuando crezca)
+- Render Starter (USD 7) → mata cold starts
+- Supabase Pro (USD 25) → más DB y bandwidth
+- Vercel y Gemini se quedan en free tier
+- Total Plan B: USD 33-35/mes
+
+---
+
+## 5. Modelo de datos
+
+Tablas principales (Postgres en Supabase):
+
+| Tabla | Campos principales |
+|---|---|
+| `usuarios` | id, email, nombre, rol (vendedor/admin/compras), activo, created_at |
+| `clientes` | id, razon_social, cuit, vendedor_asignado_id, notas, activo, created_at (datos de contacto van en tablas separadas) |
+| `contactos_cliente` | id, cliente_id, nombre, email, telefono, cargo, rol_compra (decisor/tecnico/compras/logistica/otro), es_principal, activo, notas |
+| `dominios_cliente` | id, cliente_id, dominio (ej: bencen.com.ar), es_principal_dominio, notas. Un cliente puede tener varios dominios. |
+| `oportunidades` | id, cliente_id, contacto_cliente_id, vendedor_id, estado (nueva/requiere_aclaracion/en_compras/presupuestada/ganada/cargada_en_gbp/facturada/perdida), fecha_creacion, fecha_ultimo_movimiento, fuente |
+| `solicitudes_compras` | id, oportunidad_id, solicitante_id, requerimiento, archivos_adjuntos (JSONB), condicion_pago (15/30/45/60/120/Transferencia), importe_aproximado, fecha_limite, presupuesto_gbp_referencia, ccs_extra (array de emails), fecha_envio, fecha_respuesta, gmail_thread_id, estado (enviada/respondida/cerrada) |
+| `respuestas_compras` | id, solicitud_compras_id, fecha_recepcion, contenido_raw, datos_parseados_ia (JSONB con items: fabricante/sku/descripcion/cantidad/precio_unit/iva/obs), notas_compras |
+| `productos` | id, codigo, descripcion, unidad, precio_base, moneda, categoria, activo, ultima_actualizacion |
+| `presupuestos` | id, oportunidad_id, codigo (COT-YYYY-NNNNN), monto_total, moneda, condicion_pago, plazo_entrega, validez, pdf_url, qr_url, fecha_envio, fecha_respuesta_cliente, estado (borrador/enviado/aceptado/rechazado/negociando), id_gbp_pedido, id_gbp_factura |
+| `presupuesto_items` | id, presupuesto_id, producto_id, descripcion, cantidad, precio_unitario, descuento_pct, subtotal, orden |
+| `mails` | id, gmail_thread_id, gmail_message_id, oportunidad_id, direccion (entrante/saliente), de, para, asunto, cuerpo, fecha, adjuntos (JSONB), datos_extraidos_ia (JSONB) |
+| `adjuntos` | id, mail_id, nombre_archivo, mime_type, path_storage, descripcion_ia |
+| `recordatorios` | id, usuario_id, oportunidad_id, mensaje, fecha_recordatorio, completado, tipo (manual/automatico_estado/automatico_inactividad) |
+| `notificaciones` | id, usuario_id, mensaje, link, leida, fecha_creacion |
+| `configuracion` | clave (PK), valor (JSONB). Ejs: `ccs_default_solicitudes_compras`, `dias_alerta_sin_respuesta`, `plantilla_acuse_recibo` |
+
+Convención: **nombres de tablas y columnas en español** (es el dominio del negocio); **nombres de funciones, variables, archivos y código en inglés**.
+
+---
+
+## 5.b Lógica de la IA al recibir un mail
+
+Cuando entra un mail a la casilla comercial, el backend ejecuta esta cadena:
+
+1. **Identificación del cliente por dominio**:
+   - Extrae el dominio del remitente (ej. `juan@bencen.com.ar` → `bencen.com.ar`).
+   - Busca en `dominios_cliente`. Si match → cliente identificado.
+   - Busca el email completo en `contactos_cliente`. Si match → contacto identificado (con su rol: decisor/técnico/compras/logística).
+   - Si el dominio es nuevo: la oportunidad queda con `cliente="por_identificar"`. El vendedor asigna manualmente y el sistema aprende (agrega el dominio).
+   - Si el email es nuevo pero el dominio coincide: el sistema sugiere agregarlo como contacto nuevo del cliente existente.
+
+2. **Extracción de datos del pedido (multimodal)**:
+   - Gemini 1.5 Flash procesa **texto + imágenes** en la misma llamada.
+   - Si el mail tiene texto claro → extrae cliente, producto, cantidad, requerimiento, plazo. Estado: `nueva`.
+   - Si tiene **fotos adjuntas** (etiqueta, muestra, plano, pieza): Gemini analiza la imagen y genera descripción detallada (colores, formas, códigos visibles, números de pieza). Se guarda en `adjuntos.descripcion_ia`.
+   - Si el pedido es **vago o incompleto** (falta producto, cantidad o info crítica): estado `requiere_aclaracion`, la IA prepara un borrador de mail para que el vendedor le pida los datos faltantes al cliente con un click.
+
+3. **Clasificación del mail**:
+   - Pedido nuevo a cotizar → crea oportunidad.
+   - Respuesta a un presupuesto existente (detectado por hilo o por el código `COT-YYYY-NNNNN`) → linkea al presupuesto y notifica.
+   - Ruido (spam, propaganda, consulta general) → archivado.
+
+4. **Asignación al vendedor**:
+   - Si el cliente ya tiene vendedor asignado → esa oportunidad va a ese vendedor.
+   - Si es cliente nuevo → regla configurable (rotación, manual).
+
+5. **Acuse de recibo automático** al cliente, personalizado con el nombre si el contacto está identificado.
+
+### Parsing de la respuesta de Compras (Carlos Sayegh)
+
+Cuando Carlos responde el mail de solicitud con la tabla habitual:
+
+1. La IA detecta que es respuesta a una solicitud por el patrón del asunto: `RE: Solicitud {Vendedor}: {Cliente} - ID {N°}`.
+2. Linkea el mail a la `solicitudes_compras` correspondiente vía `gmail_thread_id`.
+3. Parsea la tabla del cuerpo (Gemini maneja muy bien tablas HTML, texto plano o pegadas desde Excel). Extrae cada fila como ítem estructurado: fabricante, SKU, descripción, cantidad, precio unitario USD, IVA, observaciones.
+4. Guarda los items parseados en `respuestas_compras.datos_parseados_ia`.
+5. Crea automáticamente un `presupuesto` en estado `borrador` con todos los items pre-cargados.
+6. Notifica al vendedor: *"Carlos respondió tu cotización de {Cliente}. Hay un presupuesto borrador listo para revisar."*
+
+El vendedor revisa, ajusta margen/descuentos/condiciones, click "Generar PDF" y "Enviar al cliente". Lo que antes era 10 minutos de copy-paste, ahora son 30 segundos de revisión.
+
+### Recordatorios inteligentes con contexto
+
+La IA no manda alertas genéricas. Usa el estado de la oportunidad, el último mail recibido y las fechas para generar mensajes accionables:
+
+- *"Hace 5 días Carlos te respondió la cotización de AEROPUERTOS ARG 2K y todavía no la mandaste al cliente."*
+- *"Mandaste el presupuesto a Juan (BENCEN) hace 7 días y no respondió. ¿Mando follow-up?"*
+- *"La oportunidad COT-2026-00098 está marcada como ganada pero no cargaste el N° de pedido GBP. El dueño la está viendo en rojo."*
+
+Tipos:
+- **Manual**: vendedor pone "avisame el viernes" en una oportunidad.
+- **Automático por estado**: reglas configurables que disparan según cambio de estado + tiempo.
+- **Automático por inactividad**: si el vendedor no toca una oportunidad en X días (default 5), el sistema pregunta *"¿Sigue activa o la marco como perdida?"*.
+
+---
+
+## 5.c Handoff bidireccional con GBP
+
+GBP no expone API utilizable, pero el enlace entre CRM y GBP es bidireccional y manual asistido:
+
+```
+CRM (COT-2026-00123)
+  ↓ cliente acepta → pantalla "Listo para GBP"
+GBP (vendedor crea Pedido N°4567 con COT-2026-00123 en Observaciones)
+  ↓ vendedor pega N°4567 en el CRM
+CRM (id_gbp_pedido = 4567)
+  ↓ se factura en GBP
+GBP (Factura N°8901 con COT-2026-00123 en Observaciones)
+  ↓ conciliación mensual: admin sube reporte GBP
+CRM (cruza por código en Observaciones, actualiza id_gbp_factura)
+```
+
+**Pantalla "Listo para GBP"**: aparece al marcar oportunidad como `ganada`. Muestra el código CRM destacado con botón "Copiar", todos los datos del pedido formateados para copiar a GBP, e instrucción explícita *"Pegá este código en Observaciones de GBP"*. Tiene un input para que el vendedor guarde el N° de pedido GBP de vuelta.
+
+**QR en el PDF**: cada presupuesto generado lleva un QR en el footer que linkea a la ficha de la oportunidad en el CRM. Trazabilidad interna gratis.
+
+**Conciliación mensual**: el admin sube el reporte de pedidos/facturas exportado de GBP (CSV/Excel). El sistema cruza automáticamente por el código CRM en Observaciones (o por importe + cliente si no está anotado). Muestra: *"Cotizaciones aceptadas: 47 | Cargadas en GBP: 42 | Facturadas: 38 | Pendientes de facturar: 5"*.
+
+**Fase 2 (RPA con Playwright)**: confirmada viable porque **GBP corre en navegador**. Playwright abre GBP, crea el pedido con los datos del CRM, pone el código en Observaciones y captura el N° de vuelta. Elimina la carga manual. 1-2 semanas de desarrollo cuando se justifique por volumen.
+
+---
+
+## 6. Estructura del repo (monorepo)
+
+```
+crm-argcolor/
+├── backend/
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── config.py
+│   │   ├── db/
+│   │   │   ├── base.py
+│   │   │   ├── session.py
+│   │   │   └── models/        (un archivo por entidad)
+│   │   ├── api/
+│   │   │   ├── deps.py
+│   │   │   └── v1/             (un router por recurso)
+│   │   ├── services/           (lógica de negocio)
+│   │   ├── integrations/
+│   │   │   ├── gmail/
+│   │   │   ├── ai/
+│   │   │   │   ├── base.py     (clase abstracta AIProvider)
+│   │   │   │   └── gemini.py   (implementación)
+│   │   │   └── gbp/            (handoff manual / RPA)
+│   │   ├── schemas/            (pydantic)
+│   │   └── core/               (auth, security, exceptions)
+│   ├── alembic/
+│   ├── tests/
+│   ├── pyproject.toml
+│   └── Dockerfile
+├── frontend/
+│   ├── app/                    (next.js app router)
+│   ├── components/
+│   ├── lib/
+│   ├── public/
+│   ├── package.json
+│   └── tailwind.config.ts
+├── docker-compose.yml
+├── .env.example
+├── .gitignore
+└── README.md
+```
+
+---
+
+## 7. Plan de fases (12 semanas totales)
+
+| Fase | Duración | Entregables |
+|---|---|---|
+| **0** | 1 semana | Setup técnico: repo, hosting, Supabase, conexiones Gmail/Gemini, esquema DB inicial. Migración del JSON de Guido. |
+| **1** | 3 semanas | Login Google OAuth, CRUD de clientes, oportunidades, formulario interno a Compras, tablero básico. Sin IA todavía. |
+| **2** | 2 semanas | Integración IA: lectura automática de mails entrantes, creación de oportunidades, clasificación, acuse de recibo automático. |
+| **3** | 3 semanas | Armador de presupuestos: catálogo de productos, ítems, descuentos, plantilla PDF, envío al cliente desde la plataforma. IA pre-armando el borrador. |
+| **4** | 2 semanas | Recordatorios manuales, alertas automáticas, follow-up al cliente, plantillas de mail editables, handoff a GBP (resumen manual). |
+| **5** | 1-2 semanas | Tablero avanzado, métricas por vendedor, búsqueda full-text, ajustes finos, capacitación. |
+| **6 (opcional)** | 2 semanas | RPA con Playwright para automatizar la carga en GBP. Solo si el volumen lo justifica. |
+
+---
+
+## 8. Estado actual (qué ya está hecho)
+
+### Configuraciones de Google Cloud (COMPLETADAS)
+- Proyecto creado en Google Cloud Console.
+- Budget alert de USD 1 configurado (no se va a cobrar nada sin alerta previa).
+- Gmail API habilitada.
+- Cloud Pub/Sub API habilitada.
+- Credenciales OAuth 2.0 creadas (Client ID + Client Secret guardados).
+- API Key de Gemini obtenida desde AI Studio (aistudio.google.com/apikey).
+
+### Pendientes (próximos pasos en orden)
+1. **Crear cuenta en Supabase** y proyecto nuevo (free tier).
+2. Crear repo privado en **GitHub**.
+3. Crear cuenta en **Render** y conectar el repo.
+4. Crear cuenta en **Vercel** y conectar el repo.
+5. (Opcional) Crear cuenta en **UptimeRobot** para evitar cold starts.
+6. Setup local: clonar repo, instalar dependencias, levantar `docker-compose up`.
+7. Empezar a codear desde el prompt inicial.
+
+---
+
+## 9. Variables de entorno necesarias
+
+```bash
+# Backend (.env)
+DATABASE_URL=postgresql+psycopg://postgres:<password>@db.<proyecto>.supabase.co:5432/postgres
+SECRET_KEY=<generar con `openssl rand -hex 32`>
+AI_PROVIDER=gemini
+GEMINI_API_KEY=<de aistudio.google.com/apikey>
+GEMINI_MODEL=gemini-1.5-flash
+GOOGLE_CLIENT_ID=<de Google Cloud Console>
+GOOGLE_CLIENT_SECRET=<de Google Cloud Console>
+GMAIL_TOPIC_NAME=projects/<gcp-project>/topics/gmail-incoming
+ALLOWED_ORIGINS=http://localhost:3000,https://argcolor-crm.vercel.app
+
+# Frontend (.env.local)
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=<generar con `openssl rand -base64 32`>
+GOOGLE_CLIENT_ID=<mismo que backend>
+GOOGLE_CLIENT_SECRET=<mismo que backend>
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+---
+
+## 10. Reglas de trabajo para el asistente AI
+
+- **TypeScript estricto** en el frontend (`strict: true` en tsconfig).
+- **Type hints obligatorios** en el backend (Pydantic v2 + SQLAlchemy 2.0 `mapped_column`).
+- Nunca contraseñas en código; todo por variables de entorno.
+- Nombres en código en inglés, nombres del dominio (tablas, columnas) en español.
+- Comentarios concisos, solo donde el código no se explica solo.
+- No agregar dependencias fuera del stack obligatorio sin avisarme primero.
+- Cada archivo nuevo: mostrar el path completo y un resumen del contenido.
+- Trabajar paso a paso, generar archivos en orden lógico (config → DB → modelos → migraciones → API → frontend).
+- Cada 5-6 archivos, hacer un resumen y esperar confirmación.
+- Si una decisión técnica tiene 2 alternativas razonables, presentar ambas y dejar elegir.
+
+---
+
+## 11. Primer sprint a desarrollar (Fase 0 + parte de Fase 1)
+
+1. Crear estructura de carpetas del monorepo.
+2. Generar `docker-compose.yml` con Postgres 16 (local) + backend + frontend.
+3. `pyproject.toml` del backend con todas las dependencias (FastAPI, SQLAlchemy, Alembic, Pydantic v2, google-generativeai, google-api-python-client, weasyprint, apscheduler, pytest, ruff, python-jose, passlib).
+4. `package.json` del frontend con Next.js 14, TypeScript, Tailwind, shadcn/ui, NextAuth.js, tanstack/react-query, axios.
+5. Configurar SQLAlchemy: `Base`, session factory.
+6. Crear los 15 modelos listados en la sección 5 (un archivo por modelo: usuarios, clientes, contactos_cliente, dominios_cliente, oportunidades, solicitudes_compras, respuestas_compras, productos, presupuestos, presupuesto_items, mails, adjuntos, recordatorios, notificaciones, configuracion).
+7. Configurar Alembic, generar primera migración.
+8. Endpoint health check `GET /health`.
+9. CRUD básicos: `/api/v1/usuarios`, `/api/v1/clientes`, `/api/v1/oportunidades`.
+10. Auth con Google OAuth (NextAuth en frontend, validación JWT en backend).
+11. Frontend: layout base con sidebar (Dashboard, Oportunidades, Clientes, Presupuestos, Configuración), login, listado de oportunidades (tabla con shadcn/ui).
+12. `README.md` con instrucciones de cómo levantar todo en local.
+13. `.env.example` con todas las variables necesarias.
+14. ruff + pre-commit en backend, eslint + prettier en frontend.
+
+---
+
+## 12. Preguntas frecuentes / contexto adicional
+
+**¿Por qué Vercel y Render separados, no todo en Vercel?**
+Vercel está hecho para Next.js (frontend). Sus serverless functions tienen timeout de 10 seg, no soportan procesos persistentes (scheduler) y complican generar PDFs con WeasyPrint. Render corre un contenedor Linux completo donde todo funciona sin problemas.
+
+**¿Por qué Gemini y no Claude/GPT?**
+Por el free tier (1.500 req/día sin pagar nada). Para extraer datos de mails, Gemini Flash es muy bueno. La arquitectura está desacoplada (clase `AIProvider`) así que cambiar a Claude más adelante es solo configuración.
+
+**¿Por qué Supabase y no Railway/Render Postgres?**
+Supabase tiene el free tier más generoso (500MB), dashboard incluido, backups automáticos, y es el más conocido. Render's free Postgres se borra a los 90 días.
+
+**¿Qué pasa cuando el cliente acepta el presupuesto?**
+El CRM marca la oportunidad como "ganada", genera un "resumen para GBP" (PDF o pantalla con todos los datos del pedido) y el vendedor lo carga manualmente en GBP. Solo los aceptados, que son muchos menos que los cotizados. En fase 2 esto se automatiza con Playwright si vale la pena.
+
+**¿Cómo se maneja el catálogo de productos?**
+Carga inicial vía importación de un Excel/CSV exportado desde GBP. Cada producto tiene código, descripción, precio base, moneda, categoría. Actualizable manualmente por admin. La IA puede sugerir precios basados en histórico al armar un presupuesto.
+
+**¿Qué pasa cuando un cliente manda solo una foto sin describir el producto?**
+Gemini 1.5 Flash es multimodal: analiza la imagen (etiqueta, muestra, pieza, plano) y genera una descripción detallada. Si aún así falta info crítica, la oportunidad queda en estado `requiere_aclaracion` y la IA prepara un borrador de mail al cliente pidiendo los datos faltantes. El vendedor lo revisa y manda con un click.
+
+**¿Cómo distingue el sistema entre los distintos contactos de una misma empresa?**
+Cada cuenta de cliente tiene una tabla `contactos_cliente` donde se cargan todos los contactos individuales con email, nombre, cargo y rol (decisor/técnico/compras/logística). Cuando entra un mail, el sistema busca el email exacto y, si lo encuentra, sabe qué persona escribió y qué rol tiene. Si es un email nuevo del mismo dominio, sugiere agregarlo como contacto nuevo.
+
+**¿Cómo se asocia un dominio a una cuenta?**
+La tabla `dominios_cliente` linkea uno o más dominios (ej. bencen.com.ar, bencen-industrial.com) a una cuenta. Cuando entra un mail desde `juan@bencen.com.ar`, el sistema extrae el dominio, busca match y asocia la oportunidad al cliente correcto sin intervención humana. Si el dominio es nuevo, el vendedor lo asigna a un cliente manualmente y el sistema lo aprende para futuros mails.
+
+**¿Cómo se replica el flujo del Google Form actual?**
+Se reemplaza por un formulario web dentro del CRM con los mismos campos exactos (solicitante, cliente, requerimiento, archivos, condición de pago, importe, fecha límite, ID GBP opcional). El mail a Carlos Sayegh sigue saliendo con el formato actual y los CC habituales (Marcos, Karen, Diego). Carlos no cambia nada de su trabajo. Lo único nuevo: todo queda registrado en el CRM y la IA parsea su respuesta automáticamente.
+
+**¿Cómo se conectan CRM y GBP si GBP no tiene API?**
+Con enlace bidireccional manual. El CRM tiene su propio código (COT-YYYY-NNNNN) que se pega en el campo Observaciones de GBP cuando se carga el pedido. El N° de pedido GBP se guarda de vuelta en el CRM en el campo `id_gbp_pedido`. Conciliación mensual con import del reporte de GBP. Fase 2: Playwright automatiza todo (GBP corre en navegador, así que es viable).
+
+**¿Qué pasa si me olvido de cargar el N° de pedido GBP después de aceptar?**
+El dashboard del dueño te lo marca en rojo y te genera un recordatorio: *"La oportunidad COT-2026-00098 está ganada pero no tiene N° de GBP cargado"*. La conciliación mensual también lo levanta.
+
+---
+
+## 13. Archivos relacionados
+
+- **`CRM_Comercial_ArgColor_Documento_Tecnico.docx`**: documento técnico completo (14 secciones).
+- **`PROMPT_INICIAL_VSCODE.md`**: prompt listo para pegar en Cursor / Claude Code y arrancar el scaffolding del proyecto.
+
+---
+
+## 14. Cómo continuar la conversación
+
+Si estás abriendo un chat nuevo (sea Claude, Cursor, ChatGPT, etc.), arrancá con:
+
+> "Hola, te paso el contexto completo del proyecto. Ya hice la configuración de Google Cloud (Gemini, Gmail API, OAuth). Mi próximo paso es [X]. Necesito que me guíes."
+
+Donde **[X]** es lo que sigue según la sección 8. En este momento (junio 2026) el siguiente paso es **crear el proyecto en Supabase**.
