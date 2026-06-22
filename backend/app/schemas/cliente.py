@@ -4,6 +4,9 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.contacto import ContactoRead
+from app.schemas.dominio import DominioRead
+
 
 class ClienteBase(BaseModel):
     razon_social: str
@@ -30,3 +33,10 @@ class ClienteRead(ClienteBase):
 
     id: int
     created_at: datetime
+
+
+class ClienteDetail(ClienteRead):
+    """Cliente con sus contactos y dominios anidados (vista de ficha)."""
+
+    contactos: list[ContactoRead] = []
+    dominios: list[DominioRead] = []

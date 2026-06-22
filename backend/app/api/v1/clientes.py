@@ -9,7 +9,7 @@ from app.core.exceptions import NotFoundError
 from app.db.models.clientes import Cliente
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
-from app.schemas.cliente import ClienteCreate, ClienteRead, ClienteUpdate
+from app.schemas.cliente import ClienteCreate, ClienteDetail, ClienteRead, ClienteUpdate
 
 router = APIRouter(prefix="/clientes", tags=["clientes"])
 
@@ -32,7 +32,7 @@ def create_cliente(
     return cliente
 
 
-@router.get("/{cliente_id}", response_model=ClienteRead)
+@router.get("/{cliente_id}", response_model=ClienteDetail)
 def get_cliente(
     cliente_id: int, db: Session = Depends(get_db), _: Usuario = Depends(get_current_user)
 ) -> Cliente:

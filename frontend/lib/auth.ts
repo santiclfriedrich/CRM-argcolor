@@ -46,6 +46,11 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
+  // Alineado con la vida del JWT del backend (ACCESS_TOKEN_EXPIRE_MINUTES=480).
+  // Sesión y token del backend vencen juntos: un único re-login renueva todo.
+  session: {
+    maxAge: 60 * 60 * 8, // 8 horas
+  },
   pages: {
     signIn: "/login",
   },
