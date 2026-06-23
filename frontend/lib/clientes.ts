@@ -35,7 +35,7 @@ export function useCliente(id: number) {
   return useQuery({
     queryKey: clienteKeys.detail(id),
     queryFn: async () => (await api.get<ClienteDetail>(`${BASE}/${id}`)).data,
-    enabled: Number.isFinite(id),
+    enabled: Number.isFinite(id) && id > 0,
   });
 }
 

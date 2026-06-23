@@ -1,0 +1,67 @@
+// API + hooks de React Query para solicitudes a Compras.
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { api } from "@/lib/api";
+import { oportunidadKeys } from "@/lib/oportunidades";
+import type {
+  CondicionPago,
+  EstadoSolicitud,
+  Solicitud,
+  SolicitudCreate,
+  SolicitudDetail,
+  SolicitudUpdate,
+} from "@/lib/types";
+
+const BASE = "/api/v1/solicitudes";
+
+export const solicitudKeys = {
+  all: ["solicitudes"] as const,
+  detail: (id: number) => ["solicitudes", id] as const,
+};
+
+export const CONDICIONES_PAGO: CondicionPago[] = ["15", "30", "45", "60", "120", "Transferencia"];
+
+export const ESTADO_SOLICITUD_META: Record<EstadoSolicitud, { label: string; color: string }> = {
+  enviada: { label: "Enviada", color: "bg-amber-100 text-amber-700" },
+  respondida: { label: "Respondida", color: "bg-green-100 text-green-700" },
+  cerrada: { label: "Cerrada", color: "bg-slate-100 text-slate-600" },
+};
+
+export function useSolicitudes() {
+  return useQuery({
+    queryKey: solicitudKeys.all,
+    queryFn: async () => (await api.get<Solicitud[]>(BASE)).data,
+  });
+}
+
+export function useSolicitud(id: number | null) {
+  return useQuery({
+    queryKey: solicitudKeys.detail(id ?? 0),
+    queryFn: async () => (await api.get<SolicitudDetail>(`${BASE}/${id}`)).data,
+    enabled: id !== null && id > 0,
+  });
+}
+
+export function useCreateSolicitud() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: SolicitudCreate) => (await api.post<Solicitud>(BASE, body)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: solicitudKeys.all });
+      // El alta mueve la oportunidad a "en_compras": refrescar tablero/listado.
+      qc.invalidateQueries({ queryKey: oportunidadKeys.all });
+    },
+  });
+}
+
+export function useUpdateSolicitud(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: SolicitudUpdate) =>
+      (await api.patch<Solicitud>(`${BASE}/${id}`, body)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: solicitudKeys.all });
+      qc.invalidateQueries({ queryKey: solicitudKeys.detail(id) });
+    },
+  });
+}

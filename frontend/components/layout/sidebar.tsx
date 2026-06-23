@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Target,
   Building2,
+  ClipboardList,
   FileText,
   Settings,
   LogOut,
@@ -18,6 +19,7 @@ const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/oportunidades", label: "Oportunidades", icon: Target },
   { href: "/clientes", label: "Clientes", icon: Building2 },
+  { href: "/solicitudes", label: "Compras", icon: ClipboardList },
   { href: "/presupuestos", label: "Presupuestos", icon: FileText },
   { href: "/configuracion", label: "Configuración", icon: Settings },
 ];

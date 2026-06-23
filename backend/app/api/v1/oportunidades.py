@@ -4,11 +4,11 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user
 from app.core.exceptions import NotFoundError
-from app.db.models.oportunidades import Oportunidad
+from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.schemas.oportunidad import (
@@ -19,14 +19,27 @@ from app.schemas.oportunidad import (
 
 router = APIRouter(prefix="/oportunidades", tags=["oportunidades"])
 
+# Carga anticipada de las relaciones que expone OportunidadRead (evita N+1).
+_RELATIONS = (
+    selectinload(Oportunidad.cliente),
+    selectinload(Oportunidad.contacto),
+    selectinload(Oportunidad.vendedor),
+)
+
 
 @router.get("", response_model=list[OportunidadRead])
 def list_oportunidades(
-    db: Session = Depends(get_db), _: Usuario = Depends(get_current_user)
+    estado: EstadoOportunidad | None = None,
+    cliente_id: int | None = None,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
 ) -> list[Oportunidad]:
-    return list(
-        db.scalars(select(Oportunidad).order_by(Oportunidad.fecha_ultimo_movimiento.desc()))
-    )
+    query = select(Oportunidad).options(*_RELATIONS)
+    if estado is not None:
+        query = query.where(Oportunidad.estado == estado)
+    if cliente_id is not None:
+        query = query.where(Oportunidad.cliente_id == cliente_id)
+    return list(db.scalars(query.order_by(Oportunidad.fecha_ultimo_movimiento.desc())))
 
 
 @router.post("", response_model=OportunidadRead, status_code=201)
@@ -44,7 +57,7 @@ def create_oportunidad(
 def get_oportunidad(
     oportunidad_id: int, db: Session = Depends(get_db), _: Usuario = Depends(get_current_user)
 ) -> Oportunidad:
-    oportunidad = db.get(Oportunidad, oportunidad_id)
+    oportunidad = db.get(Oportunidad, oportunidad_id, options=list(_RELATIONS))
     if oportunidad is None:
         raise NotFoundError("Oportunidad no encontrada")
     return oportunidad

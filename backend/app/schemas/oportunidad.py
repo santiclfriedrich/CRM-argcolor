@@ -27,9 +27,34 @@ class OportunidadUpdate(BaseModel):
     fuente: str | None = None
 
 
+# Mini-objetos anidados para mostrar nombres en el listado sin un segundo fetch.
+class ClienteMini(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    razon_social: str
+
+
+class ContactoMini(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nombre: str
+
+
+class VendedorMini(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nombre: str
+
+
 class OportunidadRead(OportunidadBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     fecha_creacion: datetime
     fecha_ultimo_movimiento: datetime
+    cliente: ClienteMini | None = None
+    contacto: ContactoMini | None = None
+    vendedor: VendedorMini | None = None

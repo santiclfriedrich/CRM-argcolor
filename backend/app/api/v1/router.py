@@ -9,6 +9,7 @@ from app.api.v1 import (
     dominios,
     health,
     oportunidades,
+    solicitudes,
     usuarios,
 )
 
@@ -20,3 +21,4 @@ api_router.include_router(clientes.router)
 api_router.include_router(contactos.router)
 api_router.include_router(dominios.router)
 api_router.include_router(oportunidades.router)
+api_router.include_router(solicitudes.router)

@@ -4,7 +4,7 @@ import enum
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import ARRAY, Date, DateTime, Enum, ForeignKey, Numeric, String, Text
+from sqlalchemy import ARRAY, JSON, Date, DateTime, Enum, ForeignKey, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,14 +33,17 @@ class SolicitudCompras(Base, TimestampMixin):
     oportunidad_id: Mapped[int] = mapped_column(ForeignKey("oportunidades.id"), nullable=False)
     solicitante_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"), nullable=False)
     requerimiento: Mapped[str] = mapped_column(Text, nullable=False)
-    archivos_adjuntos: Mapped[dict | None] = mapped_column(JSONB)
+    # with_variant: JSONB/ARRAY en Postgres; JSON en SQLite (solo para tests).
+    archivos_adjuntos: Mapped[dict | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
     condicion_pago: Mapped[CondicionPago | None] = mapped_column(
         Enum(CondicionPago, name="condicion_pago")
     )
     importe_aproximado: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     fecha_limite: Mapped[date | None] = mapped_column(Date)
     presupuesto_gbp_referencia: Mapped[str | None] = mapped_column(String(80))
-    ccs_extra: Mapped[list[str] | None] = mapped_column(ARRAY(String))
+    ccs_extra: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String).with_variant(JSON(), "sqlite")
+    )
     fecha_envio: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     fecha_respuesta: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     gmail_thread_id: Mapped[str | None] = mapped_column(String(255), index=True)

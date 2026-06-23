@@ -68,3 +68,109 @@ export type DominioCreate = {
   notas?: string | null;
 };
 export type DominioUpdate = Partial<DominioCreate>;
+
+// ---- Usuarios ----
+export type RolUsuario = "vendedor" | "admin" | "compras";
+
+export interface Usuario {
+  id: number;
+  email: string;
+  nombre: string;
+  rol: RolUsuario;
+  activo: boolean;
+  created_at: string;
+}
+
+// ---- Oportunidades ----
+export type EstadoOportunidad =
+  | "nueva"
+  | "requiere_aclaracion"
+  | "en_compras"
+  | "presupuestada"
+  | "ganada"
+  | "cargada_en_gbp"
+  | "facturada"
+  | "perdida";
+
+interface ClienteMini {
+  id: number;
+  razon_social: string;
+}
+interface PersonaMini {
+  id: number;
+  nombre: string;
+}
+
+export interface Oportunidad {
+  id: number;
+  cliente_id: number | null;
+  contacto_cliente_id: number | null;
+  vendedor_id: number | null;
+  estado: EstadoOportunidad;
+  fuente: string | null;
+  fecha_creacion: string;
+  fecha_ultimo_movimiento: string;
+  cliente: ClienteMini | null;
+  contacto: PersonaMini | null;
+  vendedor: PersonaMini | null;
+}
+
+export type OportunidadCreate = {
+  cliente_id?: number | null;
+  contacto_cliente_id?: number | null;
+  vendedor_id?: number | null;
+  estado?: EstadoOportunidad;
+  fuente?: string | null;
+};
+export type OportunidadUpdate = Partial<OportunidadCreate>;
+
+// ---- Solicitudes a Compras ----
+export type CondicionPago = "15" | "30" | "45" | "60" | "120" | "Transferencia";
+export type EstadoSolicitud = "enviada" | "respondida" | "cerrada";
+
+interface SolicitudOportunidadMini {
+  id: number;
+  estado: EstadoOportunidad;
+  cliente: ClienteMini | null;
+}
+
+export interface Solicitud {
+  id: number;
+  oportunidad_id: number;
+  requerimiento: string;
+  condicion_pago: CondicionPago | null;
+  importe_aproximado: number | null;
+  fecha_limite: string | null;
+  presupuesto_gbp_referencia: string | null;
+  ccs_extra: string[] | null;
+  estado: EstadoSolicitud;
+  fecha_envio: string | null;
+  fecha_respuesta: string | null;
+  created_at: string;
+  oportunidad: SolicitudOportunidadMini | null;
+  solicitante: PersonaMini | null;
+}
+
+export interface EmailPreview {
+  to: string | null;
+  cc: string[];
+  subject: string;
+  body: string;
+}
+
+export interface SolicitudDetail extends Solicitud {
+  email_preview: EmailPreview;
+}
+
+export type SolicitudCreate = {
+  oportunidad_id: number;
+  requerimiento: string;
+  condicion_pago?: CondicionPago | null;
+  importe_aproximado?: number | null;
+  fecha_limite?: string | null;
+  presupuesto_gbp_referencia?: string | null;
+  ccs_extra?: string[] | null;
+};
+export type SolicitudUpdate = Partial<Omit<SolicitudCreate, "oportunidad_id">> & {
+  estado?: EstadoSolicitud;
+};

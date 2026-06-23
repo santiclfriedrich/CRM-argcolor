@@ -1,89 +1,140 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { Pencil, Plus } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useState } from "react";
 
-import { api } from "@/lib/api";
-
-type Oportunidad = {
-  id: number;
-  cliente_id: number | null;
-  vendedor_id: number | null;
-  estado: string;
-  fecha_creacion: string;
-  fecha_ultimo_movimiento: string;
-  fuente: string | null;
-};
-
-const ESTADO_COLOR: Record<string, string> = {
-  nueva: "bg-blue-100 text-blue-700",
-  requiere_aclaracion: "bg-amber-100 text-amber-700",
-  en_compras: "bg-purple-100 text-purple-700",
-  presupuestada: "bg-cyan-100 text-cyan-700",
-  ganada: "bg-green-100 text-green-700",
-  perdida: "bg-red-100 text-red-700",
-};
+import { OportunidadForm } from "@/components/oportunidades/oportunidad-form";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
+import {
+  ESTADO_META,
+  useCreateOportunidad,
+  useOportunidades,
+  useUpdateOportunidad,
+} from "@/lib/oportunidades";
+import type { Oportunidad, OportunidadCreate } from "@/lib/types";
 
 export default function OportunidadesPage() {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["oportunidades"],
-    queryFn: async () => {
-      const res = await api.get<Oportunidad[]>("/api/v1/oportunidades");
-      return res.data;
-    },
-  });
+  const { data: session } = useSession();
+  const currentUserId = Number(session?.usuario?.id) || null;
+
+  const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<Oportunidad | null>(null);
+
+  const { data, isLoading, isError } = useOportunidades();
+  const createMut = useCreateOportunidad();
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-900">Oportunidades</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">Oportunidades</h1>
+        <Button onClick={() => setCreating(true)}>
+          <Plus size={16} /> Nueva oportunidad
+        </Button>
+      </div>
 
       {isLoading && <p className="mt-4 text-slate-500">Cargando…</p>}
       {isError && (
         <p className="mt-4 text-red-600">
-          No se pudo conectar al backend. ¿Está corriendo en {process.env.NEXT_PUBLIC_API_URL}?
+          No se pudo cargar. ¿El backend está corriendo en {process.env.NEXT_PUBLIC_API_URL}?
         </p>
       )}
 
       {data && (
-        <table className="mt-6 w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-slate-200 text-left text-slate-500">
-              <th className="py-2 pr-4">ID</th>
-              <th className="py-2 pr-4">Estado</th>
-              <th className="py-2 pr-4">Cliente</th>
-              <th className="py-2 pr-4">Vendedor</th>
-              <th className="py-2 pr-4">Último movimiento</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((o) => (
-              <tr key={o.id} className="border-b border-slate-100">
-                <td className="py-2 pr-4 font-mono">{o.id}</td>
-                <td className="py-2 pr-4">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      ESTADO_COLOR[o.estado] ?? "bg-slate-100 text-slate-600"
-                    }`}
-                  >
-                    {o.estado}
-                  </span>
-                </td>
-                <td className="py-2 pr-4">{o.cliente_id ?? "—"}</td>
-                <td className="py-2 pr-4">{o.vendedor_id ?? "—"}</td>
-                <td className="py-2 pr-4">
-                  {new Date(o.fecha_ultimo_movimiento).toLocaleDateString("es-AR")}
-                </td>
-              </tr>
-            ))}
-            {data.length === 0 && (
+        <div className="mt-6 overflow-hidden rounded-lg border border-slate-200">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-left text-slate-500">
               <tr>
-                <td colSpan={5} className="py-6 text-center text-slate-400">
-                  No hay oportunidades todavía.
-                </td>
+                <th className="px-4 py-2 font-medium">ID</th>
+                <th className="px-4 py-2 font-medium">Cliente</th>
+                <th className="px-4 py-2 font-medium">Contacto</th>
+                <th className="px-4 py-2 font-medium">Vendedor</th>
+                <th className="px-4 py-2 font-medium">Estado</th>
+                <th className="px-4 py-2 font-medium">Últ. movimiento</th>
+                <th className="px-4 py-2" />
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.map((o) => {
+                const meta = ESTADO_META[o.estado];
+                return (
+                  <tr key={o.id} className="border-t border-slate-100">
+                    <td className="px-4 py-2 font-mono text-slate-500">{o.id}</td>
+                    <td className="px-4 py-2 font-medium text-slate-800">
+                      {o.cliente?.razon_social ?? "—"}
+                    </td>
+                    <td className="px-4 py-2 text-slate-600">{o.contacto?.nombre ?? "—"}</td>
+                    <td className="px-4 py-2 text-slate-600">{o.vendedor?.nombre ?? "—"}</td>
+                    <td className="px-4 py-2">
+                      <Badge className={meta.color}>{meta.label}</Badge>
+                    </td>
+                    <td className="px-4 py-2 text-slate-500">
+                      {new Date(o.fecha_ultimo_movimiento).toLocaleDateString("es-AR")}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setEditing(o)}
+                        aria-label="Editar"
+                      >
+                        <Pencil size={15} />
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {data.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
+                    No hay oportunidades todavía.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <Modal open={creating} onClose={() => setCreating(false)} title="Nueva oportunidad">
+        <OportunidadForm
+          defaultVendedorId={currentUserId}
+          isPending={createMut.isPending}
+          onCancel={() => setCreating(false)}
+          onSubmit={(values) =>
+            createMut.mutate(values, { onSuccess: () => setCreating(false) })
+          }
+        />
+      </Modal>
+
+      {editing && (
+        <EditOportunidadModal oportunidad={editing} onClose={() => setEditing(null)} />
       )}
     </div>
+  );
+}
+
+function EditOportunidadModal({
+  oportunidad,
+  onClose,
+}: {
+  oportunidad: Oportunidad;
+  onClose: () => void;
+}) {
+  const updateMut = useUpdateOportunidad(oportunidad.id);
+  const handleSubmit = (values: OportunidadCreate) =>
+    updateMut.mutate(values, { onSuccess: onClose });
+
+  return (
+    <Modal open onClose={onClose} title={`Editar oportunidad #${oportunidad.id}`}>
+      <OportunidadForm
+        initial={oportunidad}
+        isPending={updateMut.isPending}
+        onCancel={onClose}
+        onSubmit={handleSubmit}
+      />
+    </Modal>
   );
 }
