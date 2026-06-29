@@ -33,3 +33,6 @@ storage/
 .idea/
 .vscode/
 *.swp
+
+# Adjuntos de mails (no commitear)
+backend/media/

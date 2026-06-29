@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db.base import Base
+from app.db.models.adjuntos import Adjunto
 from app.db.models.clientes import Cliente
 from app.db.models.contactos_cliente import ContactoCliente
 from app.db.models.dominios_cliente import DominioCliente
@@ -31,7 +32,11 @@ def _b64(text: str) -> str:
 
 
 class FakeAI(AIProvider):
-    def extract_email_data(self, email_text, image_paths=None) -> EmailData:  # noqa: ANN001
+    def __init__(self) -> None:
+        self.images_recibidas: list = []
+
+    def extract_email_data(self, email_text, images=None) -> EmailData:  # noqa: ANN001
+        self.images_recibidas = images or []
         return EmailData(producto="Pigmento", requerimiento=email_text[:30])
 
     def draft_quote(self, compras_response):  # noqa: ANN001
@@ -87,6 +92,7 @@ def db() -> Iterator[Session]:
             DominioCliente.__table__,
             Oportunidad.__table__,
             Mail.__table__,
+            Adjunto.__table__,
         ],
     )
     session = TestingSessionLocal()
@@ -126,3 +132,67 @@ def test_poll_procesa_nuevos_y_dedup(db: Session) -> None:
     # Segunda corrida con los mismos ids: dedup -> no reprocesa.
     assert poll_once(db, ai, gmail, query="x") == 0
     assert db.scalar(select(func.count()).select_from(Mail)) == 2
+
+
+def test_default_vendedor_id_cuando_cliente_no_tiene_vendedor(db: Session) -> None:
+    # El cliente BENCEN (seed) no tiene vendedor asignado; debe heredar el de la casilla.
+    db.add(Usuario(id=7, email="vendedor7@argentinacolor.com", nombre="Siete", activo=True))
+    db.commit()
+    gmail = FakeGmail({"x1": _msg("x1")})
+    assert poll_once(db, FakeAI(), gmail, query="q", default_vendedor_id=7) == 1
+    op = db.scalars(select(Oportunidad)).first()
+    assert op is not None and op.cliente_id == 1 and op.vendedor_id == 7
+
+
+def test_parse_extrae_adjunto_de_imagen() -> None:
+    raw = {
+        "id": "m9",
+        "payload": {
+            "mimeType": "multipart/mixed",
+            "headers": [{"name": "From", "value": "juan@bencen.com.ar"}],
+            "parts": [
+                {"mimeType": "text/plain", "body": {"data": _b64("Mirá la foto")}},
+                {
+                    "mimeType": "image/jpeg",
+                    "filename": "toner.jpg",
+                    "body": {"attachmentId": "att-1"},
+                },
+            ],
+        },
+    }
+    att = parse_gmail_message(raw)["attachments"]
+    assert len(att) == 1
+    assert att[0]["nombre"] == "toner.jpg"
+    assert att[0]["mime"] == "image/jpeg"
+    assert att[0]["attachment_id"] == "att-1"
+
+
+def test_flujo_multimodal_pasa_imagen_a_ia_y_guarda_adjunto(
+    db: Session, tmp_path, monkeypatch
+) -> None:  # noqa: ANN001
+    from app.config import settings
+    from app.db.models.adjuntos import Adjunto as AdjuntoModel
+    from app.services.ingest import process_incoming_email
+
+    monkeypatch.setattr(settings, "MEDIA_DIR", str(tmp_path))
+    ai = FakeAI()
+
+    mail = process_incoming_email(
+        db,
+        ai,
+        de="juan@bencen.com.ar",
+        asunto="Pedido con foto",
+        cuerpo="Necesito esto",
+        images=[{"nombre": "toner.jpg", "mime": "image/jpeg", "data": b"\xff\xd8\xff\x00datos"}],
+    )
+
+    # La IA recibió la imagen.
+    assert len(ai.images_recibidas) == 1
+    assert ai.images_recibidas[0].mime_type == "image/jpeg"
+
+    # Se guardó el adjunto (fila + archivo en disco).
+    adj = db.scalars(select(AdjuntoModel).where(AdjuntoModel.mail_id == mail.id)).first()
+    assert adj is not None and adj.nombre_archivo == "toner.jpg"
+    from pathlib import Path
+
+    assert Path(adj.path_storage).exists()

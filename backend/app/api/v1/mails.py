@@ -1,11 +1,15 @@
 """Bandeja inteligente: ingesta manual de mails y listado de procesados."""
 
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_ai, get_current_user, get_gmail
 from app.core.exceptions import NotFoundError
+from app.db.models.adjuntos import Adjunto
 from app.db.models.mails import DireccionMail, Mail
 from app.db.models.oportunidades import Oportunidad
 from app.db.models.usuarios import Usuario
@@ -13,12 +17,32 @@ from app.db.session import get_db
 from app.integrations.ai.base import AIProvider
 from app.schemas.mail import IngestEmailRequest, MailRead
 from app.services.acuse import send_aclaracion, send_acuse
-from app.services.gmail_poller import poll_once
+from app.services.gmail_poller import poll_all_mailboxes
 from app.services.ingest import process_incoming_email
 
 router = APIRouter(prefix="/mails", tags=["bandeja"])
 
-_RELATIONS = (selectinload(Mail.oportunidad).selectinload(Oportunidad.cliente),)
+_RELATIONS = (
+    selectinload(Mail.oportunidad).selectinload(Oportunidad.cliente),
+    selectinload(Mail.archivos),
+)
+
+
+@router.get("/adjuntos/{adjunto_id}")
+def get_adjunto(
+    adjunto_id: int,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> FileResponse:
+    """Sirve el archivo de un adjunto (imagen) para mostrarlo en la bandeja."""
+    adjunto = db.get(Adjunto, adjunto_id)
+    if adjunto is None or not adjunto.path_storage or not Path(adjunto.path_storage).exists():
+        raise NotFoundError("Adjunto no encontrado")
+    return FileResponse(
+        adjunto.path_storage,
+        media_type=adjunto.mime_type or "application/octet-stream",
+        filename=adjunto.nombre_archivo,
+    )
 
 
 def _get_loaded(db: Session, mail_id: int) -> Mail:
@@ -62,14 +86,11 @@ def sync_gmail(
     ai: AIProvider = Depends(get_ai),
     _: Usuario = Depends(get_current_user),
 ) -> dict[str, int]:
-    """Dispara una corrida de polling de la casilla comercial ahora mismo.
+    """Dispara una corrida de polling ahora mismo (todas las casillas configuradas).
 
-    Útil para probar sin esperar al scheduler. Requiere las credenciales de
-    Gmail configuradas (Camino A)."""
-    from app.integrations.gmail.client import GmailClient
-
+    Útil para probar sin esperar al scheduler. Requiere Gmail configurado."""
     try:
-        procesados = poll_once(db, ai, GmailClient())
+        procesados = poll_all_mailboxes(db, ai)
     except Exception as exc:  # noqa: BLE001 - frontera con Gmail
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

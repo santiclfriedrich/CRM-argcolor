@@ -192,6 +192,12 @@ interface MailOportunidadMini {
   cliente: ClienteMini | null;
 }
 
+export interface Adjunto {
+  id: number;
+  nombre_archivo: string;
+  mime_type: string | null;
+}
+
 export interface Mail {
   id: number;
   direccion: "entrante" | "saliente";
@@ -204,6 +210,7 @@ export interface Mail {
   datos_extraidos_ia: EmailData | null;
   created_at: string;
   oportunidad: MailOportunidadMini | null;
+  archivos: Adjunto[];
 }
 
 export type IngestEmailRequest = {

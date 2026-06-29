@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.api.deps import get_ai, get_current_user, get_gmail
 from app.db.base import Base
+from app.db.models.adjuntos import Adjunto
 from app.db.models.clientes import Cliente
 from app.db.models.configuracion import Configuracion
 from app.db.models.contactos_cliente import ContactoCliente
@@ -62,6 +63,7 @@ def client() -> Iterator[TestClient]:
         Oportunidad.__table__,
         Mail.__table__,
         Configuracion.__table__,
+        Adjunto.__table__,
     ]
     Base.metadata.create_all(bind=engine, tables=tables)
 

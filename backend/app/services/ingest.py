@@ -17,7 +17,8 @@ from app.db.models.contactos_cliente import ContactoCliente
 from app.db.models.dominios_cliente import DominioCliente
 from app.db.models.mails import DireccionMail, Mail
 from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
-from app.integrations.ai.base import AIProvider, EmailData
+from app.integrations.ai.base import AIProvider, EmailData, ImagePart
+from app.services.attachments import save_attachments
 
 
 def domain_of(email: str | None) -> str | None:
@@ -60,12 +61,20 @@ def process_incoming_email(
     fecha: datetime | None = None,
     gmail_message_id: str | None = None,
     gmail_thread_id: str | None = None,
-    image_paths: list[str] | None = None,
+    images: list[dict] | None = None,
+    default_vendedor_id: int | None = None,
 ) -> Mail:
-    """Procesa un mail entrante y crea la oportunidad + el registro de mail."""
+    """Procesa un mail entrante y crea la oportunidad + el registro de mail.
+
+    `images`: lista de {nombre, mime, data(bytes)} de los adjuntos de imagen.
+    Se pasan a la IA (multimodal) y se persisten como `adjuntos`.
+    `default_vendedor_id`: dueño de la casilla de la que vino el mail (Camino B);
+    se usa como vendedor si el cliente no tiene uno asignado.
+    """
     cliente_id, contacto_id = _match_cliente_y_contacto(db, de)
 
-    extracted: EmailData = ai.extract_email_data(cuerpo, image_paths)
+    image_parts = [ImagePart(data=img["data"], mime_type=img["mime"]) for img in (images or [])]
+    extracted: EmailData = ai.extract_email_data(cuerpo, image_parts or None)
 
     estado = (
         EstadoOportunidad.requiere_aclaracion
@@ -73,13 +82,14 @@ def process_incoming_email(
         else EstadoOportunidad.nueva
     )
 
-    # Si el cliente está identificado y tiene vendedor asignado, hereda el vendedor.
-    vendedor_id: int | None = None
+    # Vendedor: el asignado al cliente; si no hay, el dueño de la casilla.
+    vendedor_id: int | None = default_vendedor_id
     if cliente_id is not None:
         from app.db.models.clientes import Cliente
 
         cliente = db.get(Cliente, cliente_id)
-        vendedor_id = cliente.vendedor_asignado_id if cliente else None
+        if cliente and cliente.vendedor_asignado_id:
+            vendedor_id = cliente.vendedor_asignado_id
 
     now = datetime.now(timezone.utc)
     oportunidad = Oportunidad(
@@ -104,8 +114,15 @@ def process_incoming_email(
         cuerpo=cuerpo,
         fecha=fecha or now,
         datos_extraidos_ia=extracted.model_dump(),
+        adjuntos=(
+            {"items": [{"nombre": i["nombre"], "mime": i["mime"]} for i in images]}
+            if images
+            else None
+        ),
     )
     db.add(mail)
+    db.flush()  # asigna mail.id para los adjuntos
+    save_attachments(db, mail, images or [])
     db.commit()
     db.refresh(mail)
     return mail

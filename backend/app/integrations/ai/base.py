@@ -5,8 +5,17 @@ Ollama debe ser únicamente cambiar la variable de entorno AI_PROVIDER.
 """
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 from pydantic import BaseModel
+
+
+@dataclass
+class ImagePart:
+    """Imagen adjunta de un mail, para pasar a la IA multimodal."""
+
+    data: bytes
+    mime_type: str
 
 
 class EmailData(BaseModel):
@@ -43,7 +52,7 @@ class AIProvider(ABC):
 
     @abstractmethod
     def extract_email_data(
-        self, email_text: str, image_paths: list[str] | None = None
+        self, email_text: str, images: list["ImagePart"] | None = None
     ) -> EmailData:
         """Extrae datos estructurados de un mail (texto + imágenes opcionales)."""
 

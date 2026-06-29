@@ -15,12 +15,11 @@ def _run_poll() -> None:
     """Una corrida del polling, con su propia sesión de DB (no request-scoped)."""
     from app.db.session import SessionLocal
     from app.integrations.ai.factory import get_ai_provider
-    from app.integrations.gmail.client import GmailClient
-    from app.services.gmail_poller import poll_once
+    from app.services.gmail_poller import poll_all_mailboxes
 
     db = SessionLocal()
     try:
-        n = poll_once(db, get_ai_provider(), GmailClient())
+        n = poll_all_mailboxes(db, get_ai_provider())
         if n:
             logger.info("Gmail poll: %s mail(s) nuevos procesados", n)
     except Exception:  # noqa: BLE001 - el job no debe tirar el scheduler

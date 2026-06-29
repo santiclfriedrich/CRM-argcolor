@@ -2,13 +2,14 @@
 
 import { Copy, RefreshCw, Send, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { api } from "@/lib/api";
 import {
   useMails,
   useIngestEmail,
@@ -17,7 +18,7 @@ import {
   useSyncGmail,
 } from "@/lib/mails";
 import { ESTADO_META } from "@/lib/oportunidades";
-import type { EmailData, Mail } from "@/lib/types";
+import type { Adjunto, EmailData, Mail } from "@/lib/types";
 
 export default function BandejaPage() {
   const { data: mails, isLoading } = useMails();
@@ -157,6 +158,14 @@ function MailCard({ mail }: { mail: Mail }) {
         </div>
       </div>
 
+      {mail.archivos.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {mail.archivos.map((a) => (
+            <AttachmentImage key={a.id} adjunto={a} />
+          ))}
+        </div>
+      )}
+
       {d && <Extraccion data={d} />}
 
       <div className="mt-3 flex items-center justify-between gap-2">
@@ -206,6 +215,48 @@ function ResponderButton({
         <Send size={14} /> {mut.isPending ? "Enviando…" : label}
       </Button>
     </div>
+  );
+}
+
+// Trae la imagen del backend autenticada (axios manda el JWT) y la muestra.
+function AttachmentImage({ adjunto }: { adjunto: Adjunto }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let objectUrl: string | undefined;
+    let active = true;
+    api
+      .get(`/api/v1/mails/adjuntos/${adjunto.id}`, { responseType: "blob" })
+      .then((res) => {
+        objectUrl = URL.createObjectURL(res.data as Blob);
+        if (active) setUrl(objectUrl);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [adjunto.id]);
+
+  const isImage = (adjunto.mime_type ?? "").startsWith("image/");
+  if (!isImage) {
+    return <span className="text-xs text-slate-500">📎 {adjunto.nombre_archivo}</span>;
+  }
+  return (
+    <a href={url ?? undefined} target="_blank" rel="noreferrer" title={adjunto.nombre_archivo}>
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={url}
+          alt={adjunto.nombre_archivo}
+          className="max-h-40 rounded-md border border-slate-200 object-contain"
+        />
+      ) : (
+        <div className="flex h-24 w-32 items-center justify-center rounded-md border border-slate-200 text-xs text-slate-400">
+          cargando…
+        </div>
+      )}
+    </a>
   );
 }
 

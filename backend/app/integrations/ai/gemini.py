@@ -4,14 +4,11 @@ Usa el SDK oficial vigente `google-genai`. La extracción devuelve JSON
 estructurado validado contra los schemas Pydantic de `base.py`.
 """
 
-import mimetypes
-from pathlib import Path
-
 from google import genai
 from google.genai import types
 
 from app.config import settings
-from app.integrations.ai.base import AIProvider, EmailData, QuoteDraft
+from app.integrations.ai.base import AIProvider, EmailData, ImagePart, QuoteDraft
 
 _EXTRACT_SYSTEM = """\
 Sos un asistente del equipo comercial de una empresa industrial argentina.
@@ -40,18 +37,16 @@ class GeminiProvider(AIProvider):
         self._client = genai.Client(api_key=settings.GEMINI_API_KEY)
         self._model = settings.GEMINI_MODEL
 
-    def _image_parts(self, image_paths: list[str] | None) -> list[types.Part]:
-        parts: list[types.Part] = []
-        for path in image_paths or []:
-            data = Path(path).read_bytes()
-            mime = mimetypes.guess_type(path)[0] or "image/jpeg"
-            parts.append(types.Part.from_bytes(data=data, mime_type=mime))
-        return parts
+    def _image_parts(self, images: list[ImagePart] | None) -> list[types.Part]:
+        return [
+            types.Part.from_bytes(data=img.data, mime_type=img.mime_type)
+            for img in (images or [])
+        ]
 
     def extract_email_data(
-        self, email_text: str, image_paths: list[str] | None = None
+        self, email_text: str, images: list[ImagePart] | None = None
     ) -> EmailData:
-        contents: list[object] = [email_text, *self._image_parts(image_paths)]
+        contents: list[object] = [email_text, *self._image_parts(images)]
         response = self._client.models.generate_content(
             model=self._model,
             contents=contents,

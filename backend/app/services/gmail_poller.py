@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models.mails import Mail
+from app.db.models.usuarios import Usuario
 from app.integrations.ai.base import AIProvider
 from app.services.ingest import process_incoming_email
 
@@ -23,7 +24,13 @@ class GmailLike(Protocol):
     def get_message(self, message_id: str) -> dict[str, Any]: ...
 
 
-def poll_once(db: Session, ai: AIProvider, gmail: GmailLike, query: str | None = None) -> int:
+def poll_once(
+    db: Session,
+    ai: AIProvider,
+    gmail: GmailLike,
+    query: str | None = None,
+    default_vendedor_id: int | None = None,
+) -> int:
     """Procesa los mails nuevos (no vistos antes) y devuelve cuántos creó."""
     ids = gmail.list_message_ids(query or settings.GMAIL_QUERY)
     if not ids:
@@ -49,12 +56,38 @@ def poll_once(db: Session, ai: AIProvider, gmail: GmailLike, query: str | None =
                 fecha=msg.get("fecha"),
                 gmail_message_id=msg.get("message_id"),
                 gmail_thread_id=msg.get("thread_id"),
+                images=msg.get("images"),
+                default_vendedor_id=default_vendedor_id,
             )
             procesados += 1
             _maybe_acuse(db, gmail, mail)
         except Exception:  # noqa: BLE001 - un mail malo no debe cortar el lote
             logger.exception("Error procesando el mail %s; se omite", mid)
     return procesados
+
+
+def poll_all_mailboxes(db: Session, ai: AIProvider) -> int:
+    """Pollea todas las casillas configuradas.
+
+    - Camino A: una sola casilla (la del refresh token).
+    - Camino B: una casilla por cada usuario activo (impersonación).
+    Importado acá adentro para no acoplar el cliente real en los tests.
+    """
+    from app.integrations.gmail.client import GmailClient
+
+    total = 0
+    if not settings.GMAIL_SERVICE_ACCOUNT_FILE:
+        # Camino A: una casilla, sin vendedor por defecto (lo define el cliente).
+        return poll_once(db, ai, GmailClient())
+
+    usuarios = list(db.scalars(select(Usuario).where(Usuario.activo.is_(True))))
+    for usuario in usuarios:
+        try:
+            gmail = GmailClient(usuario.email)
+            total += poll_once(db, ai, gmail, default_vendedor_id=usuario.id)
+        except Exception:  # noqa: BLE001 - una casilla rota no corta el resto
+            logger.exception("Error polleando la casilla de %s", usuario.email)
+    return total
 
 
 def _maybe_acuse(db: Session, gmail: object, mail: Mail) -> None:

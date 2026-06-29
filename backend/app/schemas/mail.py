@@ -33,6 +33,14 @@ class OportunidadMini(BaseModel):
     cliente: ClienteMini | None = None
 
 
+class AdjuntoRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nombre_archivo: str
+    mime_type: str | None = None
+
+
 class MailRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -47,3 +55,4 @@ class MailRead(BaseModel):
     datos_extraidos_ia: EmailData | None = None
     created_at: datetime
     oportunidad: OportunidadMini | None = None
+    archivos: list[AdjuntoRead] = []

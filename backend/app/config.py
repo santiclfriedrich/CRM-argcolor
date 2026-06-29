@@ -50,6 +50,12 @@ class Settings(BaseSettings):
     GMAIL_REFRESH_TOKEN: str = ""
     GMAIL_QUERY: str = "newer_than:1d"  # filtro Gmail; dedup evita reprocesar
     GMAIL_POLL_INTERVAL_SECONDS: int = 120
+    # Camino B: ruta al JSON de la service account (con domain-wide delegation).
+    # Si está seteado, se leen las casillas de todos los usuarios (impersonación).
+    GMAIL_SERVICE_ACCOUNT_FILE: str = ""
+
+    # --- Almacenamiento de adjuntos (imágenes de mails) ---
+    MEDIA_DIR: str = "media"
 
     # --- CORS ---
     ALLOWED_ORIGINS: str = "http://localhost:3000"

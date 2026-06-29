@@ -11,6 +11,7 @@ from email.message import EmailMessage
 from email.utils import parseaddr
 from typing import Any
 
+from google.oauth2 import service_account
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
@@ -53,6 +54,33 @@ def _header(headers: list[dict[str, str]], name: str) -> str | None:
     return next((h["value"] for h in headers if h["name"].lower() == name.lower()), None)
 
 
+# Máximo de imágenes a procesar por mail (corte defensivo de costo/payload).
+MAX_IMAGES = 5
+
+
+def _collect_image_attachments(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Metadatos de los adjuntos tipo imagen (recursivo sobre las partes MIME)."""
+    found: list[dict[str, Any]] = []
+
+    def walk(part: dict[str, Any]) -> None:
+        mime = part.get("mimeType", "")
+        body = part.get("body", {})
+        if mime.startswith("image/") and (body.get("data") or body.get("attachmentId")):
+            found.append(
+                {
+                    "nombre": part.get("filename") or "imagen",
+                    "mime": mime,
+                    "attachment_id": body.get("attachmentId"),
+                    "data": body.get("data"),  # inline base64url, si vino embebida
+                }
+            )
+        for child in part.get("parts") or []:
+            walk(child)
+
+    walk(payload)
+    return found
+
+
 def parse_gmail_message(msg: dict[str, Any]) -> dict[str, Any]:
     """Normaliza un mensaje de la Gmail API a los campos que usa el pipeline."""
     payload = msg.get("payload", {})
@@ -69,28 +97,43 @@ def parse_gmail_message(msg: dict[str, Any]) -> dict[str, Any]:
         "asunto": _header(headers, "Subject"),
         "cuerpo": _extract_text(payload) or msg.get("snippet", ""),
         "fecha": fecha,
+        "attachments": _collect_image_attachments(payload),
     }
 
 
 class GmailClient:
-    """Wrapper de la Gmail API autenticado con el refresh token de la casilla."""
+    """Wrapper de la Gmail API.
 
-    def __init__(self) -> None:
-        if not settings.GMAIL_REFRESH_TOKEN:
-            raise RuntimeError(
-                "Gmail sin configurar: falta GMAIL_REFRESH_TOKEN en backend/.env "
-                "(corré scripts.gmail_authorize)."
+    - Camino A (refresh token): lee la casilla dueña del token (`user` se ignora).
+    - Camino B (service account + delegation): impersona la casilla `user`.
+    """
+
+    def __init__(self, user: str | None = None) -> None:
+        if settings.GMAIL_SERVICE_ACCOUNT_FILE:
+            # Camino B: impersonación vía domain-wide delegation.
+            if not user:
+                raise RuntimeError("Camino B requiere indicar la casilla a impersonar.")
+            creds = service_account.Credentials.from_service_account_file(
+                settings.GMAIL_SERVICE_ACCOUNT_FILE, scopes=GMAIL_SCOPES
+            ).with_subject(user)
+            self._user = user
+        elif settings.GMAIL_REFRESH_TOKEN:
+            # Camino A: refresh token de una sola casilla.
+            creds = Credentials(
+                token=None,
+                refresh_token=settings.GMAIL_REFRESH_TOKEN,
+                client_id=settings.GMAIL_CLIENT_ID,
+                client_secret=settings.GMAIL_CLIENT_SECRET,
+                token_uri=_TOKEN_URI,
+                scopes=GMAIL_SCOPES,
             )
-        creds = Credentials(
-            token=None,
-            refresh_token=settings.GMAIL_REFRESH_TOKEN,
-            client_id=settings.GMAIL_CLIENT_ID,
-            client_secret=settings.GMAIL_CLIENT_SECRET,
-            token_uri=_TOKEN_URI,
-            scopes=GMAIL_SCOPES,
-        )
+            self._user = user or settings.GMAIL_USER or "me"
+        else:
+            raise RuntimeError(
+                "Gmail sin configurar: definí GMAIL_SERVICE_ACCOUNT_FILE (Camino B) o "
+                "GMAIL_REFRESH_TOKEN (Camino A) en backend/.env."
+            )
         self._service = build("gmail", "v1", credentials=creds, cache_discovery=False)
-        self._user = settings.GMAIL_USER or "me"
 
     def list_message_ids(self, query: str, max_results: int = 25) -> list[str]:
         resp = (
@@ -108,7 +151,35 @@ class GmailClient:
             .get(userId=self._user, id=message_id, format="full")
             .execute()
         )
-        return parse_gmail_message(raw)
+        parsed = parse_gmail_message(raw)
+        parsed["images"] = self._download_images(message_id, parsed.pop("attachments", []))
+        return parsed
+
+    def _download_images(
+        self, message_id: str, attachments: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Baja los bytes de cada imagen (inline o por attachmentId)."""
+        images: list[dict[str, Any]] = []
+        for att in attachments[:MAX_IMAGES]:
+            data_b64 = att.get("data")
+            if not data_b64 and att.get("attachment_id"):
+                resp = (
+                    self._service.users()
+                    .messages()
+                    .attachments()
+                    .get(userId=self._user, messageId=message_id, id=att["attachment_id"])
+                    .execute()
+                )
+                data_b64 = resp.get("data")
+            if data_b64:
+                images.append(
+                    {
+                        "nombre": att["nombre"],
+                        "mime": att["mime"],
+                        "data": base64.urlsafe_b64decode(data_b64),
+                    }
+                )
+        return images
 
     def send_message(
         self, to: str, subject: str, body: str, thread_id: str | None = None
