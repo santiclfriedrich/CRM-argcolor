@@ -3,7 +3,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -30,8 +30,11 @@ class Mail(Base, TimestampMixin):
     asunto: Mapped[str | None] = mapped_column(String(500))
     cuerpo: Mapped[str | None] = mapped_column(Text)
     fecha: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    adjuntos: Mapped[dict | None] = mapped_column(JSONB)
-    datos_extraidos_ia: Mapped[dict | None] = mapped_column(JSONB)
+    # with_variant: JSONB en Postgres; JSON en SQLite (solo para tests).
+    adjuntos: Mapped[dict | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
+    datos_extraidos_ia: Mapped[dict | None] = mapped_column(
+        JSONB().with_variant(JSON(), "sqlite")
+    )
 
     oportunidad = relationship("Oportunidad", back_populates="mails")
     archivos = relationship("Adjunto", back_populates="mail")

@@ -174,3 +174,41 @@ export type SolicitudCreate = {
 export type SolicitudUpdate = Partial<Omit<SolicitudCreate, "oportunidad_id">> & {
   estado?: EstadoSolicitud;
 };
+
+// ---- Bandeja / Mails ----
+export interface EmailData {
+  cliente_sugerido: string | null;
+  producto: string | null;
+  cantidad: string | null;
+  requerimiento: string | null;
+  plazo: string | null;
+  requiere_aclaracion: boolean;
+  borrador_aclaracion: string | null;
+}
+
+interface MailOportunidadMini {
+  id: number;
+  estado: EstadoOportunidad;
+  cliente: ClienteMini | null;
+}
+
+export interface Mail {
+  id: number;
+  direccion: "entrante" | "saliente";
+  de: string | null;
+  para: string | null;
+  asunto: string | null;
+  cuerpo: string | null;
+  fecha: string | null;
+  oportunidad_id: number | null;
+  datos_extraidos_ia: EmailData | null;
+  created_at: string;
+  oportunidad: MailOportunidadMini | null;
+}
+
+export type IngestEmailRequest = {
+  de: string;
+  asunto?: string | null;
+  cuerpo: string;
+  para?: string | null;
+};

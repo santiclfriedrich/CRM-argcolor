@@ -8,8 +8,22 @@ from sqlalchemy.orm import Session
 from app.core.security import decode_access_token
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
+from app.integrations.ai.base import AIProvider
+from app.integrations.ai.factory import get_ai_provider
 
 bearer_scheme = HTTPBearer(auto_error=False)
+
+
+def get_ai() -> AIProvider:
+    """Proveedor de IA configurado. Override en tests con un fake."""
+    return get_ai_provider()
+
+
+def get_gmail():  # noqa: ANN201 - GmailClient, import perezoso para no acoplar deps
+    """Cliente de Gmail configurado (Camino A). Override en tests con un fake."""
+    from app.integrations.gmail.client import GmailClient
+
+    return GmailClient()
 
 
 def get_current_user(

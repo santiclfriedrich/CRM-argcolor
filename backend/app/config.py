@@ -37,10 +37,19 @@ class Settings(BaseSettings):
     # --- IA ---
     AI_PROVIDER: str = "gemini"
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
 
     # --- Gmail / Pub-Sub ---
     GMAIL_TOPIC_NAME: str = ""
+
+    # --- Gmail polling (Camino A: OAuth refresh token de la casilla comercial) ---
+    GMAIL_ENABLED: bool = False  # activar solo cuando estén las credenciales cargadas
+    GMAIL_USER: str = "me"  # casilla a leer (ej. ventas@argentinacolor.com)
+    GMAIL_CLIENT_ID: str = ""
+    GMAIL_CLIENT_SECRET: str = ""
+    GMAIL_REFRESH_TOKEN: str = ""
+    GMAIL_QUERY: str = "newer_than:1d"  # filtro Gmail; dedup evita reprocesar
+    GMAIL_POLL_INTERVAL_SECONDS: int = 120
 
     # --- CORS ---
     ALLOWED_ORIGINS: str = "http://localhost:3000"

@@ -5,9 +5,11 @@ from fastapi import APIRouter
 from app.api.v1 import (
     auth,
     clientes,
+    config,
     contactos,
     dominios,
     health,
+    mails,
     oportunidades,
     solicitudes,
     usuarios,
@@ -22,3 +24,5 @@ api_router.include_router(contactos.router)
 api_router.include_router(dominios.router)
 api_router.include_router(oportunidades.router)
 api_router.include_router(solicitudes.router)
+api_router.include_router(mails.router)
+api_router.include_router(config.router)

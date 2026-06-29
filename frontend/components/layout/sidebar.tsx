@@ -2,6 +2,7 @@
 
 import {
   LayoutDashboard,
+  Inbox,
   Target,
   Building2,
   ClipboardList,
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/bandeja", label: "Bandeja", icon: Inbox },
   { href: "/oportunidades", label: "Oportunidades", icon: Target },
   { href: "/clientes", label: "Clientes", icon: Building2 },
   { href: "/solicitudes", label: "Compras", icon: ClipboardList },
