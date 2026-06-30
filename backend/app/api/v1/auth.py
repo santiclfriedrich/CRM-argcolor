@@ -1,5 +1,7 @@
 """Auth endpoints. The frontend exchanges a Google ID token for a local JWT."""
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -7,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.auth import verify_google_id_token
+from app.core.crypto import encrypt
 from app.core.security import create_access_token
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
@@ -17,6 +20,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 class GoogleLoginRequest(BaseModel):
     id_token: str
+    # Refresh token de Gmail del propio vendedor (si el login pidió esos scopes).
+    gmail_refresh_token: str | None = None
 
 
 class TokenResponse(BaseModel):
@@ -44,6 +49,13 @@ def login_with_google(body: GoogleLoginRequest, db: Session = Depends(get_db)) -
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Usuario no autorizado. Pedí al admin que te dé de alta.",
         )
+
+    # Si el login trajo el refresh token de Gmail, lo guardamos cifrado para que
+    # el poller pueda leer la casilla propia del vendedor.
+    if body.gmail_refresh_token:
+        user.gmail_refresh_token = encrypt(body.gmail_refresh_token)
+        user.gmail_conectado_en = datetime.now(timezone.utc)
+        db.commit()
 
     token = create_access_token(subject=email, extra_claims={"rol": user.rol.value})
     return TokenResponse(access_token=token, usuario=UsuarioRead.model_validate(user))

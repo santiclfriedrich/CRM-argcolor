@@ -108,8 +108,22 @@ class GmailClient:
     - Camino B (service account + delegation): impersona la casilla `user`.
     """
 
-    def __init__(self, user: str | None = None) -> None:
-        if settings.GMAIL_SERVICE_ACCOUNT_FILE:
+    def __init__(self, user: str | None = None, refresh_token: str | None = None) -> None:
+        self._per_user = False
+        if refresh_token:
+            # Camino C (por cuenta): refresh token propio del vendedor, obtenido
+            # con el OAuth del login -> se refresca con GOOGLE_CLIENT_ID/SECRET.
+            creds = Credentials(
+                token=None,
+                refresh_token=refresh_token,
+                client_id=settings.GOOGLE_CLIENT_ID,
+                client_secret=settings.GOOGLE_CLIENT_SECRET,
+                token_uri=_TOKEN_URI,
+                scopes=GMAIL_SCOPES,
+            )
+            self._user = "me"
+            self._per_user = True
+        elif settings.GMAIL_SERVICE_ACCOUNT_FILE:
             # Camino B: impersonación vía domain-wide delegation.
             if not user:
                 raise RuntimeError("Camino B requiere indicar la casilla a impersonar.")
@@ -187,7 +201,8 @@ class GmailClient:
         """Envía un mail desde la casilla. Si pasás thread_id, responde en el hilo."""
         message = EmailMessage()
         message["To"] = to
-        if "@" in (settings.GMAIL_USER or ""):
+        # En modo por-cuenta el From lo pone Gmail (la casilla autenticada).
+        if not self._per_user and "@" in (settings.GMAIL_USER or ""):
             message["From"] = settings.GMAIL_USER
         message["Subject"] = subject
         message.set_content(body)

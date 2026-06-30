@@ -29,3 +29,4 @@ class UsuarioRead(UsuarioBase):
 
     id: int
     created_at: datetime
+    gmail_conectado: bool = False

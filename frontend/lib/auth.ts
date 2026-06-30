@@ -12,6 +12,18 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+      // Pedimos también acceso a Gmail (leer + enviar) y offline para obtener un
+      // refresh token por usuario. prompt=consent garantiza que Google lo emita.
+      authorization: {
+        params: {
+          access_type: "offline",
+          prompt: "consent",
+          scope:
+            "openid email profile " +
+            "https://www.googleapis.com/auth/gmail.readonly " +
+            "https://www.googleapis.com/auth/gmail.send",
+        },
+      },
     }),
   ],
   callbacks: {
@@ -22,7 +34,11 @@ export const authOptions: NextAuthOptions = {
           const res = await fetch(`${API_URL}/api/v1/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id_token: account.id_token }),
+            body: JSON.stringify({
+              id_token: account.id_token,
+              // Solo viene en el primer consentimiento (o con prompt=consent).
+              gmail_refresh_token: account.refresh_token ?? null,
+            }),
           });
           if (res.ok) {
             const data = await res.json();

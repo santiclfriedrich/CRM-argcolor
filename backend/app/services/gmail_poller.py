@@ -149,24 +149,50 @@ def poll_all_mailboxes(
         if parcial["ultimo_error"]:
             total["ultimo_error"] = parcial["ultimo_error"]
 
-    if not settings.GMAIL_SERVICE_ACCOUNT_FILE:
-        # Camino A: una casilla; el vendedor por defecto lo define quien sincroniza.
+    if settings.GMAIL_SERVICE_ACCOUNT_FILE:
+        # Camino B: impersonación de cada casilla activa vía service account.
+        usuarios = list(db.scalars(select(Usuario).where(Usuario.activo.is_(True))))
+        for usuario in usuarios:
+            try:
+                gmail = GmailClient(usuario.email)
+                _merge(poll_once(db, ai, gmail, query=query, default_vendedor_id=usuario.id))
+            except Exception as exc:  # noqa: BLE001 - una casilla rota no corta el resto
+                total["errores"] += 1  # type: ignore[operator]
+                total["ultimo_error"] = _humanize_error(exc)
+                logger.exception("Error polleando la casilla de %s", usuario.email)
+        return total
+
+    # Camino C (por cuenta): cada vendedor conectó su Gmail (refresh token propio).
+    conectados = list(
+        db.scalars(
+            select(Usuario).where(
+                Usuario.activo.is_(True), Usuario.gmail_refresh_token.is_not(None)
+            )
+        )
+    )
+    if conectados:
+        from app.core.crypto import decrypt
+
+        for usuario in conectados:
+            try:
+                token = decrypt(usuario.gmail_refresh_token)
+                if not token:
+                    continue
+                gmail = GmailClient(refresh_token=token)
+                _merge(poll_once(db, ai, gmail, query=query, default_vendedor_id=usuario.id))
+            except Exception as exc:  # noqa: BLE001 - una casilla rota no corta el resto
+                total["errores"] += 1  # type: ignore[operator]
+                total["ultimo_error"] = _humanize_error(exc)
+                logger.exception("Error polleando la casilla de %s", usuario.email)
+        return total
+
+    # Camino A (fallback): una sola casilla global (mientras nadie conectó la suya).
+    if settings.GMAIL_REFRESH_TOKEN:
         _merge(
             poll_once(
                 db, ai, GmailClient(), query=query, default_vendedor_id=default_vendedor_id
             )
         )
-        return total
-
-    usuarios = list(db.scalars(select(Usuario).where(Usuario.activo.is_(True))))
-    for usuario in usuarios:
-        try:
-            gmail = GmailClient(usuario.email)
-            _merge(poll_once(db, ai, gmail, query=query, default_vendedor_id=usuario.id))
-        except Exception as exc:  # noqa: BLE001 - una casilla rota no corta el resto
-            total["errores"] += 1  # type: ignore[operator]
-            total["ultimo_error"] = _humanize_error(exc)
-            logger.exception("Error polleando la casilla de %s", usuario.email)
     return total
 
 
