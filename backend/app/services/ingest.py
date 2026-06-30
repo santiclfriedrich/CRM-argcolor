@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.db.models.contactos_cliente import ContactoCliente
 from app.db.models.dominios_cliente import DominioCliente
 from app.db.models.mails import DireccionMail, Mail
+from app.db.models.mails_descartados import MailDescartado
 from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
 from app.integrations.ai.base import AIProvider, EmailData, ImagePart
 from app.services.attachments import save_attachments
@@ -63,18 +64,36 @@ def process_incoming_email(
     gmail_thread_id: str | None = None,
     images: list[dict] | None = None,
     default_vendedor_id: int | None = None,
-) -> Mail:
+) -> Mail | None:
     """Procesa un mail entrante y crea la oportunidad + el registro de mail.
+
+    Devuelve el `Mail` creado, o `None` si la IA lo clasificó como NO comercial
+    (orden de compra, facturación, newsletter, etc.): en ese caso no se crea
+    oportunidad ni registro de mail, solo una fila mínima en `mails_descartados`
+    para no reprocesarlo y poder auditarlo.
 
     `images`: lista de {nombre, mime, data(bytes)} de los adjuntos de imagen.
     Se pasan a la IA (multimodal) y se persisten como `adjuntos`.
     `default_vendedor_id`: dueño de la casilla de la que vino el mail (Camino B);
     se usa como vendedor si el cliente no tiene uno asignado.
     """
-    cliente_id, contacto_id = _match_cliente_y_contacto(db, de)
-
     image_parts = [ImagePart(data=img["data"], mime_type=img["mime"]) for img in (images or [])]
     extracted: EmailData = ai.extract_email_data(cuerpo, image_parts or None)
+
+    # Triage: solo las consultas comerciales generan oportunidad y se guardan.
+    if extracted.categoria != "consulta_comercial":
+        descartado = MailDescartado(
+            gmail_message_id=gmail_message_id,
+            categoria=extracted.categoria,
+            de=de,
+            asunto=asunto,
+            fecha=fecha or datetime.now(timezone.utc),
+        )
+        db.add(descartado)
+        db.commit()
+        return None
+
+    cliente_id, contacto_id = _match_cliente_y_contacto(db, de)
 
     estado = (
         EstadoOportunidad.requiere_aclaracion

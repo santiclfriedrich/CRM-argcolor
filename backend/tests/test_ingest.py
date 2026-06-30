@@ -15,6 +15,7 @@ from app.db.models.clientes import Cliente
 from app.db.models.contactos_cliente import ContactoCliente
 from app.db.models.dominios_cliente import DominioCliente
 from app.db.models.mails import Mail
+from app.db.models.mails_descartados import MailDescartado
 from app.db.models.oportunidades import Oportunidad
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
@@ -58,6 +59,7 @@ def client() -> Iterator[TestClient]:
         DominioCliente.__table__,
         Oportunidad.__table__,
         Mail.__table__,
+        MailDescartado.__table__,
         Adjunto.__table__,
     ]
     Base.metadata.create_all(bind=engine, tables=tables)
@@ -96,7 +98,7 @@ def test_ingesta_identifica_cliente_y_contacto_por_dominio(client: TestClient) -
         json={"de": "juan@bencen.com.ar", "asunto": "Pedido", "cuerpo": "Necesito 100kg"},
     )
     assert resp.status_code == 201
-    mail = resp.json()
+    mail = resp.json()["mail"]
     # Identificó cliente (por dominio) y contacto (por email), y heredó el vendedor.
     assert mail["oportunidad"]["cliente"]["razon_social"] == "BENCEN S.A."
     assert mail["datos_extraidos_ia"]["producto"] == "Pigmento rojo"
@@ -115,9 +117,11 @@ def test_ingesta_dominio_desconocido_queda_sin_cliente(client: TestClient) -> No
         json={"de": "alguien@desconocido.com", "cuerpo": "hola"},
     )
     assert resp.status_code == 201
-    op_id = resp.json()["oportunidad_id"]
+    op_id = resp.json()["mail"]["oportunidad_id"]
     op = client.get(f"/api/v1/oportunidades/{op_id}").json()
     assert op["cliente_id"] is None  # por identificar
+    # Sin cliente asignado, la oportunidad queda a nombre del usuario logueado.
+    assert op["vendedor_id"] == 1
 
 
 def test_ingesta_requiere_aclaracion(client: TestClient) -> None:
@@ -130,10 +134,10 @@ def test_ingesta_requiere_aclaracion(client: TestClient) -> None:
         json={"de": "juan@bencen.com.ar", "cuerpo": "necesito algo"},
     )
     assert resp.status_code == 201
-    op_id = resp.json()["oportunidad_id"]
+    op_id = resp.json()["mail"]["oportunidad_id"]
     op = client.get(f"/api/v1/oportunidades/{op_id}").json()
     assert op["estado"] == "requiere_aclaracion"
-    assert resp.json()["datos_extraidos_ia"]["borrador_aclaracion"]
+    assert resp.json()["mail"]["datos_extraidos_ia"]["borrador_aclaracion"]
 
 
 def test_bandeja_lista_entrantes(client: TestClient) -> None:
@@ -141,3 +145,39 @@ def test_bandeja_lista_entrantes(client: TestClient) -> None:
     items = client.get("/api/v1/mails").json()
     assert len(items) == 1
     assert items[0]["direccion"] == "entrante"
+
+
+def test_ingesta_no_comercial_descarta_sin_crear_oportunidad(client: TestClient) -> None:
+    # IA que clasifica el mail como orden de compra (no comercial).
+    app.dependency_overrides[get_ai] = lambda: FakeAI(
+        EmailData(categoria="orden_compra")
+    )
+    resp = client.post(
+        "/api/v1/mails/ingest",
+        json={
+            "de": "mesadeentrada@bencen.com.ar",
+            "asunto": "Orden de Compra Nº 32787",
+            "cuerpo": "Adjuntamos la orden de compra. La factura deberá enviarse a...",
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["descartado"] is True
+    assert body["categoria"] == "orden_compra"
+    assert body["mail"] is None
+
+    # No se creó oportunidad ni quedó en la bandeja; sí un registro mínimo.
+    from sqlalchemy import func, select
+
+    with TestingSessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(Oportunidad)) == 0
+        assert db.scalar(select(func.count()).select_from(Mail)) == 0
+        descartado = db.scalars(select(MailDescartado)).first()
+        assert descartado is not None and descartado.categoria == "orden_compra"
+    assert client.get("/api/v1/mails").json() == []
+
+    # Aparece en el listado de descartados (para auditarlo).
+    descartados = client.get("/api/v1/mails/descartados").json()
+    assert len(descartados) == 1
+    assert descartados[0]["categoria"] == "orden_compra"
+    assert descartados[0]["de"] == "mesadeentrada@bencen.com.ar"

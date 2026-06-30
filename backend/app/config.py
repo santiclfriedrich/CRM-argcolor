@@ -48,7 +48,11 @@ class Settings(BaseSettings):
     GMAIL_CLIENT_ID: str = ""
     GMAIL_CLIENT_SECRET: str = ""
     GMAIL_REFRESH_TOKEN: str = ""
-    GMAIL_QUERY: str = "newer_than:1d"  # filtro Gmail; dedup evita reprocesar
+    # Ventana temporal base de la búsqueda. La query final se arma sumando los
+    # dominios de clientes cargados + la etiqueta comodín (ver build_poll_query).
+    GMAIL_QUERY: str = "newer_than:2d"
+    # Etiqueta comodín para prospectos nuevos cuyo dominio aún no está cargado.
+    GMAIL_LABEL: str = "crm"
     GMAIL_POLL_INTERVAL_SECONDS: int = 120
     # Camino B: ruta al JSON de la service account (con domain-wide delegation).
     # Si está seteado, se leen las casillas de todos los usuarios (impersonación).

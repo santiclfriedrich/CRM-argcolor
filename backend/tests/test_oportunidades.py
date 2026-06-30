@@ -10,9 +10,17 @@ from sqlalchemy.pool import StaticPool
 
 from app.api.deps import get_current_user
 from app.db.base import Base
+from app.db.models.adjuntos import Adjunto
 from app.db.models.clientes import Cliente
 from app.db.models.contactos_cliente import ContactoCliente
+from app.db.models.mails import Mail
+from app.db.models.mails_descartados import MailDescartado
 from app.db.models.oportunidades import Oportunidad
+from app.db.models.presupuesto_items import PresupuestoItem
+from app.db.models.presupuestos import Presupuesto
+from app.db.models.recordatorios import Recordatorio
+from app.db.models.respuestas_compras import RespuestaCompras
+from app.db.models.solicitudes_compras import SolicitudCompras
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.main import app
@@ -32,6 +40,14 @@ def client() -> Iterator[TestClient]:
         Cliente.__table__,
         ContactoCliente.__table__,
         Oportunidad.__table__,
+        Mail.__table__,
+        MailDescartado.__table__,
+        Adjunto.__table__,
+        SolicitudCompras.__table__,
+        RespuestaCompras.__table__,
+        Presupuesto.__table__,
+        PresupuestoItem.__table__,
+        Recordatorio.__table__,
     ]
     Base.metadata.create_all(bind=engine, tables=tables)
 
@@ -97,3 +113,64 @@ def test_filtro_por_estado(client: TestClient) -> None:
 
 def test_get_404(client: TestClient) -> None:
     assert client.get("/api/v1/oportunidades/999").status_code == 404
+
+
+def test_delete_borra_oportunidad_y_sus_mails_en_cascada(client: TestClient) -> None:
+    from sqlalchemy import func, select
+
+    from app.db.models.mails import DireccionMail
+
+    op_id = client.post("/api/v1/oportunidades", json={"cliente_id": 1}).json()["id"]
+    # La oportunidad tiene un mail con un adjunto (caso típico de la bandeja).
+    with TestingSessionLocal() as db:
+        mail = Mail(oportunidad_id=op_id, direccion=DireccionMail.entrante, de="x@bencen.com.ar")
+        db.add(mail)
+        db.flush()
+        db.add(
+            Adjunto(
+                mail_id=mail.id,
+                nombre_archivo="foto.jpg",
+                path_storage="/tmp/no-existe.jpg",
+            )
+        )
+        db.commit()
+
+    resp = client.delete(f"/api/v1/oportunidades/{op_id}")
+    assert resp.status_code == 204
+    assert client.get(f"/api/v1/oportunidades/{op_id}").status_code == 404
+
+    # Se borraron también el mail y su adjunto.
+    with TestingSessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(Mail)) == 0
+        assert db.scalar(select(func.count()).select_from(Adjunto)) == 0
+
+
+def test_delete_404_si_no_existe(client: TestClient) -> None:
+    assert client.delete("/api/v1/oportunidades/999").status_code == 404
+
+
+def test_delete_marca_gmail_id_para_no_resucitar(client: TestClient) -> None:
+    from sqlalchemy import select
+
+    from app.db.models.mails import DireccionMail
+
+    op_id = client.post("/api/v1/oportunidades", json={"cliente_id": 1}).json()["id"]
+    with TestingSessionLocal() as db:
+        db.add(
+            Mail(
+                oportunidad_id=op_id,
+                direccion=DireccionMail.entrante,
+                de="x@bencen.com.ar",
+                gmail_message_id="gmail-123",
+            )
+        )
+        db.commit()
+
+    assert client.delete(f"/api/v1/oportunidades/{op_id}").status_code == 204
+
+    # El id de Gmail queda marcado como eliminado para que el poller no lo reingese.
+    with TestingSessionLocal() as db:
+        desc = db.scalars(
+            select(MailDescartado).where(MailDescartado.gmail_message_id == "gmail-123")
+        ).first()
+        assert desc is not None and desc.categoria == "eliminado_manual"

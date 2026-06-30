@@ -6,6 +6,7 @@ from app.db.models.configuracion import Configuracion
 from app.db.models.contactos_cliente import ContactoCliente, RolCompra
 from app.db.models.dominios_cliente import DominioCliente
 from app.db.models.mails import DireccionMail, Mail
+from app.db.models.mails_descartados import MailDescartado
 from app.db.models.notificaciones import Notificacion
 from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
 from app.db.models.presupuesto_items import PresupuestoItem
@@ -29,6 +30,7 @@ __all__ = [
     "DominioCliente",
     "DireccionMail",
     "Mail",
+    "MailDescartado",
     "Notificacion",
     "EstadoOportunidad",
     "Oportunidad",

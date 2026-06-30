@@ -176,7 +176,14 @@ export type SolicitudUpdate = Partial<Omit<SolicitudCreate, "oportunidad_id">> &
 };
 
 // ---- Bandeja / Mails ----
+export type CategoriaMail =
+  | "consulta_comercial"
+  | "orden_compra"
+  | "administrativo"
+  | "otro";
+
 export interface EmailData {
+  categoria: CategoriaMail;
   cliente_sugerido: string | null;
   producto: string | null;
   cantidad: string | null;
@@ -219,3 +226,21 @@ export type IngestEmailRequest = {
   cuerpo: string;
   para?: string | null;
 };
+
+// Resultado de la ingesta: el mail creado, o un aviso de descarte si la IA lo
+// clasificó como no comercial (orden de compra, facturación, etc.).
+export interface IngestResult {
+  descartado: boolean;
+  categoria: CategoriaMail | null;
+  mail: Mail | null;
+}
+
+// Mail que la IA descartó por no ser una consulta comercial (registro mínimo).
+export interface MailDescartado {
+  id: number;
+  categoria: CategoriaMail;
+  de: string | null;
+  asunto: string | null;
+  fecha: string | null;
+  created_at: string;
+}

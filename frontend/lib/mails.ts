@@ -3,12 +3,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
 import { oportunidadKeys } from "@/lib/oportunidades";
-import type { IngestEmailRequest, Mail } from "@/lib/types";
+import type {
+  IngestEmailRequest,
+  IngestResult,
+  Mail,
+  MailDescartado,
+} from "@/lib/types";
 
 const BASE = "/api/v1/mails";
 
 export const mailKeys = {
   all: ["mails"] as const,
+  descartados: ["mails", "descartados"] as const,
 };
 
 export function useMails() {
@@ -18,11 +24,20 @@ export function useMails() {
   });
 }
 
+// Mails que la IA descartó por no ser consultas comerciales (solo para revisar).
+export function useDescartados(enabled: boolean) {
+  return useQuery({
+    queryKey: mailKeys.descartados,
+    queryFn: async () => (await api.get<MailDescartado[]>(`${BASE}/descartados`)).data,
+    enabled,
+  });
+}
+
 export function useIngestEmail() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: IngestEmailRequest) =>
-      (await api.post<Mail>(`${BASE}/ingest`, body)).data,
+      (await api.post<IngestResult>(`${BASE}/ingest`, body)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: mailKeys.all });
       // El procesamiento crea una oportunidad: refrescar tablero/listado.
@@ -51,11 +66,28 @@ export function useSendAclaracion() {
   });
 }
 
+// Saca un mail de descartados para que la próxima sincronización lo reprocese.
+export function useReprocesarDescartado() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (descartadoId: number) => {
+      await api.delete(`${BASE}/descartados/${descartadoId}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: mailKeys.descartados }),
+  });
+}
+
 // Dispara un polling manual de la casilla comercial (requiere Gmail configurado).
+export type SyncResult = {
+  procesados: number;
+  errores: number;
+  ultimo_error: string | null;
+};
+
 export function useSyncGmail() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => (await api.post<{ procesados: number }>(`${BASE}/sync`)).data,
+    mutationFn: async () => (await api.post<SyncResult>(`${BASE}/sync`)).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: mailKeys.all });
       qc.invalidateQueries({ queryKey: oportunidadKeys.all });

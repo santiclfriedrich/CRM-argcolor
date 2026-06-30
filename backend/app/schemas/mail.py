@@ -56,3 +56,25 @@ class MailRead(BaseModel):
     created_at: datetime
     oportunidad: OportunidadMini | None = None
     archivos: list[AdjuntoRead] = []
+
+
+class DescartadoRead(BaseModel):
+    """Mail que la IA clasificó como no comercial (registro mínimo)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    categoria: str
+    de: str | None = None
+    asunto: str | None = None
+    fecha: datetime | None = None
+    created_at: datetime
+
+
+class IngestResult(BaseModel):
+    """Resultado de la ingesta manual: el mail creado, o un aviso de descarte
+    si la IA lo clasificó como no comercial (sin crear oportunidad)."""
+
+    descartado: bool = False
+    categoria: str | None = None
+    mail: MailRead | None = None

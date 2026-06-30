@@ -19,9 +19,13 @@ def _run_poll() -> None:
 
     db = SessionLocal()
     try:
-        n = poll_all_mailboxes(db, get_ai_provider())
-        if n:
-            logger.info("Gmail poll: %s mail(s) nuevos procesados", n)
+        r = poll_all_mailboxes(db, get_ai_provider())
+        if r["procesados"]:
+            logger.info("Gmail poll: %s mail(s) nuevos procesados", r["procesados"])
+        if r["errores"]:
+            logger.warning(
+                "Gmail poll: %s mail(s) con error. Último: %s", r["errores"], r["ultimo_error"]
+            )
     except Exception:  # noqa: BLE001 - el job no debe tirar el scheduler
         logger.exception("Falló el polling de Gmail")
     finally:

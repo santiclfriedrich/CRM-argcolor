@@ -6,8 +6,13 @@ Ollama debe ser únicamente cambiar la variable de entorno AI_PROVIDER.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Literal
 
 from pydantic import BaseModel
+
+# Clasificación del mail entrante. Solo "consulta_comercial" genera oportunidad
+# y habilita respuesta automática; el resto se registra pero se descarta.
+CategoriaMail = Literal["consulta_comercial", "orden_compra", "administrativo", "otro"]
 
 
 @dataclass
@@ -21,6 +26,7 @@ class ImagePart:
 class EmailData(BaseModel):
     """Datos estructurados extraídos de un mail entrante."""
 
+    categoria: CategoriaMail = "consulta_comercial"
     cliente_sugerido: str | None = None
     producto: str | None = None
     cantidad: str | None = None

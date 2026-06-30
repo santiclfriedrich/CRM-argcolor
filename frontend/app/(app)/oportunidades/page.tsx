@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 
@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/modal";
 import {
   ESTADO_META,
   useCreateOportunidad,
+  useDeleteOportunidad,
   useOportunidades,
   useUpdateOportunidad,
 } from "@/lib/oportunidades";
@@ -25,6 +26,14 @@ export default function OportunidadesPage() {
 
   const { data, isLoading, isError } = useOportunidades();
   const createMut = useCreateOportunidad();
+  const deleteMut = useDeleteOportunidad();
+
+  const eliminar = (o: Oportunidad) => {
+    const quien = o.cliente?.razon_social ?? `#${o.id}`;
+    if (window.confirm(`¿Eliminar la oportunidad de ${quien}? Esta acción no se puede deshacer.`)) {
+      deleteMut.mutate(o.id);
+    }
+  };
 
   return (
     <div>
@@ -81,6 +90,16 @@ export default function OportunidadesPage() {
                         aria-label="Editar"
                       >
                         <Pencil size={15} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => eliminar(o)}
+                        disabled={deleteMut.isPending}
+                        aria-label="Eliminar"
+                        className="text-slate-400 hover:text-red-600"
+                      >
+                        <Trash2 size={15} />
                       </Button>
                     </td>
                   </tr>

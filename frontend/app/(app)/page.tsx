@@ -1,10 +1,11 @@
 "use client";
 
+import { Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { ESTADO_META, useOportunidades } from "@/lib/oportunidades";
+import { ESTADO_META, useDeleteOportunidad, useOportunidades } from "@/lib/oportunidades";
 import {
   diasSinMovimiento,
   semaforoDe,
@@ -102,8 +103,17 @@ export default function TableroPage() {
 function OportunidadCard({ oportunidad: o }: { oportunidad: Oportunidad }) {
   const dias = diasSinMovimiento(o, new Date());
   const meta = ESTADO_META[o.estado];
+  const deleteMut = useDeleteOportunidad();
+
+  const eliminar = () => {
+    const quien = o.cliente?.razon_social ?? `#${o.id}`;
+    if (window.confirm(`¿Eliminar la oportunidad de ${quien}? Esta acción no se puede deshacer.`)) {
+      deleteMut.mutate(o.id);
+    }
+  };
+
   return (
-    <article className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+    <article className="group rounded-md border border-slate-200 bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <span className="font-medium text-slate-800">
           {o.cliente?.razon_social ?? "Sin cliente"}
@@ -112,7 +122,18 @@ function OportunidadCard({ oportunidad: o }: { oportunidad: Oportunidad }) {
       </div>
       <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
         <span>{o.vendedor?.nombre ?? "Sin vendedor"}</span>
-        <span>{dias === 0 ? "hoy" : `hace ${dias} día${dias === 1 ? "" : "s"}`}</span>
+        <div className="flex items-center gap-2">
+          <span>{dias === 0 ? "hoy" : `hace ${dias} día${dias === 1 ? "" : "s"}`}</span>
+          <button
+            type="button"
+            onClick={eliminar}
+            disabled={deleteMut.isPending}
+            aria-label="Eliminar oportunidad"
+            className="text-slate-300 transition hover:text-red-600 group-hover:text-slate-400"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
     </article>
   );

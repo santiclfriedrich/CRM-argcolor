@@ -15,11 +15,12 @@ from app.db.models.clientes import Cliente
 from app.db.models.contactos_cliente import ContactoCliente
 from app.db.models.dominios_cliente import DominioCliente
 from app.db.models.mails import Mail
+from app.db.models.mails_descartados import MailDescartado
 from app.db.models.oportunidades import Oportunidad
 from app.db.models.usuarios import Usuario
 from app.integrations.ai.base import AIProvider, EmailData
 from app.integrations.gmail.client import parse_gmail_message
-from app.services.gmail_poller import poll_once
+from app.services.gmail_poller import build_poll_query, poll_once
 
 engine = create_engine(
     "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
@@ -92,6 +93,7 @@ def db() -> Iterator[Session]:
             DominioCliente.__table__,
             Oportunidad.__table__,
             Mail.__table__,
+            MailDescartado.__table__,
             Adjunto.__table__,
         ],
     )
@@ -123,15 +125,62 @@ def test_poll_procesa_nuevos_y_dedup(db: Session) -> None:
     ai = FakeAI()
 
     # Primera corrida: procesa los 2 mails nuevos.
-    assert poll_once(db, ai, gmail, query="x") == 2
+    assert poll_once(db, ai, gmail, query="x")["procesados"] == 2
     assert db.scalar(select(func.count()).select_from(Mail)) == 2
     # Identificó el cliente por dominio.
     op = db.scalars(select(Oportunidad)).first()
     assert op is not None and op.cliente_id == 1 and op.fuente == "mail"
 
     # Segunda corrida con los mismos ids: dedup -> no reprocesa.
-    assert poll_once(db, ai, gmail, query="x") == 0
+    assert poll_once(db, ai, gmail, query="x")["procesados"] == 0
     assert db.scalar(select(func.count()).select_from(Mail)) == 2
+
+
+class FakeAINoComercial(AIProvider):
+    def extract_email_data(self, email_text, images=None) -> EmailData:  # noqa: ANN001
+        return EmailData(categoria="orden_compra")
+
+    def draft_quote(self, compras_response):  # noqa: ANN001
+        raise NotImplementedError
+
+    def summarize_thread(self, messages):  # noqa: ANN001
+        return ""
+
+
+def test_poll_descarta_no_comercial_y_dedup(db: Session) -> None:
+    gmail = FakeGmail({"oc1": _msg("oc1")})
+
+    # No crea oportunidad ni mail; sí un registro mínimo en descartados.
+    assert poll_once(db, FakeAINoComercial(), gmail, query="x")["procesados"] == 0
+    assert db.scalar(select(func.count()).select_from(Oportunidad)) == 0
+    assert db.scalar(select(func.count()).select_from(Mail)) == 0
+    desc = db.scalars(select(MailDescartado)).first()
+    assert desc is not None and desc.categoria == "orden_compra"
+
+    # Segunda corrida: dedup contra mails_descartados, no reprocesa.
+    assert poll_once(db, FakeAINoComercial(), gmail, query="x")["procesados"] == 0
+    assert db.scalar(select(func.count()).select_from(MailDescartado)) == 1
+
+
+class FakeAIQuota(AIProvider):
+    def extract_email_data(self, email_text, images=None) -> EmailData:  # noqa: ANN001
+        raise RuntimeError("429 RESOURCE_EXHAUSTED: quota exceeded")
+
+    def draft_quote(self, compras_response):  # noqa: ANN001
+        raise NotImplementedError
+
+    def summarize_thread(self, messages):  # noqa: ANN001
+        return ""
+
+
+def test_poll_reporta_error_de_cuota(db: Session) -> None:
+    gmail = FakeGmail({"q1": _msg("q1")})
+    r = poll_once(db, FakeAIQuota(), gmail, query="x")
+    assert r["procesados"] == 0
+    assert r["errores"] == 1
+    assert "cuota" in (r["ultimo_error"] or "").lower()
+    # No quedó registrado: en la próxima corrida se reintenta.
+    assert db.scalar(select(func.count()).select_from(Mail)) == 0
 
 
 def test_default_vendedor_id_cuando_cliente_no_tiene_vendedor(db: Session) -> None:
@@ -139,9 +188,30 @@ def test_default_vendedor_id_cuando_cliente_no_tiene_vendedor(db: Session) -> No
     db.add(Usuario(id=7, email="vendedor7@argentinacolor.com", nombre="Siete", activo=True))
     db.commit()
     gmail = FakeGmail({"x1": _msg("x1")})
-    assert poll_once(db, FakeAI(), gmail, query="q", default_vendedor_id=7) == 1
+    assert poll_once(db, FakeAI(), gmail, query="q", default_vendedor_id=7)["procesados"] == 1
     op = db.scalars(select(Oportunidad)).first()
     assert op is not None and op.cliente_id == 1 and op.vendedor_id == 7
+
+
+def test_build_poll_query_combina_dominios_y_etiqueta(db: Session, monkeypatch) -> None:  # noqa: ANN001
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "GMAIL_QUERY", "newer_than:2d")
+    monkeypatch.setattr(settings, "GMAIL_LABEL", "crm")
+
+    # El fixture siembra el dominio bencen.com.ar. La query debe combinar la
+    # ventana temporal + (etiqueta comodín OR los dominios conocidos).
+    q = build_poll_query(db)
+    assert q == "newer_than:2d (label:crm OR from:bencen.com.ar)"
+
+    # Al agregar otro cliente con dominio, entra en la query automáticamente.
+    db.add(Cliente(id=2, razon_social="OTRO S.A.", activo=True))
+    db.add(DominioCliente(id=2, cliente_id=2, dominio="Otro.com"))
+    db.commit()
+    q2 = build_poll_query(db)
+    assert "from:otro.com" in q2  # normalizado a minúsculas
+    assert "from:bencen.com.ar" in q2
+    assert "label:crm" in q2
 
 
 def test_parse_extrae_adjunto_de_imagen() -> None:

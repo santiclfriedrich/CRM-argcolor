@@ -57,3 +57,18 @@ export function useUpdateOportunidad(id: number) {
     onSuccess: () => qc.invalidateQueries({ queryKey: oportunidadKeys.all }),
   });
 }
+
+// Elimina la oportunidad y todo lo que cuelga (mails, solicitudes, presupuestos…).
+export function useDeleteOportunidad() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`${BASE}/${id}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: oportunidadKeys.all });
+      // Se borran también los mails ligados: refrescar la bandeja.
+      qc.invalidateQueries({ queryKey: ["mails"] });
+    },
+  });
+}

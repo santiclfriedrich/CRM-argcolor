@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -11,11 +11,12 @@ from app.api.deps import get_ai, get_current_user, get_gmail
 from app.core.exceptions import NotFoundError
 from app.db.models.adjuntos import Adjunto
 from app.db.models.mails import DireccionMail, Mail
+from app.db.models.mails_descartados import MailDescartado
 from app.db.models.oportunidades import Oportunidad
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.integrations.ai.base import AIProvider
-from app.schemas.mail import IngestEmailRequest, MailRead
+from app.schemas.mail import DescartadoRead, IngestEmailRequest, IngestResult, MailRead
 from app.services.acuse import send_aclaracion, send_acuse
 from app.services.gmail_poller import poll_all_mailboxes
 from app.services.ingest import process_incoming_email
@@ -52,15 +53,19 @@ def _get_loaded(db: Session, mail_id: int) -> Mail:
     return mail
 
 
-@router.post("/ingest", response_model=MailRead, status_code=201)
+@router.post("/ingest", response_model=IngestResult, status_code=201)
 def ingest_email(
     body: IngestEmailRequest,
     db: Session = Depends(get_db),
     ai: AIProvider = Depends(get_ai),
-    _: Usuario = Depends(get_current_user),
-) -> Mail:
+    current_user: Usuario = Depends(get_current_user),
+) -> IngestResult:
     """Procesa un mail entrante: identifica cliente/contacto, extrae con IA y
-    crea la oportunidad. El transporte real (Gmail) usará este mismo pipeline."""
+    crea la oportunidad. El transporte real (Gmail) usará este mismo pipeline.
+
+    La oportunidad queda a nombre del usuario logueado (salvo que el cliente ya
+    tenga un vendedor asignado, que tiene prioridad). Si la IA lo clasifica como
+    no comercial, no crea oportunidad y devuelve un aviso de descarte."""
     try:
         mail = process_incoming_email(
             db,
@@ -70,6 +75,7 @@ def ingest_email(
             cuerpo=body.cuerpo,
             para=body.para,
             fecha=body.fecha,
+            default_vendedor_id=current_user.id,
         )
     except Exception as exc:  # noqa: BLE001 - frontera con servicio externo (IA)
         # Devolvemos el error real del proveedor de IA para no enmascararlo.
@@ -77,26 +83,36 @@ def ingest_email(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Error al procesar con IA: {exc}",
         ) from exc
-    return _get_loaded(db, mail.id)
+
+    if mail is None:
+        # Recuperamos la categoría del último descartado de este remitente.
+        categoria = db.scalar(
+            select(MailDescartado.categoria)
+            .where(MailDescartado.de == body.de)
+            .order_by(MailDescartado.id.desc())
+        )
+        return IngestResult(descartado=True, categoria=categoria)
+    return IngestResult(mail=MailRead.model_validate(_get_loaded(db, mail.id)))
 
 
 @router.post("/sync")
 def sync_gmail(
     db: Session = Depends(get_db),
     ai: AIProvider = Depends(get_ai),
-    _: Usuario = Depends(get_current_user),
-) -> dict[str, int]:
+    current_user: Usuario = Depends(get_current_user),
+) -> dict[str, int | str | None]:
     """Dispara una corrida de polling ahora mismo (todas las casillas configuradas).
 
-    Útil para probar sin esperar al scheduler. Requiere Gmail configurado."""
+    Útil para probar sin esperar al scheduler. Requiere Gmail configurado.
+    Devuelve {procesados, errores, ultimo_error}."""
     try:
-        procesados = poll_all_mailboxes(db, ai)
+        resultado = poll_all_mailboxes(db, ai, default_vendedor_id=current_user.id)
     except Exception as exc:  # noqa: BLE001 - frontera con Gmail
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Error al sincronizar Gmail: {exc}",
         ) from exc
-    return {"procesados": procesados}
+    return resultado
 
 
 @router.get("", response_model=list[MailRead])
@@ -111,6 +127,37 @@ def list_mails(
         .order_by(Mail.created_at.desc())
     )
     return list(db.scalars(query))
+
+
+@router.get("/descartados", response_model=list[DescartadoRead])
+def list_descartados(
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> list[MailDescartado]:
+    """Mails que la IA clasificó como no comerciales (no generaron oportunidad)."""
+    query = (
+        select(MailDescartado)
+        .where(MailDescartado.categoria != "eliminado_manual")
+        .order_by(MailDescartado.created_at.desc())
+        .limit(100)
+    )
+    return list(db.scalars(query))
+
+
+@router.delete("/descartados/{descartado_id}", status_code=204)
+def reprocesar_descartado(
+    descartado_id: int,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> Response:
+    """Saca un mail de la lista de descartados para que la próxima sincronización
+    lo vuelva a leer y reclasificar (útil si la IA lo descartó por error)."""
+    descartado = db.get(MailDescartado, descartado_id)
+    if descartado is None:
+        raise NotFoundError("Descartado no encontrado")
+    db.delete(descartado)
+    db.commit()
+    return Response(status_code=204)
 
 
 @router.get("/{mail_id}", response_model=MailRead)

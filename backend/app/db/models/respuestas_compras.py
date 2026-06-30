@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Text, func
+from sqlalchemy import JSON, DateTime, ForeignKey, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -21,7 +21,8 @@ class RespuestaCompras(Base, TimestampMixin):
     )
     contenido_raw: Mapped[str | None] = mapped_column(Text)
     # items: fabricante/sku/descripcion/cantidad/precio_unit/iva/obs
-    datos_parseados_ia: Mapped[dict | None] = mapped_column(JSONB)
+    # with_variant: JSONB en Postgres; JSON en SQLite (solo para tests).
+    datos_parseados_ia: Mapped[dict | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
     notas_compras: Mapped[str | None] = mapped_column(Text)
 
     solicitud = relationship("SolicitudCompras", back_populates="respuestas")

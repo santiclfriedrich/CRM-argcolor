@@ -16,6 +16,7 @@ from app.db.models.configuracion import Configuracion
 from app.db.models.contactos_cliente import ContactoCliente
 from app.db.models.dominios_cliente import DominioCliente
 from app.db.models.mails import DireccionMail, Mail
+from app.db.models.mails_descartados import MailDescartado
 from app.db.models.oportunidades import Oportunidad
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
@@ -62,6 +63,7 @@ def client() -> Iterator[TestClient]:
         DominioCliente.__table__,
         Oportunidad.__table__,
         Mail.__table__,
+        MailDescartado.__table__,
         Configuracion.__table__,
         Adjunto.__table__,
     ]
@@ -101,7 +103,7 @@ def test_acuse_se_envia_y_registra_saliente(client: TestClient) -> None:
     mail = client.post(
         "/api/v1/mails/ingest",
         json={"de": "juan@bencen.com.ar", "asunto": "Pedido", "cuerpo": "Necesito 100kg"},
-    ).json()
+    ).json()["mail"]
 
     resp = client.post(f"/api/v1/mails/{mail['id']}/acuse")
     assert resp.status_code == 201
@@ -144,7 +146,7 @@ def test_enviar_aclaracion_usa_borrador_de_ia(client: TestClient) -> None:
     mail = client.post(
         "/api/v1/mails/ingest",
         json={"de": "juan@bencen.com.ar", "asunto": "Consulta", "cuerpo": "necesito algo"},
-    ).json()
+    ).json()["mail"]
 
     resp = client.post(f"/api/v1/mails/{mail['id']}/aclaracion")
     assert resp.status_code == 201

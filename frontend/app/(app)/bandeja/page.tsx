@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, RefreshCw, Send, Sparkles } from "lucide-react";
+import { ChevronRight, Copy, RefreshCw, Send, Sparkles, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 
@@ -11,14 +11,24 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import {
+  useDescartados,
   useMails,
   useIngestEmail,
+  useReprocesarDescartado,
   useSendAclaracion,
   useSendAcuse,
   useSyncGmail,
 } from "@/lib/mails";
-import { ESTADO_META } from "@/lib/oportunidades";
-import type { Adjunto, EmailData, Mail } from "@/lib/types";
+import { ESTADO_META, useDeleteOportunidad } from "@/lib/oportunidades";
+import type { Adjunto, CategoriaMail, EmailData, Mail } from "@/lib/types";
+
+// Etiquetas legibles de las categorías de descarte.
+const CATEGORIA_LABEL: Record<CategoriaMail, string> = {
+  consulta_comercial: "Consulta comercial",
+  orden_compra: "Orden de compra",
+  administrativo: "Administrativo",
+  otro: "Otro",
+};
 
 export default function BandejaPage() {
   const { data: mails, isLoading } = useMails();
@@ -64,9 +74,17 @@ export default function BandejaPage() {
         </Button>
       </div>
       {syncMut.isSuccess && (
-        <p className="mt-2 text-sm text-green-600">
-          Sincronización OK: {syncMut.data.procesados} mail(s) nuevos procesados.
-        </p>
+        <div className="mt-2 text-sm">
+          <p className="text-green-600">
+            Sincronización OK: {syncMut.data.procesados} mail(s) nuevos procesados.
+          </p>
+          {syncMut.data.errores > 0 && (
+            <p className="text-amber-600">
+              {syncMut.data.errores} mail(s) no se pudieron procesar.
+              {syncMut.data.ultimo_error ? ` ${syncMut.data.ultimo_error}` : ""}
+            </p>
+          )}
+        </div>
       )}
       {syncMut.isError && (
         <p className="mt-2 text-sm text-red-600">
@@ -115,6 +133,17 @@ export default function BandejaPage() {
             })()}
           </p>
         )}
+        {ingestMut.isSuccess && ingestMut.data.descartado && (
+          <p className="rounded-md border border-slate-200 bg-slate-100 p-2 text-sm text-slate-600">
+            La IA lo clasificó como{" "}
+            <span className="font-medium">
+              {ingestMut.data.categoria
+                ? CATEGORIA_LABEL[ingestMut.data.categoria]
+                : "no comercial"}
+            </span>{" "}
+            — no se creó oportunidad ni se respondió.
+          </p>
+        )}
         <div className="flex justify-end">
           <Button type="submit" disabled={ingestMut.isPending || !de.trim() || !cuerpo.trim()}>
             <Sparkles size={16} /> {ingestMut.isPending ? "Procesando…" : "Procesar con IA"}
@@ -132,6 +161,63 @@ export default function BandejaPage() {
           </p>
         )}
       </div>
+
+      <Descartados />
+    </div>
+  );
+}
+
+// Mails que la IA descartó por no ser consultas comerciales. Colapsado por
+// defecto: sirve para verificar que no se esté tirando nada importante.
+function Descartados() {
+  const [open, setOpen] = useState(false);
+  const { data, isLoading } = useDescartados(open);
+  const reprocesarMut = useReprocesarDescartado();
+
+  return (
+    <div className="mt-8">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-slate-700"
+      >
+        <ChevronRight size={16} className={open ? "rotate-90 transition" : "transition"} />
+        Descartados por la IA
+        {data && <span className="text-slate-400">({data.length})</span>}
+      </button>
+      {open && (
+        <div className="mt-3 space-y-2">
+          {isLoading && <p className="text-sm text-slate-400">Cargando…</p>}
+          {data?.map((d) => (
+            <div
+              key={d.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+            >
+              <div className="min-w-0">
+                <span className="text-slate-700">{d.de ?? "—"}</span>
+                {d.asunto && <span className="ml-2 text-slate-400">· {d.asunto}</span>}
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge className="bg-slate-200 text-slate-600">
+                  {CATEGORIA_LABEL[d.categoria]}
+                </Badge>
+                <button
+                  type="button"
+                  onClick={() => reprocesarMut.mutate(d.id)}
+                  disabled={reprocesarMut.isPending}
+                  className="text-xs font-medium text-brand hover:underline disabled:opacity-50"
+                  title="Sacar de descartados para que la próxima sincronización lo vuelva a leer"
+                >
+                  Reprocesar
+                </button>
+              </div>
+            </div>
+          ))}
+          {data && data.length === 0 && (
+            <p className="text-sm text-slate-400">No hay mails descartados.</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -139,6 +225,7 @@ export default function BandejaPage() {
 function MailCard({ mail }: { mail: Mail }) {
   const d = mail.datos_extraidos_ia;
   const estado = mail.oportunidad?.estado;
+  const [showOriginal, setShowOriginal] = useState(false);
   return (
     <article className="rounded-lg border border-slate-200 bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -169,18 +256,67 @@ function MailCard({ mail }: { mail: Mail }) {
       {d && <Extraccion data={d} />}
 
       <div className="mt-3 flex items-center justify-between gap-2">
-        {mail.oportunidad_id ? (
-          <Link href="/oportunidades" className="text-xs text-brand hover:underline">
-            Ver oportunidad #{mail.oportunidad_id} →
-          </Link>
-        ) : (
-          <span />
-        )}
-        {mail.de && (
-          <ResponderButton mailId={mail.id} requiereAclaracion={Boolean(d?.requiere_aclaracion)} />
-        )}
+        <div className="flex items-center gap-3">
+          {mail.oportunidad_id && (
+            <Link href="/oportunidades" className="text-xs text-brand hover:underline">
+              Ver oportunidad #{mail.oportunidad_id} →
+            </Link>
+          )}
+          {mail.cuerpo && (
+            <button
+              type="button"
+              onClick={() => setShowOriginal((v) => !v)}
+              className="text-xs text-slate-500 hover:underline"
+            >
+              {showOriginal ? "Ocultar original" : "Ver mail original"}
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {mail.de && (
+            <ResponderButton mailId={mail.id} requiereAclaracion={Boolean(d?.requiere_aclaracion)} />
+          )}
+          {mail.oportunidad_id && (
+            <EliminarButton oportunidadId={mail.oportunidad_id} cliente={mail.oportunidad?.cliente?.razon_social} />
+          )}
+        </div>
       </div>
+
+      {showOriginal && (
+        <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+          {mail.cuerpo}
+        </pre>
+      )}
     </article>
+  );
+}
+
+// Elimina la oportunidad ligada al mail (y el mail mismo) — para limpiar basura.
+function EliminarButton({
+  oportunidadId,
+  cliente,
+}: {
+  oportunidadId: number;
+  cliente?: string;
+}) {
+  const deleteMut = useDeleteOportunidad();
+  const eliminar = () => {
+    const quien = cliente ?? `#${oportunidadId}`;
+    if (window.confirm(`¿Eliminar la oportunidad de ${quien} y este mail? No se puede deshacer.`)) {
+      deleteMut.mutate(oportunidadId);
+    }
+  };
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={eliminar}
+      disabled={deleteMut.isPending}
+      aria-label="Eliminar"
+      className="text-slate-400 hover:text-red-600"
+    >
+      <Trash2 size={14} /> {deleteMut.isPending ? "Eliminando…" : "Eliminar"}
+    </Button>
   );
 }
 
