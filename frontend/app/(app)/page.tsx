@@ -42,18 +42,18 @@ export default function TableroPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Tablero</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Tablero</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             {total} oportunidad{total === 1 ? "" : "es"} en seguimiento
           </p>
         </div>
-        <div className="flex rounded-md border border-slate-200 p-0.5 text-sm">
+        <div className="flex rounded-md border border-slate-200 dark:border-slate-800 p-0.5 text-sm">
           {(["todas", "mias"] as Filtro[]).map((f) => (
             <button
               key={f}
               onClick={() => setFiltro(f)}
               className={`rounded px-3 py-1 font-medium transition ${
-                filtro === f ? "bg-brand text-white" : "text-slate-600 hover:bg-slate-100"
+                filtro === f ? "bg-brand text-white" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
             >
               {f === "todas" ? "Todas" : "Mías"}
@@ -62,7 +62,7 @@ export default function TableroPage() {
         </div>
       </div>
 
-      {isLoading && <p className="mt-6 text-slate-500">Cargando…</p>}
+      {isLoading && <p className="mt-6 text-slate-500 dark:text-slate-400">Cargando…</p>}
       {isError && (
         <p className="mt-6 text-red-600">
           No se pudo cargar. ¿El backend está corriendo en {process.env.NEXT_PUBLIC_API_URL}?
@@ -75,8 +75,8 @@ export default function TableroPage() {
             const meta = SEMAFORO_META[s];
             const items = grupos[s];
             return (
-              <section key={s} className={`rounded-lg border ${meta.ring} bg-slate-50/50`}>
-                <header className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <section key={s} className={`rounded-lg border ${meta.ring} bg-slate-50/50 dark:bg-slate-800/40`}>
+                <header className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 py-3">
                   <span className={`flex items-center gap-2 font-semibold ${meta.header}`}>
                     <span className={`h-2.5 w-2.5 rounded-full ${meta.dot}`} />
                     {meta.label}
@@ -88,7 +88,7 @@ export default function TableroPage() {
                     <OportunidadCard key={o.id} oportunidad={o} />
                   ))}
                   {items.length === 0 && (
-                    <p className="px-1 py-4 text-center text-xs text-slate-400">Sin oportunidades.</p>
+                    <p className="px-1 py-4 text-center text-xs text-slate-400 dark:text-slate-500">Sin oportunidades.</p>
                   )}
                 </div>
               </section>
@@ -113,14 +113,14 @@ function OportunidadCard({ oportunidad: o }: { oportunidad: Oportunidad }) {
   };
 
   return (
-    <article className="group rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+    <article className="group rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 shadow-sm">
       <div className="flex items-start justify-between gap-2">
-        <span className="font-medium text-slate-800">
+        <span className="font-medium text-slate-800 dark:text-slate-100">
           {o.cliente?.razon_social ?? "Sin cliente"}
         </span>
         <Badge className={meta.color}>{meta.label}</Badge>
       </div>
-      <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+      <div className="mt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
         <span>{o.vendedor?.nombre ?? "Sin vendedor"}</span>
         <div className="flex items-center gap-2">
           <span>{dias === 0 ? "hoy" : `hace ${dias} día${dias === 1 ? "" : "s"}`}</span>

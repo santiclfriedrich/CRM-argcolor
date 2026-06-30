@@ -16,7 +16,7 @@ export default function ClienteDetailPage() {
   const { data: cliente, isLoading, isError } = useCliente(clienteId);
   const updateMut = useUpdateCliente(clienteId);
 
-  if (isLoading) return <p className="text-slate-500">Cargando…</p>;
+  if (isLoading) return <p className="text-slate-500 dark:text-slate-400">Cargando…</p>;
   if (isError || !cliente)
     return <p className="text-red-600">No se pudo cargar el cliente.</p>;
 
@@ -25,15 +25,15 @@ export default function ClienteDetailPage() {
       <div>
         <Link
           href="/clientes"
-          className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"
+          className="inline-flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700"
         >
           <ArrowLeft size={15} /> Volver a clientes
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-slate-900">{cliente.razon_social}</h1>
+        <h1 className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{cliente.razon_social}</h1>
       </div>
 
-      <section className="rounded-lg border border-slate-200 p-5">
-        <h2 className="mb-4 text-lg font-semibold text-slate-900">Datos del cliente</h2>
+      <section className="rounded-lg border border-slate-200 dark:border-slate-800 p-5">
+        <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100">Datos del cliente</h2>
         <ClienteForm
           initial={cliente}
           submitLabel="Guardar cambios"

@@ -26,13 +26,13 @@ export default function SolicitudesPage() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">Solicitudes a Compras</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Solicitudes a Compras</h1>
         <Button onClick={() => setCreating(true)}>
           <Plus size={16} /> Nueva solicitud
         </Button>
       </div>
 
-      {isLoading && <p className="mt-4 text-slate-500">Cargando…</p>}
+      {isLoading && <p className="mt-4 text-slate-500 dark:text-slate-400">Cargando…</p>}
       {isError && (
         <p className="mt-4 text-red-600">
           No se pudo cargar. ¿El backend está corriendo en {process.env.NEXT_PUBLIC_API_URL}?
@@ -40,9 +40,9 @@ export default function SolicitudesPage() {
       )}
 
       {data && (
-        <div className="mt-6 overflow-hidden rounded-lg border border-slate-200">
+        <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-500">
+            <thead className="bg-slate-50 dark:bg-slate-800/50 text-left text-slate-500 dark:text-slate-400">
               <tr>
                 <th className="px-4 py-2 font-medium">ID</th>
                 <th className="px-4 py-2 font-medium">Cliente</th>
@@ -58,21 +58,21 @@ export default function SolicitudesPage() {
                 return (
                   <tr
                     key={s.id}
-                    className="cursor-pointer border-t border-slate-100 hover:bg-slate-50"
+                    className="cursor-pointer border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
                     onClick={() => setDetailId(s.id)}
                   >
-                    <td className="px-4 py-2 font-mono text-slate-500">{s.id}</td>
-                    <td className="px-4 py-2 font-medium text-slate-800">
+                    <td className="px-4 py-2 font-mono text-slate-500 dark:text-slate-400">{s.id}</td>
+                    <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">
                       {s.oportunidad?.cliente?.razon_social ?? "—"}
                     </td>
-                    <td className="max-w-xs truncate px-4 py-2 text-slate-600">
+                    <td className="max-w-xs truncate px-4 py-2 text-slate-600 dark:text-slate-300">
                       {s.requerimiento}
                     </td>
-                    <td className="px-4 py-2 text-slate-600">{s.solicitante?.nombre ?? "—"}</td>
+                    <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{s.solicitante?.nombre ?? "—"}</td>
                     <td className="px-4 py-2">
                       <Badge className={meta.color}>{meta.label}</Badge>
                     </td>
-                    <td className="px-4 py-2 text-right text-slate-400">
+                    <td className="px-4 py-2 text-right text-slate-400 dark:text-slate-500">
                       <Mail size={15} className="inline" />
                     </td>
                   </tr>
@@ -80,7 +80,7 @@ export default function SolicitudesPage() {
               })}
               {data.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
+                  <td colSpan={6} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
                     No hay solicitudes todavía.
                   </td>
                 </tr>
@@ -128,11 +128,11 @@ function SolicitudDetailModal({ id, onClose }: { id: number; onClose: () => void
   return (
     <Modal open onClose={onClose} title={`Solicitud #${id}`}>
       {isLoading || !solicitud ? (
-        <p className="text-slate-500">Cargando…</p>
+        <p className="text-slate-500 dark:text-slate-400">Cargando…</p>
       ) : (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-slate-500">Estado:</span>
+            <span className="text-sm text-slate-500 dark:text-slate-400">Estado:</span>
             <Badge className={ESTADO_SOLICITUD_META[solicitud.estado].color}>
               {ESTADO_SOLICITUD_META[solicitud.estado].label}
             </Badge>
@@ -150,20 +150,20 @@ function SolicitudDetailModal({ id, onClose }: { id: number; onClose: () => void
             </div>
           </div>
 
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
-            <p className="mb-2 font-medium text-slate-700">Borrador de mail a Compras</p>
-            <dl className="space-y-1 text-slate-600">
+          <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-3 text-sm">
+            <p className="mb-2 font-medium text-slate-700 dark:text-slate-200">Borrador de mail a Compras</p>
+            <dl className="space-y-1 text-slate-600 dark:text-slate-300">
               <Row label="Para" value={solicitud.email_preview.to ?? "(configurar email de Compras)"} />
               <Row label="CC" value={solicitud.email_preview.cc.join(", ") || "—"} />
               <Row label="Asunto" value={solicitud.email_preview.subject} />
             </dl>
-            <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap rounded border border-slate-200 bg-white p-2 text-xs text-slate-700">
+            <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 text-xs text-slate-700 dark:text-slate-200">
               {solicitud.email_preview.body}
             </pre>
             <Button size="sm" variant="secondary" className="mt-2" onClick={copyEmail}>
               <Copy size={14} /> {copied ? "¡Copiado!" : "Copiar mail"}
             </Button>
-            <p className="mt-2 text-xs text-slate-400">
+            <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
               El envío automático por Gmail llega en Fase 2. Por ahora, copiá y enviá manualmente.
             </p>
           </div>
@@ -176,8 +176,8 @@ function SolicitudDetailModal({ id, onClose }: { id: number; onClose: () => void
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex gap-2">
-      <dt className="w-14 shrink-0 font-medium text-slate-500">{label}:</dt>
-      <dd className="text-slate-700">{value}</dd>
+      <dt className="w-14 shrink-0 font-medium text-slate-500 dark:text-slate-400">{label}:</dt>
+      <dd className="text-slate-700 dark:text-slate-200">{value}</dd>
     </div>
   );
 }

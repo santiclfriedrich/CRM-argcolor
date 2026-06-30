@@ -7,6 +7,12 @@
   --foreground: #0f172a;
 }
 
+.dark {
+  /* Fondo casi negro (slate-950) para que las tarjetas slate-900 resalten. */
+  --background: #020617;
+  --foreground: #e2e8f0;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

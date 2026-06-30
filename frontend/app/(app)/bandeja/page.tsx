@@ -57,8 +57,8 @@ export default function BandejaPage() {
     <div>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Bandeja inteligente</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Bandeja inteligente</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             La IA identifica la cuenta, extrae el pedido y crea la oportunidad. Podés pegar un
             mail abajo o sincronizar la casilla comercial.
           </p>
@@ -95,7 +95,7 @@ export default function BandejaPage() {
 
       <form
         onSubmit={procesar}
-        className="mt-6 space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4"
+        className="mt-6 space-y-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-4"
       >
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -134,7 +134,7 @@ export default function BandejaPage() {
           </p>
         )}
         {ingestMut.isSuccess && ingestMut.data.descartado && (
-          <p className="rounded-md border border-slate-200 bg-slate-100 p-2 text-sm text-slate-600">
+          <p className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 p-2 text-sm text-slate-600 dark:text-slate-300">
             La IA lo clasificó como{" "}
             <span className="font-medium">
               {ingestMut.data.categoria
@@ -151,12 +151,12 @@ export default function BandejaPage() {
         </div>
       </form>
 
-      <h2 className="mt-8 text-lg font-semibold text-slate-900">Mails procesados</h2>
-      {isLoading && <p className="mt-2 text-slate-500">Cargando…</p>}
-      <div className="mt-3 space-y-3">
+      <h2 className="mt-8 text-lg font-semibold text-slate-900 dark:text-slate-100">Mails procesados</h2>
+      {isLoading && <p className="mt-2 text-slate-500 dark:text-slate-400">Cargando…</p>}
+      <div className="mt-3 space-y-4">
         {mails?.map((m) => <MailCard key={m.id} mail={m} />)}
         {mails && mails.length === 0 && (
-          <p className="rounded-lg border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">
+          <p className="rounded-lg border border-dashed border-slate-200 dark:border-slate-800 p-6 text-center text-sm text-slate-400 dark:text-slate-500">
             Todavía no procesaste ningún mail.
           </p>
         )}
@@ -179,26 +179,26 @@ function Descartados() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-slate-700"
+        className="flex items-center gap-1 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700"
       >
         <ChevronRight size={16} className={open ? "rotate-90 transition" : "transition"} />
         Descartados por la IA
-        {data && <span className="text-slate-400">({data.length})</span>}
+        {data && <span className="text-slate-400 dark:text-slate-500">({data.length})</span>}
       </button>
       {open && (
         <div className="mt-3 space-y-2">
-          {isLoading && <p className="text-sm text-slate-400">Cargando…</p>}
+          {isLoading && <p className="text-sm text-slate-400 dark:text-slate-500">Cargando…</p>}
           {data?.map((d) => (
             <div
               key={d.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-sm"
             >
               <div className="min-w-0">
-                <span className="text-slate-700">{d.de ?? "—"}</span>
-                {d.asunto && <span className="ml-2 text-slate-400">· {d.asunto}</span>}
+                <span className="text-slate-700 dark:text-slate-200">{d.de ?? "—"}</span>
+                {d.asunto && <span className="ml-2 text-slate-400 dark:text-slate-500">· {d.asunto}</span>}
               </div>
               <div className="flex items-center gap-2">
-                <Badge className="bg-slate-200 text-slate-600">
+                <Badge className="bg-slate-200 text-slate-600 dark:text-slate-300">
                   {CATEGORIA_LABEL[d.categoria]}
                 </Badge>
                 <button
@@ -214,7 +214,7 @@ function Descartados() {
             </div>
           ))}
           {data && data.length === 0 && (
-            <p className="text-sm text-slate-400">No hay mails descartados.</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500">No hay mails descartados.</p>
           )}
         </div>
       )}
@@ -227,11 +227,11 @@ function MailCard({ mail }: { mail: Mail }) {
   const estado = mail.oportunidad?.estado;
   const [showOriginal, setShowOriginal] = useState(false);
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-4">
+    <article className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-sm dark:shadow-none">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <span className="font-medium text-slate-800">{mail.de}</span>
-          {mail.asunto && <span className="ml-2 text-sm text-slate-500">· {mail.asunto}</span>}
+          <span className="font-medium text-slate-800 dark:text-slate-100">{mail.de}</span>
+          {mail.asunto && <span className="ml-2 text-sm text-slate-500 dark:text-slate-400">· {mail.asunto}</span>}
         </div>
         <div className="flex items-center gap-2">
           {mail.oportunidad?.cliente ? (
@@ -239,7 +239,7 @@ function MailCard({ mail }: { mail: Mail }) {
               {mail.oportunidad.cliente.razon_social}
             </Badge>
           ) : (
-            <Badge className="bg-slate-100 text-slate-500">cliente por identificar</Badge>
+            <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">cliente por identificar</Badge>
           )}
           {estado && <Badge className={ESTADO_META[estado].color}>{ESTADO_META[estado].label}</Badge>}
         </div>
@@ -266,7 +266,7 @@ function MailCard({ mail }: { mail: Mail }) {
             <button
               type="button"
               onClick={() => setShowOriginal((v) => !v)}
-              className="text-xs text-slate-500 hover:underline"
+              className="text-xs text-slate-500 dark:text-slate-400 hover:underline"
             >
               {showOriginal ? "Ocultar original" : "Ver mail original"}
             </button>
@@ -283,7 +283,7 @@ function MailCard({ mail }: { mail: Mail }) {
       </div>
 
       {showOriginal && (
-        <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+        <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-3 text-xs text-slate-700 dark:text-slate-200">
           {mail.cuerpo}
         </pre>
       )}
@@ -313,7 +313,7 @@ function EliminarButton({
       onClick={eliminar}
       disabled={deleteMut.isPending}
       aria-label="Eliminar"
-      className="text-slate-400 hover:text-red-600"
+      className="text-slate-400 dark:text-slate-500 hover:text-red-600"
     >
       <Trash2 size={14} /> {deleteMut.isPending ? "Eliminando…" : "Eliminar"}
     </Button>
@@ -376,7 +376,7 @@ function AttachmentImage({ adjunto }: { adjunto: Adjunto }) {
 
   const isImage = (adjunto.mime_type ?? "").startsWith("image/");
   if (!isImage) {
-    return <span className="text-xs text-slate-500">📎 {adjunto.nombre_archivo}</span>;
+    return <span className="text-xs text-slate-500 dark:text-slate-400">📎 {adjunto.nombre_archivo}</span>;
   }
   return (
     <a href={url ?? undefined} target="_blank" rel="noreferrer" title={adjunto.nombre_archivo}>
@@ -385,10 +385,10 @@ function AttachmentImage({ adjunto }: { adjunto: Adjunto }) {
         <img
           src={url}
           alt={adjunto.nombre_archivo}
-          className="max-h-40 rounded-md border border-slate-200 object-contain"
+          className="max-h-40 rounded-md border border-slate-200 dark:border-slate-800 object-contain"
         />
       ) : (
-        <div className="flex h-24 w-32 items-center justify-center rounded-md border border-slate-200 text-xs text-slate-400">
+        <div className="flex h-24 w-32 items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 text-xs text-slate-400 dark:text-slate-500">
           cargando…
         </div>
       )}
@@ -400,18 +400,18 @@ function Extraccion({ data }: { data: EmailData }) {
   const copy = () => data.borrador_aclaracion && navigator.clipboard.writeText(data.borrador_aclaracion);
   return (
     <div className="mt-3 space-y-2 text-sm">
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-slate-600 sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-slate-600 dark:text-slate-300 sm:grid-cols-4">
         <Field label="Producto" value={data.producto} />
         <Field label="Cantidad" value={data.cantidad} />
         <Field label="Plazo" value={data.plazo} />
         <Field label="Requerimiento" value={data.requerimiento} />
       </dl>
       {data.requiere_aclaracion && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
-          <p className="mb-1 text-xs font-medium text-amber-700">
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-950/30">
+          <p className="mb-1 text-xs font-medium text-amber-700 dark:text-amber-400">
             Requiere aclaración — borrador para el cliente:
           </p>
-          <pre className="whitespace-pre-wrap text-xs text-slate-700">
+          <pre className="whitespace-pre-wrap text-xs text-slate-700 dark:text-slate-200">
             {data.borrador_aclaracion ?? "—"}
           </pre>
           {data.borrador_aclaracion && (
@@ -428,8 +428,8 @@ function Extraccion({ data }: { data: EmailData }) {
 function Field({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
-      <dt className="text-xs text-slate-400">{label}</dt>
-      <dd className="text-slate-700">{value ?? "—"}</dd>
+      <dt className="text-xs text-slate-400 dark:text-slate-500">{label}</dt>
+      <dd className="text-slate-700 dark:text-slate-200">{value ?? "—"}</dd>
     </div>
   );
 }

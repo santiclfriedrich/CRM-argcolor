@@ -38,13 +38,13 @@ export default function OportunidadesPage() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">Oportunidades</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Oportunidades</h1>
         <Button onClick={() => setCreating(true)}>
           <Plus size={16} /> Nueva oportunidad
         </Button>
       </div>
 
-      {isLoading && <p className="mt-4 text-slate-500">Cargando…</p>}
+      {isLoading && <p className="mt-4 text-slate-500 dark:text-slate-400">Cargando…</p>}
       {isError && (
         <p className="mt-4 text-red-600">
           No se pudo cargar. ¿El backend está corriendo en {process.env.NEXT_PUBLIC_API_URL}?
@@ -52,9 +52,9 @@ export default function OportunidadesPage() {
       )}
 
       {data && (
-        <div className="mt-6 overflow-hidden rounded-lg border border-slate-200">
+        <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-500">
+            <thead className="bg-slate-50 dark:bg-slate-800/50 text-left text-slate-500 dark:text-slate-400">
               <tr>
                 <th className="px-4 py-2 font-medium">ID</th>
                 <th className="px-4 py-2 font-medium">Cliente</th>
@@ -69,17 +69,17 @@ export default function OportunidadesPage() {
               {data.map((o) => {
                 const meta = ESTADO_META[o.estado];
                 return (
-                  <tr key={o.id} className="border-t border-slate-100">
-                    <td className="px-4 py-2 font-mono text-slate-500">{o.id}</td>
-                    <td className="px-4 py-2 font-medium text-slate-800">
+                  <tr key={o.id} className="border-t border-slate-100 dark:border-slate-800">
+                    <td className="px-4 py-2 font-mono text-slate-500 dark:text-slate-400">{o.id}</td>
+                    <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">
                       {o.cliente?.razon_social ?? "—"}
                     </td>
-                    <td className="px-4 py-2 text-slate-600">{o.contacto?.nombre ?? "—"}</td>
-                    <td className="px-4 py-2 text-slate-600">{o.vendedor?.nombre ?? "—"}</td>
+                    <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{o.contacto?.nombre ?? "—"}</td>
+                    <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{o.vendedor?.nombre ?? "—"}</td>
                     <td className="px-4 py-2">
                       <Badge className={meta.color}>{meta.label}</Badge>
                     </td>
-                    <td className="px-4 py-2 text-slate-500">
+                    <td className="px-4 py-2 text-slate-500 dark:text-slate-400">
                       {new Date(o.fecha_ultimo_movimiento).toLocaleDateString("es-AR")}
                     </td>
                     <td className="px-4 py-2 text-right">
@@ -97,7 +97,7 @@ export default function OportunidadesPage() {
                         onClick={() => eliminar(o)}
                         disabled={deleteMut.isPending}
                         aria-label="Eliminar"
-                        className="text-slate-400 hover:text-red-600"
+                        className="text-slate-400 dark:text-slate-500 hover:text-red-600"
                       >
                         <Trash2 size={15} />
                       </Button>
@@ -107,7 +107,7 @@ export default function OportunidadesPage() {
               })}
               {data.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
+                  <td colSpan={7} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
                     No hay oportunidades todavía.
                   </td>
                 </tr>

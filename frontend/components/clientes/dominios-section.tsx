@@ -37,7 +37,7 @@ export function DominiosSection({ clienteId, dominios }: Props) {
 
   return (
     <section>
-      <h2 className="mb-3 text-lg font-semibold text-slate-900">Dominios de mail</h2>
+      <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-slate-100">Dominios de mail</h2>
 
       <form onSubmit={agregar} className="mb-3 flex items-center gap-2">
         <Input
@@ -46,12 +46,12 @@ export function DominiosSection({ clienteId, dominios }: Props) {
           placeholder="bencen.com.ar"
           className="max-w-xs"
         />
-        <label className="flex items-center gap-1.5 whitespace-nowrap text-sm text-slate-600">
+        <label className="flex items-center gap-1.5 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300">
           <input
             type="checkbox"
             checked={principal}
             onChange={(e) => setPrincipal(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300"
+            className="h-4 w-4 rounded border-slate-300 dark:border-slate-700"
           />
           Principal
         </label>
@@ -60,10 +60,10 @@ export function DominiosSection({ clienteId, dominios }: Props) {
         </Button>
       </form>
 
-      <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+      <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 dark:border-slate-800">
         {dominios.map((d) => (
           <li key={d.id} className="flex items-center justify-between px-3 py-2 text-sm">
-            <span className="inline-flex items-center gap-2 font-mono text-slate-700">
+            <span className="inline-flex items-center gap-2 font-mono text-slate-700 dark:text-slate-200">
               {d.dominio}
               {d.es_principal_dominio && (
                 <Badge className="bg-amber-100 text-amber-700">
@@ -84,7 +84,7 @@ export function DominiosSection({ clienteId, dominios }: Props) {
           </li>
         ))}
         {dominios.length === 0 && (
-          <li className="px-3 py-6 text-center text-slate-400">Sin dominios asociados.</li>
+          <li className="px-3 py-6 text-center text-slate-400 dark:text-slate-500">Sin dominios asociados.</li>
         )}
       </ul>
     </section>
