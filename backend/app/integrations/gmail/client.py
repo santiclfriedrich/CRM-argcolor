@@ -9,11 +9,13 @@ import base64
 from datetime import datetime, timezone
 from email.message import EmailMessage
 from email.utils import parseaddr
+from html.parser import HTMLParser
 from typing import Any
 
 from google.oauth2 import service_account
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 from app.config import settings
 
@@ -29,24 +31,73 @@ def _decode_body(data: str) -> str:
     return base64.urlsafe_b64decode(data.encode()).decode("utf-8", errors="replace")
 
 
+class _HTMLToText(HTMLParser):
+    """Extrae texto legible de un HTML (stdlib, sin dependencias extra)."""
+
+    _BLOCK = {"p", "div", "tr", "table", "li", "ul", "ol", "h1", "h2", "h3", "br"}
+    _SKIP = {"style", "script", "head", "title"}
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._out: list[str] = []
+        self._skip_depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list) -> None:  # noqa: ANN001
+        if tag in self._SKIP:
+            self._skip_depth += 1
+        elif tag in self._BLOCK:
+            self._out.append("\n")
+
+    def handle_startendtag(self, tag: str, attrs: list) -> None:  # noqa: ANN001
+        if tag in self._BLOCK:
+            self._out.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in self._SKIP and self._skip_depth:
+            self._skip_depth -= 1
+        elif tag in self._BLOCK:
+            self._out.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if self._skip_depth == 0:
+            self._out.append(data)
+
+    def get_text(self) -> str:
+        # Colapsa espacios por línea y comprime líneas en blanco consecutivas.
+        lineas = [" ".join(ln.split()) for ln in "".join(self._out).splitlines()]
+        limpio: list[str] = []
+        for ln in lineas:
+            if ln or (limpio and limpio[-1]):
+                limpio.append(ln)
+        return "\n".join(limpio).strip()
+
+
+def _html_to_text(html: str) -> str:
+    parser = _HTMLToText()
+    parser.feed(html)
+    return parser.get_text()
+
+
 def _extract_text(payload: dict[str, Any]) -> str:
-    """Devuelve el texto plano del mail recorriendo las partes MIME."""
+    """Devuelve el texto del mail recorriendo las partes MIME.
+
+    Prefiere text/plain; si el mail viene solo en HTML, lo convierte a texto
+    legible (evita guardar/mandar a la IA el HTML crudo)."""
     mime = payload.get("mimeType", "")
     body = payload.get("body", {})
     if mime == "text/plain" and body.get("data"):
         return _decode_body(body["data"])
+    if mime == "text/html" and body.get("data"):
+        return _html_to_text(_decode_body(body["data"]))
 
     parts = payload.get("parts") or []
     for part in parts:  # preferimos text/plain directo
         if part.get("mimeType") == "text/plain" and part.get("body", {}).get("data"):
             return _decode_body(part["body"]["data"])
-    for part in parts:  # si no, recursión (multipart anidado)
+    for part in parts:  # si no, recursión (multipart anidado / text/html)
         text = _extract_text(part)
         if text:
             return text
-
-    if mime == "text/html" and body.get("data"):
-        return _decode_body(body["data"])
     return ""
 
 
@@ -92,6 +143,7 @@ def parse_gmail_message(msg: dict[str, Any]) -> dict[str, Any]:
     return {
         "message_id": msg.get("id"),
         "thread_id": msg.get("threadId"),
+        "rfc_message_id": _header(headers, "Message-ID"),
         "de": parseaddr(de_raw or "")[1] or de_raw,
         "para": _header(headers, "To"),
         "asunto": _header(headers, "Subject"),
@@ -196,23 +248,44 @@ class GmailClient:
         return images
 
     def send_message(
-        self, to: str, subject: str, body: str, thread_id: str | None = None
+        self,
+        to: str,
+        subject: str,
+        body: str,
+        thread_id: str | None = None,
+        in_reply_to: str | None = None,
     ) -> dict[str, str | None]:
-        """Envía un mail desde la casilla. Si pasás thread_id, responde en el hilo."""
+        """Envía un mail desde la casilla.
+
+        - ``thread_id``: agrupa dentro del hilo de Gmail (solo si el hilo vive en
+          esta casilla).
+        - ``in_reply_to``: Message-ID (RFC) del mail al que se responde. Setea los
+          headers ``In-Reply-To``/``References`` para que la respuesta se encadene
+          en el cliente del destinatario aunque salga de otra casilla.
+        """
         message = EmailMessage()
         message["To"] = to
         # En modo por-cuenta el From lo pone Gmail (la casilla autenticada).
         if not self._per_user and "@" in (settings.GMAIL_USER or ""):
             message["From"] = settings.GMAIL_USER
         message["Subject"] = subject
+        if in_reply_to:
+            message["In-Reply-To"] = in_reply_to
+            message["References"] = in_reply_to
         message.set_content(body)
 
-        payload: dict[str, Any] = {
-            "raw": base64.urlsafe_b64encode(message.as_bytes()).decode()
-        }
+        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+
+        def _send(body: dict[str, Any]) -> dict[str, str | None]:
+            sent = self._service.users().messages().send(userId=self._user, body=body).execute()
+            return {"message_id": sent.get("id"), "thread_id": sent.get("threadId")}
+
         if thread_id:
-            payload["threadId"] = thread_id
-        sent = (
-            self._service.users().messages().send(userId=self._user, body=payload).execute()
-        )
-        return {"message_id": sent.get("id"), "thread_id": sent.get("threadId")}
+            try:
+                return _send({"raw": raw, "threadId": thread_id})
+            except HttpError as exc:
+                # El hilo no existe en esta casilla (mail viejo o llegó a otra
+                # casilla): reintentamos como mensaje nuevo en vez de fallar.
+                if exc.resp.status != 404:
+                    raise
+        return _send({"raw": raw})

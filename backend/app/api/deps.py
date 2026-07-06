@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import decode_access_token
-from app.db.models.usuarios import Usuario
+from app.db.models.usuarios import RolUsuario, Usuario
 from app.db.session import get_db
 from app.integrations.ai.base import AIProvider
 from app.integrations.ai.factory import get_ai_provider
@@ -44,3 +44,29 @@ def get_current_user(
     if user is None or not user.activo:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario inactivo")
     return user
+
+
+def get_current_admin(current: Usuario = Depends(get_current_user)) -> Usuario:
+    """Igual que get_current_user pero exige rol admin (para el ABM de usuarios)."""
+    if current.rol != RolUsuario.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Necesitás rol admin para esta acción.",
+        )
+    return current
+
+
+def get_user_gmail(current: Usuario = Depends(get_current_user)):  # noqa: ANN201
+    """Cliente de Gmail del usuario logueado (Camino C: su propio refresh token).
+
+    Así las respuestas que el vendedor escribe desde la bandeja salen de *su*
+    casilla. Si el usuario todavía no conectó su Gmail, cae a la casilla global
+    (Camino A). Override en tests con un fake."""
+    from app.core.crypto import decrypt
+    from app.integrations.gmail.client import GmailClient
+
+    if current.gmail_refresh_token:
+        token = decrypt(current.gmail_refresh_token)
+        if token:
+            return GmailClient(refresh_token=token)
+    return GmailClient()

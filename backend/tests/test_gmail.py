@@ -70,12 +70,14 @@ def test_parse_gmail_message_multipart() -> None:
                 {"name": "From", "value": "Juan Perez <juan@bencen.com.ar>"},
                 {"name": "Subject", "value": "Pedido de pigmento"},
                 {"name": "To", "value": "ventas@argentinacolor.com"},
+                {"name": "Message-ID", "value": "<CAF123@mail.gmail.com>"},
             ],
             "parts": [{"mimeType": "text/plain", "body": {"data": _b64("Necesito 100kg")}}],
         },
     }
     parsed = parse_gmail_message(raw)
     assert parsed["message_id"] == "m1"
+    assert parsed["rfc_message_id"] == "<CAF123@mail.gmail.com>"  # header RFC para encadenar
     assert parsed["de"] == "juan@bencen.com.ar"  # se extrae el email del "From"
     assert parsed["asunto"] == "Pedido de pigmento"
     assert "100kg" in parsed["cuerpo"]
@@ -183,6 +185,20 @@ def test_poll_reporta_error_de_cuota(db: Session) -> None:
     assert db.scalar(select(func.count()).select_from(Mail)) == 0
 
 
+def test_poll_ignora_remitente_automatico(db: Session) -> None:
+    noreply = _msg("nr1")
+    noreply["de"] = "no-reply@bencen.com.ar"
+    gmail = FakeGmail({"nr1": noreply})
+    r = poll_once(db, FakeAI(), gmail, query="x")
+    assert r["procesados"] == 0
+    # No creó oportunidad ni mail; quedó registrado para no re-descargarlo.
+    assert db.scalar(select(func.count()).select_from(Oportunidad)) == 0
+    desc = db.scalars(select(MailDescartado)).first()
+    assert desc is not None and desc.categoria == "remitente_ignorado"
+    # Segunda corrida: dedup, no reprocesa.
+    assert poll_once(db, FakeAI(), gmail, query="x")["procesados"] == 0
+
+
 def test_default_vendedor_id_cuando_cliente_no_tiene_vendedor(db: Session) -> None:
     # El cliente BENCEN (seed) no tiene vendedor asignado; debe heredar el de la casilla.
     db.add(Usuario(id=7, email="vendedor7@argentinacolor.com", nombre="Siete", activo=True))
@@ -200,9 +216,9 @@ def test_build_poll_query_combina_dominios_y_etiqueta(db: Session, monkeypatch) 
     monkeypatch.setattr(settings, "GMAIL_LABEL", "crm")
 
     # El fixture siembra el dominio bencen.com.ar. La query debe combinar la
-    # ventana temporal + (etiqueta comodín OR los dominios conocidos).
+    # ventana temporal + exclusión de propios enviados + (etiqueta OR dominios).
     q = build_poll_query(db)
-    assert q == "newer_than:2d (label:crm OR from:bencen.com.ar)"
+    assert q == "newer_than:2d -from:me (label:crm OR from:bencen.com.ar)"
 
     # Al agregar otro cliente con dominio, entra en la query automáticamente.
     db.add(Cliente(id=2, razon_social="OTRO S.A.", activo=True))
@@ -212,6 +228,103 @@ def test_build_poll_query_combina_dominios_y_etiqueta(db: Session, monkeypatch) 
     assert "from:otro.com" in q2  # normalizado a minúsculas
     assert "from:bencen.com.ar" in q2
     assert "label:crm" in q2
+
+
+def test_respuesta_del_hilo_no_duplica_oportunidad(db: Session) -> None:
+    from app.services.ingest import process_incoming_email
+
+    ai = FakeAI()
+    # Primer mail: crea la oportunidad.
+    m1 = process_incoming_email(
+        db, ai, de="juan@bencen.com.ar", asunto="Pedido", cuerpo="Necesito 100kg",
+        gmail_message_id="a1", gmail_thread_id="hilo-1",
+    )
+    assert m1 is not None and m1.oportunidad_id is not None
+    op_id = m1.oportunidad_id
+
+    # Respuesta en el MISMO hilo: se adjunta, NO crea otra oportunidad ni re-analiza.
+    m2 = process_incoming_email(
+        db, ai, de="juan@bencen.com.ar", asunto="Re: Pedido", cuerpo="No hay stock, gracias",
+        gmail_message_id="a2", gmail_thread_id="hilo-1",
+    )
+    assert m2 is not None and m2.oportunidad_id == op_id
+    assert m2.datos_extraidos_ia is None  # no se re-analiza (no gasta IA ni acusa)
+    assert db.scalar(select(func.count()).select_from(Oportunidad)) == 1
+    assert db.scalar(select(func.count()).select_from(Mail)) == 2
+
+
+class FakeSender:
+    """Cliente de Gmail de envío que solo registra la última llamada."""
+
+    def __init__(self) -> None:
+        self.enviado: dict[str, Any] | None = None
+
+    def send_message(self, to, subject, body, thread_id=None, in_reply_to=None):  # noqa: ANN001
+        self.enviado = {
+            "to": to,
+            "subject": subject,
+            "body": body,
+            "thread_id": thread_id,
+            "in_reply_to": in_reply_to,
+        }
+        return {"message_id": "out-1", "thread_id": thread_id or "hilo-nuevo"}
+
+
+def test_send_respuesta_registra_saliente_en_el_hilo(db: Session) -> None:
+    from app.db.models.mails import DireccionMail
+    from app.services.acuse import send_respuesta
+
+    entrante = Mail(
+        gmail_thread_id="hilo-1",
+        gmail_message_id="in-1",
+        rfc_message_id="<abc@mail.gmail.com>",
+        direccion=DireccionMail.entrante,
+        de="juan@bencen.com.ar",
+        para="ventas@argentinacolor.com",
+        asunto="Pedido",
+        cuerpo="Necesito 100kg",
+    )
+    db.add(entrante)
+    db.commit()
+
+    sender = FakeSender()
+    salida = send_respuesta(
+        db, sender, entrante, "Te confirmo stock, saludos.",
+        remitente="vendedor@argentinacolor.com",
+    )
+
+    # Se envió al cliente, dentro del mismo hilo, con Re: del asunto.
+    assert sender.enviado["to"] == "juan@bencen.com.ar"
+    assert sender.enviado["thread_id"] == "hilo-1"
+    assert sender.enviado["subject"] == "Re: Pedido"
+    # Se encadena vía In-Reply-To con el Message-ID del entrante.
+    assert sender.enviado["in_reply_to"] == "<abc@mail.gmail.com>"
+    # Quedó registrado como saliente, con el vendedor como remitente.
+    assert salida.direccion == DireccionMail.saliente
+    assert salida.de == "vendedor@argentinacolor.com"
+    assert salida.para == "juan@bencen.com.ar"
+    assert salida.gmail_thread_id == "hilo-1"
+
+
+def test_parse_convierte_html_a_texto_legible() -> None:
+    html = (
+        "<html><head><style>.x{color:red}</style><title>T</title></head><body>"
+        "<p>Estimados,</p><p>Necesito cotizar 5 <strong>cartuchos HP 964</strong>.</p>"
+        "Gracias<br>Simon</body></html>"
+    )
+    raw = {
+        "id": "h1",
+        "payload": {
+            "mimeType": "text/html",
+            "headers": [{"name": "From", "value": "cliente@itasa.com.ar"}],
+            "body": {"data": _b64(html)},
+        },
+    }
+    cuerpo = parse_gmail_message(raw)["cuerpo"]
+    assert "<" not in cuerpo and ">" not in cuerpo  # sin tags
+    assert "color:red" not in cuerpo  # se ignoró el <style>
+    assert "cartuchos HP 964" in cuerpo
+    assert "Estimados," in cuerpo
 
 
 def test_parse_extrae_adjunto_de_imagen() -> None:

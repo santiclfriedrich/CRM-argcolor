@@ -1,11 +1,14 @@
-"""CRUD endpoints for usuarios."""
+"""ABM de usuarios. Listar/ver: cualquier usuario logueado (para selects de
+vendedor). Alta/modificación/baja: solo admin."""
 
-from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_admin, get_current_user
 from app.core.exceptions import NotFoundError
+from app.db.models.clientes import Cliente
+from app.db.models.oportunidades import Oportunidad
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.schemas.usuario import UsuarioCreate, UsuarioRead, UsuarioUpdate
@@ -22,8 +25,15 @@ def list_usuarios(
 
 @router.post("", response_model=UsuarioRead, status_code=201)
 def create_usuario(
-    body: UsuarioCreate, db: Session = Depends(get_db), _: Usuario = Depends(get_current_user)
+    body: UsuarioCreate,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_admin),
 ) -> Usuario:
+    if db.scalar(select(Usuario).where(Usuario.email == body.email)):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ya existe un usuario con ese email.",
+        )
     usuario = Usuario(**body.model_dump())
     db.add(usuario)
     db.commit()
@@ -46,13 +56,53 @@ def update_usuario(
     usuario_id: int,
     body: UsuarioUpdate,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    admin: Usuario = Depends(get_current_admin),
 ) -> Usuario:
     usuario = db.get(Usuario, usuario_id)
     if usuario is None:
         raise NotFoundError("Usuario no encontrado")
-    for field, value in body.model_dump(exclude_unset=True).items():
+    cambios = body.model_dump(exclude_unset=True)
+    # Evitar que un admin se bloquee a sí mismo (desactivarse o sacarse el rol).
+    if usuario.id == admin.id:
+        if cambios.get("activo") is False:
+            raise HTTPException(status_code=400, detail="No podés desactivar tu propia cuenta.")
+        if "rol" in cambios and cambios["rol"] != usuario.rol:
+            raise HTTPException(status_code=400, detail="No podés cambiar tu propio rol.")
+    for field, value in cambios.items():
         setattr(usuario, field, value)
     db.commit()
     db.refresh(usuario)
     return usuario
+
+
+@router.delete("/{usuario_id}", status_code=204)
+def delete_usuario(
+    usuario_id: int,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(get_current_admin),
+) -> Response:
+    """Elimina un usuario solo si no tiene historial (oportunidades/clientes).
+    Si tiene, conviene desactivarlo (activo=false) para no romper referencias."""
+    usuario = db.get(Usuario, usuario_id)
+    if usuario is None:
+        raise NotFoundError("Usuario no encontrado")
+    if usuario.id == admin.id:
+        raise HTTPException(status_code=400, detail="No podés eliminar tu propia cuenta.")
+
+    con_oportunidades = db.scalar(
+        select(func.count()).select_from(Oportunidad).where(Oportunidad.vendedor_id == usuario_id)
+    )
+    con_clientes = db.scalar(
+        select(func.count()).select_from(Cliente).where(Cliente.vendedor_asignado_id == usuario_id)
+    )
+    if con_oportunidades or con_clientes:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "El usuario tiene oportunidades o clientes asignados. "
+                "Desactivalo en vez de eliminarlo."
+            ),
+        )
+    db.delete(usuario)
+    db.commit()
+    return Response(status_code=204)

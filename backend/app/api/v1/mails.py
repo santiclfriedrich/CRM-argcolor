@@ -4,10 +4,10 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import get_ai, get_current_user, get_gmail
+from app.api.deps import get_ai, get_current_user, get_gmail, get_user_gmail
 from app.core.exceptions import NotFoundError
 from app.db.models.adjuntos import Adjunto
 from app.db.models.mails import DireccionMail, Mail
@@ -16,8 +16,14 @@ from app.db.models.oportunidades import Oportunidad
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.integrations.ai.base import AIProvider
-from app.schemas.mail import DescartadoRead, IngestEmailRequest, IngestResult, MailRead
-from app.services.acuse import send_aclaracion, send_acuse
+from app.schemas.mail import (
+    DescartadoRead,
+    IngestEmailRequest,
+    IngestResult,
+    MailRead,
+    ResponderRequest,
+)
+from app.services.acuse import send_aclaracion, send_acuse, send_respuesta
 from app.services.gmail_poller import poll_all_mailboxes
 from app.services.ingest import process_incoming_email
 
@@ -137,7 +143,7 @@ def list_descartados(
     """Mails que la IA clasificó como no comerciales (no generaron oportunidad)."""
     query = (
         select(MailDescartado)
-        .where(MailDescartado.categoria != "eliminado_manual")
+        .where(MailDescartado.categoria.not_in(["eliminado_manual", "remitente_ignorado"]))
         .order_by(MailDescartado.created_at.desc())
         .limit(100)
     )
@@ -158,6 +164,56 @@ def reprocesar_descartado(
     db.delete(descartado)
     db.commit()
     return Response(status_code=204)
+
+
+@router.get("/{mail_id}/hilo", response_model=list[MailRead])
+def get_hilo(
+    mail_id: int,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> list[Mail]:
+    """Toda la conversación del mail: entrantes y salientes del mismo hilo /
+    oportunidad, en orden cronológico. Alimenta el chat de la bandeja."""
+    mail = _get_loaded(db, mail_id)
+    condiciones = []
+    if mail.oportunidad_id is not None:
+        condiciones.append(Mail.oportunidad_id == mail.oportunidad_id)
+    if mail.gmail_thread_id:
+        condiciones.append(Mail.gmail_thread_id == mail.gmail_thread_id)
+    if not condiciones:
+        return [mail]
+    query = (
+        select(Mail)
+        .where(or_(*condiciones))
+        .options(*_RELATIONS)
+        .order_by(Mail.fecha.asc().nullslast(), Mail.id.asc())
+    )
+    return list(db.scalars(query))
+
+
+@router.post("/{mail_id}/responder", response_model=MailRead, status_code=201)
+def responder_mail(
+    mail_id: int,
+    body: ResponderRequest,
+    db: Session = Depends(get_db),
+    gmail=Depends(get_user_gmail),  # noqa: ANN001 - GmailClient del usuario logueado
+    current_user: Usuario = Depends(get_current_user),
+) -> Mail:
+    """Responde al cliente con texto libre, dentro del mismo hilo, desde la
+    casilla del vendedor logueado (chat de la bandeja)."""
+    if not body.cuerpo or not body.cuerpo.strip():
+        raise HTTPException(status_code=400, detail="La respuesta no puede estar vacía.")
+    mail = _get_loaded(db, mail_id)
+    try:
+        salida = send_respuesta(
+            db, gmail, mail, body.cuerpo, remitente=current_user.email, asunto=body.asunto
+        )
+    except Exception as exc:  # noqa: BLE001 - frontera con Gmail
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"No se pudo enviar la respuesta: {exc}",
+        ) from exc
+    return _get_loaded(db, salida.id)
 
 
 @router.get("/{mail_id}", response_model=MailRead)

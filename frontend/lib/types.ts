@@ -79,7 +79,20 @@ export interface Usuario {
   rol: RolUsuario;
   activo: boolean;
   created_at: string;
+  gmail_conectado?: boolean;
 }
+
+export type UsuarioCreate = {
+  email: string;
+  nombre: string;
+  rol?: RolUsuario;
+  activo?: boolean;
+};
+export type UsuarioUpdate = {
+  nombre?: string;
+  rol?: RolUsuario;
+  activo?: boolean;
+};
 
 // ---- Oportunidades ----
 export type EstadoOportunidad =
@@ -196,6 +209,7 @@ export interface EmailData {
 interface MailOportunidadMini {
   id: number;
   estado: EstadoOportunidad;
+  vendedor_id: number | null;
   cliente: ClienteMini | null;
 }
 

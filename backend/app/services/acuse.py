@@ -28,8 +28,35 @@ _DEFAULT_CUERPO = (
 
 class GmailSender(Protocol):
     def send_message(
-        self, to: str, subject: str, body: str, thread_id: str | None = None
+        self,
+        to: str,
+        subject: str,
+        body: str,
+        thread_id: str | None = None,
+        in_reply_to: str | None = None,
     ) -> dict[str, str | None]: ...
+
+
+def _rfc_message_id(db: Session, gmail: GmailSender, mail: Mail) -> str | None:
+    """Message-ID (RFC) del mail entrante, para encadenar la respuesta.
+
+    Si no está guardado (mail viejo, previo a esta feature) intenta traerlo de
+    Gmail y lo backfillea. Si el hilo no está en esta casilla, devuelve None y la
+    respuesta sale igual (sin encadenar)."""
+    if mail.rfc_message_id:
+        return mail.rfc_message_id
+    getter = getattr(gmail, "get_message", None)
+    if getter and mail.gmail_message_id:
+        try:
+            original = getter(mail.gmail_message_id)
+        except Exception:  # noqa: BLE001 - el mensaje puede no estar en esta casilla
+            return None
+        rfc = original.get("rfc_message_id")
+        if rfc:
+            mail.rfc_message_id = rfc  # backfill para próximas respuestas
+            db.commit()
+        return rfc
+    return None
 
 
 def _first_name(db: Session, contacto_id: int | None) -> str:
@@ -57,20 +84,36 @@ def build_acuse_email(mail: Mail, db: Session) -> dict[str, str]:
     return {"to": mail.de or "", "subject": asunto, "body": cuerpo}
 
 
-def _send_and_record(db: Session, gmail: GmailSender, mail: Mail, subject: str, body: str) -> Mail:
-    """Envía un mail al remitente del entrante y registra el saliente."""
+def _send_and_record(
+    db: Session,
+    gmail: GmailSender,
+    mail: Mail,
+    subject: str,
+    body: str,
+    remitente: str | None = None,
+) -> Mail:
+    """Envía un mail al remitente del entrante y registra el saliente.
+
+    ``remitente`` es el email que queda como "De" del saliente (el vendedor que
+    responde). Si no se pasa, cae a la casilla global (``GMAIL_USER``).
+    """
     if not mail.de:
         raise ValueError("El mail entrante no tiene remitente; no se puede responder.")
 
+    in_reply_to = _rfc_message_id(db, gmail, mail)
     sent = gmail.send_message(
-        to=mail.de, subject=subject, body=body, thread_id=mail.gmail_thread_id
+        to=mail.de,
+        subject=subject,
+        body=body,
+        thread_id=mail.gmail_thread_id,
+        in_reply_to=in_reply_to,
     )
     salida = Mail(
         gmail_message_id=sent.get("message_id"),
         gmail_thread_id=sent.get("thread_id") or mail.gmail_thread_id,
         oportunidad_id=mail.oportunidad_id,
         direccion=DireccionMail.saliente,
-        de=settings.GMAIL_USER,
+        de=remitente or settings.GMAIL_USER,
         para=mail.de,
         asunto=subject,
         cuerpo=body,
@@ -96,3 +139,21 @@ def send_aclaracion(db: Session, gmail: GmailSender, mail: Mail) -> Mail:
         raise ValueError("Este mail no tiene un borrador de aclaración para enviar.")
     asunto = f"Re: {mail.asunto}" if mail.asunto else "Tu consulta — ARG COLOR"
     return _send_and_record(db, gmail, mail, asunto, borrador)
+
+
+def send_respuesta(
+    db: Session,
+    gmail: GmailSender,
+    mail: Mail,
+    cuerpo: str,
+    remitente: str | None = None,
+    asunto: str | None = None,
+) -> Mail:
+    """Envía una respuesta de texto libre al cliente, dentro del mismo hilo.
+
+    La escribe el vendedor desde la bandeja (chat). Si no se pasa ``asunto``,
+    responde con ``Re: <asunto original>``."""
+    if not cuerpo or not cuerpo.strip():
+        raise ValueError("La respuesta no puede estar vacía.")
+    subject = asunto or (f"Re: {mail.asunto}" if mail.asunto else "Tu consulta — ARG COLOR")
+    return _send_and_record(db, gmail, mail, subject, cuerpo, remitente=remitente)

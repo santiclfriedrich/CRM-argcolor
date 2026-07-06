@@ -18,6 +18,13 @@ class IngestEmailRequest(BaseModel):
     fecha: datetime | None = None
 
 
+class ResponderRequest(BaseModel):
+    """Respuesta de texto libre que el vendedor escribe desde la bandeja."""
+
+    cuerpo: str
+    asunto: str | None = None
+
+
 class ClienteMini(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -30,6 +37,7 @@ class OportunidadMini(BaseModel):
 
     id: int
     estado: str
+    vendedor_id: int | None = None
     cliente: ClienteMini | None = None
 
 

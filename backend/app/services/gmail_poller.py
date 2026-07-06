@@ -5,6 +5,7 @@ list_message_ids/get_message) para poder testearlo con un fake.
 """
 
 import logging
+import re
 from typing import Any, Protocol
 
 from sqlalchemy import select
@@ -20,6 +21,13 @@ from app.services.ingest import process_incoming_email
 
 logger = logging.getLogger(__name__)
 
+# Remitentes automáticos que no vale la pena procesar (ni gastar IA en clasificar).
+_REMITENTE_IGNORADO = re.compile(
+    r"no[-_.]?reply|noreply|no[-_.]?responder|donotreply|do-not-reply|"
+    r"notificac|notification|mailer-daemon|postmaster|bounce",
+    re.IGNORECASE,
+)
+
 
 class GmailLike(Protocol):
     def list_message_ids(self, query: str, max_results: int = 25) -> list[str]: ...
@@ -31,7 +39,8 @@ def build_poll_query(db: Session) -> str:
 
     Lee automáticamente los mails de dominios ya cargados en el CRM y deja la
     etiqueta como red de seguridad para prospectos nuevos todavía sin cargar.
-    Resultado: ``newer_than:2d (label:crm OR from:cli1.com OR from:cli2.com)``.
+    Excluye los propios enviados con ``-from:me`` (no interesan como pedidos).
+    Resultado: ``newer_than:2d -from:me (label:crm OR from:cli1.com ...)``.
     """
     base = settings.GMAIL_QUERY.strip()
     label = settings.GMAIL_LABEL.strip()
@@ -44,15 +53,18 @@ def build_poll_query(db: Session) -> str:
         }
     )
 
+    # -from:me: no procesar los mails que envió el propio dueño de la casilla.
+    prefijo = f"{base} -from:me".strip() if base else "-from:me"
+
     clauses: list[str] = []
     if label:
         clauses.append(f"label:{label}")
     clauses.extend(f"from:{dom}" for dom in dominios)
 
     if not clauses:
-        return base
+        return prefijo
     selector = " OR ".join(clauses)
-    return f"{base} ({selector})" if base else f"({selector})"
+    return f"{prefijo} ({selector})"
 
 
 def _humanize_error(exc: Exception) -> str:
@@ -101,6 +113,19 @@ def poll_once(
     for mid in nuevos:
         try:
             msg = gmail.get_message(mid)
+            # Filtro barato ANTES de la IA: remitentes automáticos (no-reply, etc.).
+            # Se registra como descartado para no re-descargarlo en cada ciclo.
+            if _REMITENTE_IGNORADO.search(msg.get("de") or ""):
+                db.add(
+                    MailDescartado(
+                        gmail_message_id=msg.get("message_id"),
+                        categoria="remitente_ignorado",
+                        de=msg.get("de"),
+                        asunto=msg.get("asunto"),
+                    )
+                )
+                db.commit()
+                continue
             mail = process_incoming_email(
                 db,
                 ai,
@@ -111,6 +136,7 @@ def poll_once(
                 fecha=msg.get("fecha"),
                 gmail_message_id=msg.get("message_id"),
                 gmail_thread_id=msg.get("thread_id"),
+                rfc_message_id=msg.get("rfc_message_id"),
                 images=msg.get("images"),
                 default_vendedor_id=default_vendedor_id,
             )
@@ -202,6 +228,9 @@ def _maybe_acuse(db: Session, gmail: object, mail: Mail) -> None:
     - requiere aclaración -> aclaración al cliente (si aclaracion_automatica)
     """
     if not mail.de:
+        return
+    # Respuesta dentro de un hilo existente (sin datos de IA): no lleva acuse.
+    if not mail.datos_extraidos_ia:
         return
     from app.services.acuse import send_aclaracion, send_acuse
     from app.services.automatizacion import get_automatizacion

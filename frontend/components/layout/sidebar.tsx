@@ -8,6 +8,7 @@ import {
   ClipboardList,
   FileText,
   Settings,
+  UsersRound,
   LogOut,
 } from "lucide-react";
 import { signIn, signOut, useSession } from "next-auth/react";
@@ -34,6 +35,10 @@ export function Sidebar() {
   const gmailConectado = Boolean(
     (session?.usuario as { gmail_conectado?: boolean } | undefined)?.gmail_conectado
   );
+  const esAdmin = (session?.usuario as { rol?: string } | undefined)?.rol === "admin";
+  const nav = esAdmin
+    ? [...NAV, { href: "/usuarios", label: "Usuarios", icon: UsersRound }]
+    : NAV;
 
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
@@ -43,7 +48,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {nav.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link

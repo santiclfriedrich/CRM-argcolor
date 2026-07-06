@@ -46,8 +46,16 @@ class FakeGmail:
     def __init__(self) -> None:
         self.sent: list[dict] = []
 
-    def send_message(self, to, subject, body, thread_id=None):  # noqa: ANN001
-        self.sent.append({"to": to, "subject": subject, "body": body, "thread_id": thread_id})
+    def send_message(self, to, subject, body, thread_id=None, in_reply_to=None):  # noqa: ANN001
+        self.sent.append(
+            {
+                "to": to,
+                "subject": subject,
+                "body": body,
+                "thread_id": thread_id,
+                "in_reply_to": in_reply_to,
+            }
+        )
         return {"message_id": "sent-1", "thread_id": thread_id or "t-new"}
 
 

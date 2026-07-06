@@ -1,6 +1,15 @@
 "use client";
 
-import { ChevronRight, Copy, RefreshCw, Send, Sparkles, Trash2 } from "lucide-react";
+import {
+  ChevronRight,
+  Copy,
+  MessageSquare,
+  RefreshCw,
+  Send,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 
@@ -12,9 +21,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import {
   useDescartados,
+  useHilo,
   useMails,
   useIngestEmail,
   useReprocesarDescartado,
+  useResponder,
   useSendAclaracion,
   useSendAcuse,
   useSyncGmail,
@@ -34,6 +45,13 @@ export default function BandejaPage() {
   const { data: mails, isLoading } = useMails();
   const ingestMut = useIngestEmail();
   const syncMut = useSyncGmail();
+
+  const { data: session } = useSession();
+  const currentUserId = Number(session?.usuario?.id) || null;
+  const [filtro, setFiltro] = useState<"todos" | "personal">("todos");
+  const visibles = (mails ?? []).filter(
+    (m) => filtro === "todos" || m.oportunidad?.vendedor_id === currentUserId
+  );
 
   const [de, setDe] = useState("");
   const [asunto, setAsunto] = useState("");
@@ -151,13 +169,32 @@ export default function BandejaPage() {
         </div>
       </form>
 
-      <h2 className="mt-8 text-lg font-semibold text-slate-900 dark:text-slate-100">Mails procesados</h2>
+      <div className="mt-8 flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Mails procesados</h2>
+        <div className="flex rounded-md border border-slate-200 p-0.5 text-sm dark:border-slate-800">
+          {(["todos", "personal"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFiltro(f)}
+              className={`rounded px-3 py-1 font-medium transition ${
+                filtro === f
+                  ? "bg-brand text-white"
+                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              }`}
+            >
+              {f === "todos" ? "Todos" : "Personal"}
+            </button>
+          ))}
+        </div>
+      </div>
       {isLoading && <p className="mt-2 text-slate-500 dark:text-slate-400">Cargando…</p>}
       <div className="mt-3 space-y-4">
-        {mails?.map((m) => <MailCard key={m.id} mail={m} />)}
-        {mails && mails.length === 0 && (
+        {visibles.map((m) => <MailCard key={m.id} mail={m} />)}
+        {!isLoading && visibles.length === 0 && (
           <p className="rounded-lg border border-dashed border-slate-200 dark:border-slate-800 p-6 text-center text-sm text-slate-400 dark:text-slate-500">
-            Todavía no procesaste ningún mail.
+            {filtro === "personal"
+              ? "No tenés mails propios todavía."
+              : "Todavía no procesaste ningún mail."}
           </p>
         )}
       </div>
@@ -226,6 +263,7 @@ function MailCard({ mail }: { mail: Mail }) {
   const d = mail.datos_extraidos_ia;
   const estado = mail.oportunidad?.estado;
   const [showOriginal, setShowOriginal] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   return (
     <article className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-sm dark:shadow-none">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -274,6 +312,15 @@ function MailCard({ mail }: { mail: Mail }) {
         </div>
         <div className="flex items-center gap-2">
           {mail.de && (
+            <Button
+              size="sm"
+              variant={showChat ? "secondary" : "outline"}
+              onClick={() => setShowChat((v) => !v)}
+            >
+              <MessageSquare size={14} /> Responder
+            </Button>
+          )}
+          {mail.de && (
             <ResponderButton mailId={mail.id} requiereAclaracion={Boolean(d?.requiere_aclaracion)} />
           )}
           {mail.oportunidad_id && (
@@ -287,7 +334,102 @@ function MailCard({ mail }: { mail: Mail }) {
           {mail.cuerpo}
         </pre>
       )}
+
+      {showChat && mail.de && <ConversacionPanel mail={mail} />}
     </article>
+  );
+}
+
+// Panel tipo chat: muestra el hilo completo (entrantes + salientes) y permite
+// responder al cliente con texto libre sin salir del CRM.
+function ConversacionPanel({ mail }: { mail: Mail }) {
+  const { data: hilo, isLoading } = useHilo(mail.id, true);
+  const responder = useResponder(mail.id);
+  const [texto, setTexto] = useState("");
+
+  const enviar = (e: FormEvent) => {
+    e.preventDefault();
+    const cuerpo = texto.trim();
+    if (!cuerpo) return;
+    responder.mutate(cuerpo, { onSuccess: () => setTexto("") });
+  };
+
+  // Si el backend todavía no devolvió el hilo, mostramos al menos el entrante.
+  const mensajes = hilo && hilo.length > 0 ? hilo : [mail];
+
+  return (
+    <div className="mt-4 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-3">
+      {isLoading ? (
+        <p className="text-xs text-slate-400 dark:text-slate-500">Cargando conversación…</p>
+      ) : (
+        <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
+          {mensajes.map((m) => (
+            <Burbuja key={m.id} mail={m} />
+          ))}
+        </div>
+      )}
+
+      <form onSubmit={enviar} className="mt-3 space-y-2">
+        <Textarea
+          rows={3}
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          placeholder={`Escribí tu respuesta para ${mail.de}…`}
+        />
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-slate-400 dark:text-slate-500">
+            Se envía desde tu casilla, dentro del mismo hilo.
+          </span>
+          <div className="flex items-center gap-2">
+            {responder.isError && (
+              <span className="text-xs text-red-600">
+                {(responder.error as { response?: { data?: { detail?: string } } })?.response?.data
+                  ?.detail ?? "No se pudo enviar."}
+              </span>
+            )}
+            {responder.isSuccess && <span className="text-xs text-green-600">Enviado ✓</span>}
+            <Button type="submit" size="sm" disabled={responder.isPending || !texto.trim()}>
+              <Send size={14} /> {responder.isPending ? "Enviando…" : "Enviar"}
+            </Button>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// Una burbuja del chat. Salientes a la derecha (marca), entrantes a la izquierda.
+function Burbuja({ mail }: { mail: Mail }) {
+  const esSaliente = mail.direccion === "saliente";
+  const fecha = mail.fecha ?? mail.created_at;
+  const cuando = fecha
+    ? new Date(fecha).toLocaleString("es-AR", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
+  return (
+    <div className={`flex ${esSaliente ? "justify-end" : "justify-start"}`}>
+      <div
+        className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+          esSaliente
+            ? "bg-brand text-white"
+            : "border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+        }`}
+      >
+        <div
+          className={`mb-0.5 flex items-center gap-2 text-[11px] ${
+            esSaliente ? "text-white/70" : "text-slate-400 dark:text-slate-500"
+          }`}
+        >
+          <span className="truncate">{esSaliente ? mail.de ?? "Vos" : mail.de}</span>
+          {cuando && <span>· {cuando}</span>}
+        </div>
+        <p className="whitespace-pre-wrap break-words">{mail.cuerpo}</p>
+      </div>
+    </div>
   );
 }
 

@@ -62,6 +62,7 @@ def process_incoming_email(
     fecha: datetime | None = None,
     gmail_message_id: str | None = None,
     gmail_thread_id: str | None = None,
+    rfc_message_id: str | None = None,
     images: list[dict] | None = None,
     default_vendedor_id: int | None = None,
 ) -> Mail | None:
@@ -77,6 +78,50 @@ def process_incoming_email(
     `default_vendedor_id`: dueño de la casilla de la que vino el mail (Camino B);
     se usa como vendedor si el cliente no tiene uno asignado.
     """
+    now = datetime.now(timezone.utc)
+
+    # Thread-aware (Slice 5): si el hilo ya tiene una oportunidad, adjuntamos el
+    # mail a ELLA en vez de crear otra. Evita duplicar cuando el cliente responde
+    # o cuando el propio vendedor contesta dentro del mismo hilo. No llama a la IA
+    # ni manda acuse (queda como parte de la conversación en curso).
+    if gmail_thread_id:
+        op_existente_id = db.scalar(
+            select(Mail.oportunidad_id)
+            .where(
+                Mail.gmail_thread_id == gmail_thread_id,
+                Mail.oportunidad_id.is_not(None),
+            )
+            .order_by(Mail.id.desc())
+        )
+        if op_existente_id is not None:
+            op = db.get(Oportunidad, op_existente_id)
+            if op is not None:
+                op.fecha_ultimo_movimiento = now
+            mail = Mail(
+                gmail_message_id=gmail_message_id,
+                gmail_thread_id=gmail_thread_id,
+                rfc_message_id=rfc_message_id,
+                oportunidad_id=op_existente_id,
+                direccion=DireccionMail.entrante,
+                de=de,
+                para=para,
+                asunto=asunto,
+                cuerpo=cuerpo,
+                fecha=fecha or now,
+                datos_extraidos_ia=None,  # respuesta del hilo: no se re-analiza
+                adjuntos=(
+                    {"items": [{"nombre": i["nombre"], "mime": i["mime"]} for i in images]}
+                    if images
+                    else None
+                ),
+            )
+            db.add(mail)
+            db.flush()
+            save_attachments(db, mail, images or [])
+            db.commit()
+            db.refresh(mail)
+            return mail
+
     image_parts = [ImagePart(data=img["data"], mime_type=img["mime"]) for img in (images or [])]
     extracted: EmailData = ai.extract_email_data(cuerpo, image_parts or None)
 
@@ -110,7 +155,6 @@ def process_incoming_email(
         if cliente and cliente.vendedor_asignado_id:
             vendedor_id = cliente.vendedor_asignado_id
 
-    now = datetime.now(timezone.utc)
     oportunidad = Oportunidad(
         cliente_id=cliente_id,
         contacto_cliente_id=contacto_id,
@@ -125,6 +169,7 @@ def process_incoming_email(
     mail = Mail(
         gmail_message_id=gmail_message_id,
         gmail_thread_id=gmail_thread_id,
+        rfc_message_id=rfc_message_id,
         oportunidad_id=oportunidad.id,
         direccion=DireccionMail.entrante,
         de=de,

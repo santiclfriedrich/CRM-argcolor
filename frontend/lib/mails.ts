@@ -15,6 +15,7 @@ const BASE = "/api/v1/mails";
 export const mailKeys = {
   all: ["mails"] as const,
   descartados: ["mails", "descartados"] as const,
+  hilo: (mailId: number) => ["mails", "hilo", mailId] as const,
 };
 
 export function useMails() {
@@ -63,6 +64,28 @@ export function useSendAclaracion() {
     mutationFn: async (mailId: number) =>
       (await api.post<Mail>(`${BASE}/${mailId}/aclaracion`)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: mailKeys.all }),
+  });
+}
+
+// Trae toda la conversación (entrantes + salientes) del hilo de un mail.
+export function useHilo(mailId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: mailKeys.hilo(mailId),
+    queryFn: async () => (await api.get<Mail[]>(`${BASE}/${mailId}/hilo`)).data,
+    enabled,
+  });
+}
+
+// Responde al cliente con texto libre, dentro del mismo hilo, desde tu casilla.
+export function useResponder(mailId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (cuerpo: string) =>
+      (await api.post<Mail>(`${BASE}/${mailId}/responder`, { cuerpo })).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: mailKeys.hilo(mailId) });
+      qc.invalidateQueries({ queryKey: mailKeys.all });
+    },
   });
 }
 
