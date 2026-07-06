@@ -16,6 +16,7 @@ from app.db.models.contactos_cliente import ContactoCliente
 from app.db.models.dominios_cliente import DominioCliente
 from app.db.models.mails import Mail
 from app.db.models.mails_descartados import MailDescartado
+from app.db.models.notificaciones import Notificacion
 from app.db.models.oportunidades import Oportunidad
 from app.db.models.usuarios import Usuario
 from app.integrations.ai.base import AIProvider, EmailData
@@ -96,6 +97,7 @@ def db() -> Iterator[Session]:
             Oportunidad.__table__,
             Mail.__table__,
             MailDescartado.__table__,
+            Notificacion.__table__,
             Adjunto.__table__,
         ],
     )
@@ -304,6 +306,78 @@ def test_send_respuesta_registra_saliente_en_el_hilo(db: Session) -> None:
     assert salida.de == "vendedor@argentinacolor.com"
     assert salida.para == "juan@bencen.com.ar"
     assert salida.gmail_thread_id == "hilo-1"
+
+
+class FakeAIAclaracion(AIProvider):
+    """Considera el pedido completo solo cuando aparece una cantidad ('kg')."""
+
+    def extract_email_data(self, email_text, images=None) -> EmailData:  # noqa: ANN001
+        completo = "kg" in email_text.lower()
+        return EmailData(producto="Pigmento", requiere_aclaracion=not completo)
+
+    def draft_quote(self, compras_response):  # noqa: ANN001
+        raise NotImplementedError
+
+    def summarize_thread(self, messages):  # noqa: ANN001
+        return ""
+
+
+def test_respuesta_resuelve_aclaracion_y_notifica(db: Session) -> None:
+    from app.db.models.oportunidades import EstadoOportunidad
+    from app.services.ingest import process_incoming_email
+
+    db.add(Usuario(id=7, email="vendedor7@argentinacolor.com", nombre="Siete", activo=True))
+    db.commit()
+    ai = FakeAIAclaracion()
+
+    # Primer mail sin cantidad -> queda en requiere_aclaracion, con vendedor 7.
+    m1 = process_incoming_email(
+        db, ai, de="juan@bencen.com.ar", asunto="Pedido", cuerpo="Necesito pigmento rojo",
+        gmail_message_id="a1", gmail_thread_id="hilo-1", default_vendedor_id=7,
+    )
+    assert m1 is not None
+    op = db.get(Oportunidad, m1.oportunidad_id)
+    assert op.estado == EstadoOportunidad.requiere_aclaracion
+    assert op.vendedor_id == 7
+
+    # El cliente responde con la cantidad: se re-evalúa y se resuelve.
+    m2 = process_incoming_email(
+        db, ai, de="juan@bencen.com.ar", asunto="Re: Pedido", cuerpo="Son 100 kg",
+        gmail_message_id="a2", gmail_thread_id="hilo-1",
+    )
+    db.refresh(op)
+    assert op.estado == EstadoOportunidad.nueva  # volvió a estar lista
+    assert m2.datos_extraidos_ia is not None  # guardó la extracción del hilo
+    assert db.scalar(select(func.count()).select_from(Oportunidad)) == 1  # no duplicó
+
+    # Se le creó una notificación al vendedor.
+    noti = db.scalars(select(Notificacion)).all()
+    assert len(noti) == 1
+    assert noti[0].usuario_id == 7 and not noti[0].leida
+
+
+def test_respuesta_sin_completar_sigue_en_aclaracion_sin_notificar(db: Session) -> None:
+    from app.db.models.oportunidades import EstadoOportunidad
+    from app.services.ingest import process_incoming_email
+
+    db.add(Usuario(id=8, email="v8@argentinacolor.com", nombre="Ocho", activo=True))
+    db.commit()
+    ai = FakeAIAclaracion()
+
+    m1 = process_incoming_email(
+        db, ai, de="juan@bencen.com.ar", asunto="Pedido", cuerpo="Necesito pigmento",
+        gmail_message_id="b1", gmail_thread_id="hilo-2", default_vendedor_id=8,
+    )
+    op = db.get(Oportunidad, m1.oportunidad_id)
+
+    # Responde pero SIGUE sin dar la cantidad -> se queda en requiere_aclaracion.
+    process_incoming_email(
+        db, ai, de="juan@bencen.com.ar", asunto="Re: Pedido", cuerpo="Es para una obra",
+        gmail_message_id="b2", gmail_thread_id="hilo-2",
+    )
+    db.refresh(op)
+    assert op.estado == EstadoOportunidad.requiere_aclaracion
+    assert db.scalar(select(func.count()).select_from(Notificacion)) == 0
 
 
 def test_parse_convierte_html_a_texto_legible() -> None:

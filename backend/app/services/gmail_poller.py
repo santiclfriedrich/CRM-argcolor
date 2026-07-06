@@ -8,7 +8,7 @@ import logging
 import re
 from typing import Any, Protocol
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -232,6 +232,17 @@ def _maybe_acuse(db: Session, gmail: object, mail: Mail) -> None:
     # Respuesta dentro de un hilo existente (sin datos de IA): no lleva acuse.
     if not mail.datos_extraidos_ia:
         return
+    # Solo auto-respondemos el PRIMER mail de la oportunidad. Las respuestas de
+    # un hilo (aunque la IA las haya re-evaluado en el Slice 5) las sigue el
+    # vendedor a mano: evita re-acusar o re-preguntar en loop.
+    if mail.oportunidad_id is not None:
+        anteriores = db.scalar(
+            select(func.count())
+            .select_from(Mail)
+            .where(Mail.oportunidad_id == mail.oportunidad_id, Mail.id != mail.id)
+        )
+        if anteriores:
+            return
     from app.services.acuse import send_aclaracion, send_acuse
     from app.services.automatizacion import get_automatizacion
 

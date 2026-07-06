@@ -20,6 +20,7 @@ from app.db.models.mails_descartados import MailDescartado
 from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
 from app.integrations.ai.base import AIProvider, EmailData, ImagePart
 from app.services.attachments import save_attachments
+from app.services.notificaciones import crear_notificacion
 
 
 def domain_of(email: str | None) -> str | None:
@@ -27,6 +28,51 @@ def domain_of(email: str | None) -> str | None:
     if not email or "@" not in email:
         return None
     return email.rsplit("@", 1)[1].strip().lower()
+
+
+def _reevaluar_hilo(
+    db: Session,
+    ai: AIProvider,
+    thread_id: str,
+    nuevo_cuerpo: str,
+    images: list[dict] | None,
+) -> EmailData | None:
+    """Re-extrae los datos del pedido usando TODO el hilo como contexto.
+
+    Arma un transcript (mails previos del hilo + la respuesta nueva) para que la
+    IA entienda que el cliente está completando datos que faltaban."""
+    previos = db.scalars(
+        select(Mail)
+        .where(Mail.gmail_thread_id == thread_id)
+        .order_by(Mail.fecha.asc().nullslast(), Mail.id.asc())
+    )
+    lineas: list[str] = []
+    for m in previos:
+        if m.cuerpo:
+            rol = "Cliente" if m.direccion == DireccionMail.entrante else "Nosotros"
+            lineas.append(f"[{rol}]\n{m.cuerpo}")
+    lineas.append(f"[Cliente]\n{nuevo_cuerpo}")
+    transcript = "\n\n---\n\n".join(lineas)
+
+    image_parts = [ImagePart(data=i["data"], mime_type=i["mime"]) for i in (images or [])]
+    return ai.extract_email_data(transcript, image_parts or None)
+
+
+def _notificar_aclaracion_resuelta(db: Session, op: Oportunidad) -> None:
+    """Avisa (in-app) al vendedor que la aclaración se resolvió y la oportunidad
+    volvió a estar lista para avanzar."""
+    if op.vendedor_id is None:
+        return
+    quien = op.cliente.razon_social if op.cliente else "un cliente"
+    crear_notificacion(
+        db,
+        usuario_id=op.vendedor_id,
+        mensaje=(
+            f"{quien} respondió la aclaración de la oportunidad #{op.id}. "
+            "Ya está lista para avanzar."
+        ),
+        link="/oportunidades",
+    )
 
 
 def _match_cliente_y_contacto(
@@ -95,8 +141,20 @@ def process_incoming_email(
         )
         if op_existente_id is not None:
             op = db.get(Oportunidad, op_existente_id)
+            datos_reeval: EmailData | None = None
             if op is not None:
                 op.fecha_ultimo_movimiento = now
+                # Slice 5 conversacional: si estábamos esperando una aclaración y
+                # el cliente respondió, re-evaluamos con el contexto del hilo. Si
+                # ya está completa, la oportunidad vuelve a "nueva" y avisamos al
+                # vendedor. Si sigue faltando, se queda en requiere_aclaracion.
+                if op.estado == EstadoOportunidad.requiere_aclaracion:
+                    reeval = _reevaluar_hilo(db, ai, gmail_thread_id, cuerpo, images)
+                    if reeval is not None and reeval.categoria == "consulta_comercial":
+                        datos_reeval = reeval
+                        if not reeval.requiere_aclaracion:
+                            op.estado = EstadoOportunidad.nueva
+                            _notificar_aclaracion_resuelta(db, op)
             mail = Mail(
                 gmail_message_id=gmail_message_id,
                 gmail_thread_id=gmail_thread_id,
@@ -108,7 +166,9 @@ def process_incoming_email(
                 asunto=asunto,
                 cuerpo=cuerpo,
                 fecha=fecha or now,
-                datos_extraidos_ia=None,  # respuesta del hilo: no se re-analiza
+                # Datos solo si la re-evaluación aportó algo; si no, es una
+                # respuesta más del hilo y no se re-analiza.
+                datos_extraidos_ia=datos_reeval.model_dump() if datos_reeval else None,
                 adjuntos=(
                     {"items": [{"nombre": i["nombre"], "mime": i["mime"]} for i in images]}
                     if images

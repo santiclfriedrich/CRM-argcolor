@@ -258,3 +258,12 @@ export interface MailDescartado {
   fecha: string | null;
   created_at: string;
 }
+
+// ---- Notificaciones in-app ----
+export interface Notificacion {
+  id: number;
+  mensaje: string;
+  link: string | null;
+  leida: boolean;
+  fecha_creacion: string;
+}

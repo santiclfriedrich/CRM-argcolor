@@ -15,6 +15,7 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { NotificationBell } from "@/components/layout/notification-bell";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -44,7 +45,10 @@ export function Sidebar() {
     <aside className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-center justify-between px-6 py-5">
         <span className="text-lg font-bold text-brand dark:text-brand-light">CRM ARG COLOR</span>
-        <ThemeToggle compact />
+        <div className="flex items-center gap-1">
+          <NotificationBell />
+          <ThemeToggle compact />
+        </div>
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3">
