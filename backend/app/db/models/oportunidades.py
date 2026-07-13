@@ -1,9 +1,11 @@
 """Modelo: oportunidades (núcleo del ciclo comercial)."""
 
 import enum
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, func
+from sqlalchemy import JSON, Date, DateTime, Enum, ForeignKey, Numeric, String, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -40,6 +42,17 @@ class Oportunidad(Base, TimestampMixin):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     fuente: Mapped[str | None] = mapped_column(String(80))  # mail / manual / etc.
+
+    # --- Seguimiento (uso comercial diario) ---
+    asunto: Mapped[str | None] = mapped_column(String(255))  # título/descripción breve
+    valor_estimado: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
+    # Fechas clave del ciclo (se autocompletan en los eventos, editables a mano):
+    fecha_pedido_cliente: Mapped[date | None] = mapped_column(Date)  # cuándo pidió el cliente
+    fecha_enviado_compras: Mapped[date | None] = mapped_column(Date)  # cuándo fue a Compras
+    fecha_enviado_cliente: Mapped[date | None] = mapped_column(Date)  # cuándo se cotizó al cliente
+    fecha_limite: Mapped[date | None] = mapped_column(Date)  # validez / hasta cuándo seguir
+    # Bitácora de seguimiento: lista de {fecha, texto, autor}.
+    comentarios: Mapped[list | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
 
     cliente = relationship("Cliente", back_populates="oportunidades")
     contacto = relationship("ContactoCliente")

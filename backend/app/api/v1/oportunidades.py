@@ -1,9 +1,9 @@
 """CRUD endpoints for oportunidades."""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -21,6 +21,7 @@ from app.db.models.solicitudes_compras import SolicitudCompras
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.schemas.oportunidad import (
+    ComentarioCreate,
     OportunidadCreate,
     OportunidadRead,
     OportunidadUpdate,
@@ -42,14 +43,23 @@ _RELATIONS = (
 def list_oportunidades(
     estado: EstadoOportunidad | None = None,
     cliente_id: int | None = None,
+    desde: date | None = None,
+    hasta: date | None = None,
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ) -> list[Oportunidad]:
+    """Lista oportunidades con filtros opcionales. `desde`/`hasta` filtran por
+    fecha de último movimiento (inclusive)."""
     query = select(Oportunidad).options(*_RELATIONS)
     if estado is not None:
         query = query.where(Oportunidad.estado == estado)
     if cliente_id is not None:
         query = query.where(Oportunidad.cliente_id == cliente_id)
+    if desde is not None:
+        query = query.where(Oportunidad.fecha_ultimo_movimiento >= desde)
+    if hasta is not None:
+        # inclusive: hasta el final de ese día.
+        query = query.where(Oportunidad.fecha_ultimo_movimiento < hasta + timedelta(days=1))
     return list(db.scalars(query.order_by(Oportunidad.fecha_ultimo_movimiento.desc())))
 
 
@@ -85,6 +95,33 @@ def sugerencia_compras(
     if db.get(Oportunidad, oportunidad_id) is None:
         raise NotFoundError("Oportunidad no encontrada")
     return SugerenciaCompras(requerimiento=sugerir_requerimiento(db, oportunidad_id))
+
+
+@router.post("/{oportunidad_id}/comentarios", response_model=OportunidadRead)
+def agregar_comentario(
+    oportunidad_id: int,
+    body: ComentarioCreate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> Oportunidad:
+    """Suma un comentario a la bitácora de seguimiento y marca movimiento."""
+    op = db.get(Oportunidad, oportunidad_id, options=list(_RELATIONS))
+    if op is None:
+        raise NotFoundError("Oportunidad no encontrada")
+    if not body.texto.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="El comentario no puede estar vacío."
+        )
+    ahora = datetime.now(timezone.utc)
+    # Reasignar (no append in-place) para que SQLAlchemy detecte el cambio del JSONB.
+    op.comentarios = [
+        *(op.comentarios or []),
+        {"fecha": ahora.isoformat(), "texto": body.texto.strip(), "autor": current_user.nombre},
+    ]
+    op.fecha_ultimo_movimiento = ahora
+    db.commit()
+    db.refresh(op)
+    return op
 
 
 @router.patch("/{oportunidad_id}", response_model=OportunidadRead)

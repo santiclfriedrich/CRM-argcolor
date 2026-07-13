@@ -6,6 +6,7 @@ import { useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
@@ -123,19 +124,23 @@ export default function UsuariosPage() {
                     </div>
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <Button variant="ghost" size="icon" onClick={() => setEditing(u)} aria-label="Editar">
-                      <Pencil size={15} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => eliminar(u)}
-                      disabled={deleteMut.isPending}
-                      aria-label="Eliminar"
-                      className="text-slate-400 hover:text-red-600 dark:text-slate-500"
-                    >
-                      <Trash2 size={15} />
-                    </Button>
+                    <Tooltip label="Editar">
+                      <Button variant="ghost" size="icon" onClick={() => setEditing(u)} aria-label="Editar">
+                        <Pencil size={15} />
+                      </Button>
+                    </Tooltip>
+                    <Tooltip label="Eliminar">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => eliminar(u)}
+                        disabled={deleteMut.isPending}
+                        aria-label="Eliminar"
+                        className="text-slate-400 hover:text-red-600 dark:text-slate-500"
+                      >
+                        <Trash2 size={15} />
+                      </Button>
+                    </Tooltip>
                   </td>
                 </tr>
               ))}

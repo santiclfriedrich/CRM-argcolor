@@ -6,6 +6,7 @@ import type {
   EstadoOportunidad,
   Oportunidad,
   OportunidadCreate,
+  OportunidadFiltros,
   OportunidadUpdate,
 } from "@/lib/types";
 
@@ -33,10 +34,27 @@ export const ESTADO_META: Record<EstadoOportunidad, { label: string; color: stri
     { label: string; color: string }
   >;
 
-export function useOportunidades() {
+export function useOportunidades(filtros?: OportunidadFiltros) {
+  // Solo mandamos params con valor (los vacíos se omiten).
+  const params: Record<string, string | number> = {};
+  if (filtros?.estado) params.estado = filtros.estado;
+  if (filtros?.cliente_id) params.cliente_id = filtros.cliente_id;
+  if (filtros?.desde) params.desde = filtros.desde;
+  if (filtros?.hasta) params.hasta = filtros.hasta;
+
   return useQuery({
-    queryKey: oportunidadKeys.all,
-    queryFn: async () => (await api.get<Oportunidad[]>(BASE)).data,
+    queryKey: [...oportunidadKeys.all, params],
+    queryFn: async () => (await api.get<Oportunidad[]>(BASE, { params })).data,
+  });
+}
+
+// Suma un comentario a la bitácora de seguimiento de la oportunidad.
+export function useAgregarComentario(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (texto: string) =>
+      (await api.post<Oportunidad>(`${BASE}/${id}/comentarios`, { texto })).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: oportunidadKeys.all }),
   });
 }
 

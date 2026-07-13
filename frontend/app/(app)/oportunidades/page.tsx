@@ -1,26 +1,60 @@
 "use client";
 
-import { ClipboardList, FileText, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  ClipboardList,
+  FileText,
+  MessageSquare,
+  Pencil,
+  Plus,
+  Send,
+  Trash2,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { OportunidadForm } from "@/components/oportunidades/oportunidad-form";
 import { SolicitudForm } from "@/components/solicitudes/solicitud-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Tooltip } from "@/components/ui/tooltip";
+import { useClientes } from "@/lib/clientes";
 import {
+  ESTADOS,
   ESTADO_META,
+  useAgregarComentario,
   useCreateOportunidad,
   useDeleteOportunidad,
   useOportunidades,
   useSugerenciaCompras,
   useUpdateOportunidad,
 } from "@/lib/oportunidades";
-import { useCreatePresupuesto } from "@/lib/presupuestos";
+import { fmtMonto, useCreatePresupuesto } from "@/lib/presupuestos";
 import { useCreateSolicitud } from "@/lib/solicitudes";
-import type { Oportunidad, OportunidadCreate } from "@/lib/types";
+import type {
+  EstadoOportunidad,
+  Oportunidad,
+  OportunidadCreate,
+  OportunidadFiltros,
+} from "@/lib/types";
+
+// "2026-08-01" -> "01/08/2026" (sin líos de zona horaria).
+function fmtDate(d: string | null): string {
+  if (!d) return "—";
+  const [y, m, day] = d.split("-");
+  return `${day}/${m}/${y}`;
+}
+
+const CERRADOS: EstadoOportunidad[] = ["ganada", "facturada", "perdida", "cargada_en_gbp"];
+
+function estaVencida(o: Oportunidad): boolean {
+  if (!o.fecha_limite || CERRADOS.includes(o.estado)) return false;
+  return o.fecha_limite < new Date().toISOString().slice(0, 10);
+}
 
 export default function OportunidadesPage() {
   const { data: session } = useSession();
@@ -29,12 +63,23 @@ export default function OportunidadesPage() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Oportunidad | null>(null);
   const [pidiendo, setPidiendo] = useState<Oportunidad | null>(null);
+  const [detalleId, setDetalleId] = useState<number | null>(null);
+  const [filtros, setFiltros] = useState<OportunidadFiltros>({ estado: "", cliente_id: null });
 
   const router = useRouter();
-  const { data, isLoading, isError } = useOportunidades();
+  const { data, isLoading, isError } = useOportunidades(filtros);
+  const { data: clientes } = useClientes();
   const createMut = useCreateOportunidad();
   const deleteMut = useDeleteOportunidad();
   const crearPresupuesto = useCreatePresupuesto();
+
+  // Abrir el seguimiento si llega ?op=ID (desde la búsqueda global).
+  useEffect(() => {
+    const op = new URLSearchParams(window.location.search).get("op");
+    if (op) setDetalleId(Number(op));
+  }, []);
+
+  const detalle = data?.find((o) => o.id === detalleId) ?? null;
 
   const eliminar = (o: Oportunidad) => {
     const quien = o.cliente?.razon_social ?? `#${o.id}`;
@@ -43,12 +88,14 @@ export default function OportunidadesPage() {
     }
   };
 
-  // Crea un presupuesto en borrador y abre el armador.
   const armarPresupuesto = (o: Oportunidad) =>
     crearPresupuesto.mutate(
       { oportunidad_id: o.id, items: [] },
       { onSuccess: (p) => router.push(`/presupuestos/${p.id}`) }
     );
+
+  const setFiltro = (patch: Partial<OportunidadFiltros>) =>
+    setFiltros((f) => ({ ...f, ...patch }));
 
   return (
     <div>
@@ -59,6 +106,54 @@ export default function OportunidadesPage() {
         </Button>
       </div>
 
+      {/* Filtros */}
+      <div className="mt-4 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/40 sm:grid-cols-4">
+        <div>
+          <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Estado</label>
+          <Select
+            value={filtros.estado ?? ""}
+            onChange={(e) => setFiltro({ estado: e.target.value as EstadoOportunidad | "" })}
+          >
+            <option value="">Todos</option>
+            {ESTADOS.map((e) => (
+              <option key={e.value} value={e.value}>
+                {e.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Cliente</label>
+          <Select
+            value={filtros.cliente_id ?? ""}
+            onChange={(e) => setFiltro({ cliente_id: e.target.value ? Number(e.target.value) : null })}
+          >
+            <option value="">Todos</option>
+            {clientes?.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.razon_social}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Desde</label>
+          <Input
+            type="date"
+            value={filtros.desde ?? ""}
+            onChange={(e) => setFiltro({ desde: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Hasta</label>
+          <Input
+            type="date"
+            value={filtros.hasta ?? ""}
+            onChange={(e) => setFiltro({ hasta: e.target.value })}
+          />
+        </div>
+      </div>
+
       {isLoading && <p className="mt-4 text-slate-500 dark:text-slate-400">Cargando…</p>}
       {isError && (
         <p className="mt-4 text-red-600">
@@ -67,84 +162,84 @@ export default function OportunidadesPage() {
       )}
 
       {data && (
-        <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+        <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-800/50 text-left text-slate-500 dark:text-slate-400">
+            <thead className="bg-slate-50 text-left text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
               <tr>
-                <th className="px-4 py-2 font-medium">ID</th>
-                <th className="px-4 py-2 font-medium">Cliente</th>
-                <th className="px-4 py-2 font-medium">Contacto</th>
-                <th className="px-4 py-2 font-medium">Vendedor</th>
-                <th className="px-4 py-2 font-medium">Estado</th>
-                <th className="px-4 py-2 font-medium">Últ. movimiento</th>
-                <th className="px-4 py-2" />
+                <th className="px-3 py-2 font-medium">Cliente</th>
+                <th className="px-3 py-2 font-medium">Asunto</th>
+                <th className="px-3 py-2 font-medium">Valor</th>
+                <th className="px-3 py-2 font-medium">Estado</th>
+                <th className="px-3 py-2 font-medium">Validez</th>
+                <th className="px-3 py-2 font-medium">Últ. mov.</th>
+                <th className="px-3 py-2" />
               </tr>
             </thead>
             <tbody>
-              {data.map((o) => {
-                const meta = ESTADO_META[o.estado];
-                return (
-                  <tr key={o.id} className="border-t border-slate-100 dark:border-slate-800">
-                    <td className="px-4 py-2 font-mono text-slate-500 dark:text-slate-400">{o.id}</td>
-                    <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">
-                      {o.cliente?.razon_social ?? "—"}
-                    </td>
-                    <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{o.contacto?.nombre ?? "—"}</td>
-                    <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{o.vendedor?.nombre ?? "—"}</td>
-                    <td className="px-4 py-2">
-                      <Badge className={meta.color}>{meta.label}</Badge>
-                    </td>
-                    <td className="px-4 py-2 text-slate-500 dark:text-slate-400">
-                      {new Date(o.fecha_ultimo_movimiento).toLocaleDateString("es-AR")}
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setPidiendo(o)}
-                        aria-label="Pedir a Compras"
-                        title="Pedir a Compras"
-                        className="text-slate-400 hover:text-brand dark:text-slate-500"
-                      >
-                        <ClipboardList size={15} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => armarPresupuesto(o)}
-                        disabled={crearPresupuesto.isPending}
-                        aria-label="Armar presupuesto"
-                        title="Armar presupuesto"
-                        className="text-slate-400 hover:text-brand dark:text-slate-500"
-                      >
-                        <FileText size={15} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setEditing(o)}
-                        aria-label="Editar"
-                      >
-                        <Pencil size={15} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => eliminar(o)}
-                        disabled={deleteMut.isPending}
-                        aria-label="Eliminar"
-                        className="text-slate-400 dark:text-slate-500 hover:text-red-600"
-                      >
-                        <Trash2 size={15} />
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
+              {data.map((o) => (
+                <tr key={o.id} className="border-t border-slate-100 dark:border-slate-800">
+                  <td
+                    className="cursor-pointer px-3 py-2 font-medium text-slate-800 hover:text-brand dark:text-slate-100"
+                    onClick={() => setDetalleId(o.id)}
+                  >
+                    {o.cliente?.razon_social ?? "—"}
+                  </td>
+                  <td
+                    className="max-w-xs cursor-pointer truncate px-3 py-2 text-slate-600 dark:text-slate-300"
+                    onClick={() => setDetalleId(o.id)}
+                  >
+                    {o.asunto ?? "—"}
+                  </td>
+                  <td className="px-3 py-2 text-slate-700 dark:text-slate-200">
+                    {o.valor_estimado != null ? fmtMonto(o.valor_estimado, "USD") : "—"}
+                  </td>
+                  <td className="px-3 py-2">
+                    <Badge className={ESTADO_META[o.estado].color}>{ESTADO_META[o.estado].label}</Badge>
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className={estaVencida(o) ? "font-semibold text-red-600" : "text-slate-500 dark:text-slate-400"}>
+                      {fmtDate(o.fecha_limite)}
+                      {estaVencida(o) ? " ⚠" : ""}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-slate-500 dark:text-slate-400">
+                    {new Date(o.fecha_ultimo_movimiento).toLocaleDateString("es-AR")}
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center justify-end">
+                      <Tooltip label="Seguimiento">
+                        <Button variant="ghost" size="icon" onClick={() => setDetalleId(o.id)} aria-label="Seguimiento" className="text-slate-400 hover:text-brand dark:text-slate-500">
+                          <MessageSquare size={15} />
+                        </Button>
+                      </Tooltip>
+                      <Tooltip label="Pedir a Compras">
+                        <Button variant="ghost" size="icon" onClick={() => setPidiendo(o)} aria-label="Pedir a Compras" className="text-slate-400 hover:text-brand dark:text-slate-500">
+                          <ClipboardList size={15} />
+                        </Button>
+                      </Tooltip>
+                      <Tooltip label="Armar presupuesto">
+                        <Button variant="ghost" size="icon" onClick={() => armarPresupuesto(o)} disabled={crearPresupuesto.isPending} aria-label="Armar presupuesto" className="text-slate-400 hover:text-brand dark:text-slate-500">
+                          <FileText size={15} />
+                        </Button>
+                      </Tooltip>
+                      <Tooltip label="Editar">
+                        <Button variant="ghost" size="icon" onClick={() => setEditing(o)} aria-label="Editar">
+                          <Pencil size={15} />
+                        </Button>
+                      </Tooltip>
+                      <Tooltip label="Eliminar">
+                        <Button variant="ghost" size="icon" onClick={() => eliminar(o)} disabled={deleteMut.isPending} aria-label="Eliminar" className="text-slate-400 hover:text-red-600 dark:text-slate-500">
+                          <Trash2 size={15} />
+                        </Button>
+                      </Tooltip>
+                    </div>
+                  </td>
+                </tr>
+              ))}
               {data.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
-                    No hay oportunidades todavía.
+                    No hay oportunidades con estos filtros.
                   </td>
                 </tr>
               )}
@@ -158,36 +253,120 @@ export default function OportunidadesPage() {
           defaultVendedorId={currentUserId}
           isPending={createMut.isPending}
           onCancel={() => setCreating(false)}
-          onSubmit={(values) =>
-            createMut.mutate(values, { onSuccess: () => setCreating(false) })
-          }
+          onSubmit={(values) => createMut.mutate(values, { onSuccess: () => setCreating(false) })}
         />
       </Modal>
 
-      {editing && (
-        <EditOportunidadModal oportunidad={editing} onClose={() => setEditing(null)} />
-      )}
-
-      {pidiendo && (
-        <PedirComprasModal oportunidad={pidiendo} onClose={() => setPidiendo(null)} />
-      )}
+      {editing && <EditOportunidadModal oportunidad={editing} onClose={() => setEditing(null)} />}
+      {pidiendo && <PedirComprasModal oportunidad={pidiendo} onClose={() => setPidiendo(null)} />}
+      {detalle && <SeguimientoModal oportunidad={detalle} onClose={() => setDetalleId(null)} />}
     </div>
   );
 }
 
-// Abre la solicitud a Compras pre-cargada con el requerimiento que la IA extrajo
-// del mail del cliente. El vendedor revisa y crea; el envío se hace en Solicitudes.
-function PedirComprasModal({
+// Centro de seguimiento: fechas clave + bitácora de comentarios.
+function SeguimientoModal({
   oportunidad,
   onClose,
 }: {
   oportunidad: Oportunidad;
   onClose: () => void;
 }) {
+  const comentarioMut = useAgregarComentario(oportunidad.id);
+  const [texto, setTexto] = useState("");
+
+  const agregar = (e: FormEvent) => {
+    e.preventDefault();
+    if (!texto.trim()) return;
+    comentarioMut.mutate(texto.trim(), { onSuccess: () => setTexto("") });
+  };
+
+  const cliente = oportunidad.cliente?.razon_social ?? `#${oportunidad.id}`;
+  const comentarios = [...oportunidad.comentarios].reverse();
+
+  return (
+    <Modal open onClose={onClose} title={`Seguimiento — ${cliente}`}>
+      <div className="space-y-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <Badge className={ESTADO_META[oportunidad.estado].color}>
+              {ESTADO_META[oportunidad.estado].label}
+            </Badge>
+            {oportunidad.valor_estimado != null && (
+              <span className="font-semibold text-slate-800 dark:text-slate-100">
+                {fmtMonto(oportunidad.valor_estimado, "USD")}
+              </span>
+            )}
+          </div>
+          {oportunidad.asunto && (
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{oportunidad.asunto}</p>
+          )}
+        </div>
+
+        {/* Línea de tiempo de fechas clave */}
+        <div className="grid grid-cols-2 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-800/40">
+          <Fecha label="Pedido del cliente" value={oportunidad.fecha_pedido_cliente} />
+          <Fecha label="Enviado a Compras" value={oportunidad.fecha_enviado_compras} />
+          <Fecha label="Enviado al cliente" value={oportunidad.fecha_enviado_cliente} />
+          <Fecha label="Validez / límite" value={oportunidad.fecha_limite} alerta={estaVencida(oportunidad)} />
+        </div>
+
+        {/* Bitácora */}
+        <div>
+          <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">Bitácora de seguimiento</p>
+          <form onSubmit={agregar} className="mb-3 flex items-start gap-2">
+            <Textarea
+              rows={2}
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              placeholder="Anotá una llamada, un avance, una respuesta del cliente…"
+            />
+            <Button type="submit" size="sm" disabled={comentarioMut.isPending || !texto.trim()}>
+              <Send size={14} />
+            </Button>
+          </form>
+          <div className="max-h-64 space-y-2 overflow-y-auto">
+            {comentarios.length === 0 ? (
+              <p className="rounded-md border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400 dark:border-slate-700 dark:text-slate-500">
+                Sin anotaciones todavía.
+              </p>
+            ) : (
+              comentarios.map((c, i) => (
+                <div
+                  key={i}
+                  className="rounded-md border border-slate-200 bg-white p-2 text-sm dark:border-slate-800 dark:bg-slate-900"
+                >
+                  <div className="mb-0.5 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+                    <span>{c.autor ?? "—"}</span>
+                    <span>{new Date(c.fecha).toLocaleString("es-AR")}</span>
+                  </div>
+                  <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-200">{c.texto}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function Fecha({ label, value, alerta }: { label: string; value: string | null; alerta?: boolean }) {
+  return (
+    <div>
+      <div className="text-xs text-slate-400 dark:text-slate-500">{label}</div>
+      <div className={alerta ? "font-semibold text-red-600" : "text-slate-700 dark:text-slate-200"}>
+        {fmtDate(value)}
+        {alerta ? " ⚠" : ""}
+      </div>
+    </div>
+  );
+}
+
+function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad; onClose: () => void }) {
   const router = useRouter();
   const { data: sugerencia, isLoading } = useSugerenciaCompras(oportunidad.id);
   const createSolicitud = useCreateSolicitud();
-
   const cliente = oportunidad.cliente?.razon_social ?? `#${oportunidad.id}`;
 
   return (
@@ -215,16 +394,9 @@ function PedirComprasModal({
   );
 }
 
-function EditOportunidadModal({
-  oportunidad,
-  onClose,
-}: {
-  oportunidad: Oportunidad;
-  onClose: () => void;
-}) {
+function EditOportunidadModal({ oportunidad, onClose }: { oportunidad: Oportunidad; onClose: () => void }) {
   const updateMut = useUpdateOportunidad(oportunidad.id);
-  const handleSubmit = (values: OportunidadCreate) =>
-    updateMut.mutate(values, { onSuccess: onClose });
+  const handleSubmit = (values: OportunidadCreate) => updateMut.mutate(values, { onSuccess: onClose });
 
   return (
     <Modal open onClose={onClose} title={`Editar oportunidad #${oportunidad.id}`}>

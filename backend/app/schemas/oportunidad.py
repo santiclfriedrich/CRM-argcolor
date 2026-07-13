@@ -1,8 +1,9 @@
 """Pydantic schemas for Oportunidad."""
 
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.db.models.oportunidades import EstadoOportunidad
 
@@ -13,6 +14,13 @@ class OportunidadBase(BaseModel):
     vendedor_id: int | None = None
     estado: EstadoOportunidad = EstadoOportunidad.nueva
     fuente: str | None = None
+    # Seguimiento
+    asunto: str | None = None
+    valor_estimado: Decimal | None = None
+    fecha_pedido_cliente: date | None = None
+    fecha_enviado_compras: date | None = None
+    fecha_enviado_cliente: date | None = None
+    fecha_limite: date | None = None
 
 
 class OportunidadCreate(OportunidadBase):
@@ -25,6 +33,22 @@ class OportunidadUpdate(BaseModel):
     vendedor_id: int | None = None
     estado: EstadoOportunidad | None = None
     fuente: str | None = None
+    asunto: str | None = None
+    valor_estimado: Decimal | None = None
+    fecha_pedido_cliente: date | None = None
+    fecha_enviado_compras: date | None = None
+    fecha_enviado_cliente: date | None = None
+    fecha_limite: date | None = None
+
+
+class ComentarioRead(BaseModel):
+    fecha: str
+    texto: str
+    autor: str | None = None
+
+
+class ComentarioCreate(BaseModel):
+    texto: str
 
 
 # Mini-objetos anidados para mostrar nombres en el listado sin un segundo fetch.
@@ -55,6 +79,12 @@ class OportunidadRead(OportunidadBase):
     id: int
     fecha_creacion: datetime
     fecha_ultimo_movimiento: datetime
+    comentarios: list[ComentarioRead] = []
     cliente: ClienteMini | None = None
     contacto: ContactoMini | None = None
     vendedor: VendedorMini | None = None
+
+    @field_validator("comentarios", mode="before")
+    @classmethod
+    def _comentarios_none_a_lista(cls, v: object) -> object:
+        return v or []

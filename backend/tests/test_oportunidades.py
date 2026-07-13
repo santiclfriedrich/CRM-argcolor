@@ -115,6 +115,68 @@ def test_get_404(client: TestClient) -> None:
     assert client.get("/api/v1/oportunidades/999").status_code == 404
 
 
+def test_campos_seguimiento_y_comentarios(client: TestClient) -> None:
+    op = client.post(
+        "/api/v1/oportunidades",
+        json={
+            "cliente_id": 1,
+            "asunto": "Pigmento urgente obra La Plata",
+            "valor_estimado": 15000.5,
+            "fecha_limite": "2026-08-01",
+        },
+    ).json()
+    assert op["asunto"] == "Pigmento urgente obra La Plata"
+    assert float(op["valor_estimado"]) == 15000.5
+    assert op["fecha_limite"] == "2026-08-01"
+    assert op["comentarios"] == []
+
+    # Agregar un comentario a la bitácora.
+    resp = client.post(
+        f"/api/v1/oportunidades/{op['id']}/comentarios",
+        json={"texto": "Llamé al cliente, espera confirmación."},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["comentarios"]) == 1
+    assert data["comentarios"][0]["texto"] == "Llamé al cliente, espera confirmación."
+    assert data["comentarios"][0]["autor"] == "Vendedor Uno"
+
+
+def test_filtro_por_fecha(client: TestClient) -> None:
+    from datetime import date, timedelta
+
+    client.post("/api/v1/oportunidades", json={"cliente_id": 1})
+    hoy = date.today()
+
+    incluidas = client.get("/api/v1/oportunidades", params={"desde": str(hoy)}).json()
+    assert len(incluidas) == 1
+    # Rango que termina ayer no incluye la de hoy.
+    hasta_ayer = {"hasta": str(hoy - timedelta(days=1))}
+    ayer = client.get("/api/v1/oportunidades", params=hasta_ayer).json()
+    assert len(ayer) == 0
+
+
+def test_busqueda_global(client: TestClient) -> None:
+    with TestingSessionLocal() as db:
+        db.add(
+            ContactoCliente(id=1, cliente_id=1, nombre="Juan Pérez", email="juan@bencen.com.ar")
+        )
+        db.commit()
+    client.post(
+        "/api/v1/oportunidades",
+        json={"cliente_id": 1, "asunto": "Cotización de solventes"},
+    )
+
+    porCliente = client.get("/api/v1/search", params={"q": "BENCEN"}).json()
+    assert any(c["razon_social"] == "BENCEN S.A." for c in porCliente["clientes"])
+
+    porContacto = client.get("/api/v1/search", params={"q": "Juan"}).json()
+    assert any(ct["nombre"] == "Juan Pérez" for ct in porContacto["contactos"])
+
+    porOpp = client.get("/api/v1/search", params={"q": "solventes"}).json()
+    assert any("solventes" in (o["asunto"] or "").lower() for o in porOpp["oportunidades"])
+
+
 def test_delete_borra_oportunidad_y_sus_mails_en_cascada(client: TestClient) -> None:
     from sqlalchemy import func, select
 

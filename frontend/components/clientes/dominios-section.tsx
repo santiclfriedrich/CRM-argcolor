@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { useCreateDominio, useDeleteDominio } from "@/lib/clientes";
 import type { Dominio } from "@/lib/types";
@@ -71,16 +72,18 @@ export function DominiosSection({ clienteId, dominios }: Props) {
                 </Badge>
               )}
             </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => {
-                if (confirm(`¿Eliminar el dominio "${d.dominio}"?`)) deleteMut.mutate(d.id);
-              }}
-              aria-label="Eliminar"
-            >
-              <Trash2 size={15} className="text-red-500" />
-            </Button>
+            <Tooltip label="Eliminar">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (confirm(`¿Eliminar el dominio "${d.dominio}"?`)) deleteMut.mutate(d.id);
+                }}
+                aria-label="Eliminar"
+              >
+                <Trash2 size={15} className="text-red-500" />
+              </Button>
+            </Tooltip>
           </li>
         ))}
         {dominios.length === 0 && (

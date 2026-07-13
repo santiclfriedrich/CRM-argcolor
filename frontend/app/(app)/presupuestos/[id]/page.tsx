@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Tooltip } from "@/components/ui/tooltip";
 import {
   abrirPdf,
   ESTADO_PRESUPUESTO,
@@ -210,14 +211,16 @@ export default function ArmadorPresupuestoPage() {
                   {fmtMonto(subtotalRow(r), moneda)}
                 </td>
                 <td className="px-1">
-                  <button
-                    type="button"
-                    onClick={() => setRows((rs) => rs.filter((x) => x.key !== r.key))}
-                    className="text-slate-400 hover:text-red-600"
-                    aria-label="Quitar fila"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <Tooltip label="Quitar fila">
+                    <button
+                      type="button"
+                      onClick={() => setRows((rs) => rs.filter((x) => x.key !== r.key))}
+                      className="text-slate-400 hover:text-red-600"
+                      aria-label="Quitar fila"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </Tooltip>
                 </td>
               </tr>
             ))}

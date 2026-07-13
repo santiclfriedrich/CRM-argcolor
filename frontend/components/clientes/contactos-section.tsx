@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
@@ -80,19 +81,23 @@ export function ContactosSection({ clienteId, contactos }: Props) {
                   <Badge>{c.rol_compra}</Badge>
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <Button variant="ghost" size="icon" onClick={() => setEditing(c)} aria-label="Editar">
-                    <Pencil size={15} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      if (confirm(`¿Eliminar el contacto "${c.nombre}"?`)) deleteMut.mutate(c.id);
-                    }}
-                    aria-label="Eliminar"
-                  >
-                    <Trash2 size={15} className="text-red-500" />
-                  </Button>
+                  <Tooltip label="Editar">
+                    <Button variant="ghost" size="icon" onClick={() => setEditing(c)} aria-label="Editar">
+                      <Pencil size={15} />
+                    </Button>
+                  </Tooltip>
+                  <Tooltip label="Eliminar">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        if (confirm(`¿Eliminar el contacto "${c.nombre}"?`)) deleteMut.mutate(c.id);
+                      }}
+                      aria-label="Eliminar"
+                    >
+                      <Trash2 size={15} className="text-red-500" />
+                    </Button>
+                  </Tooltip>
                 </td>
               </tr>
             ))}

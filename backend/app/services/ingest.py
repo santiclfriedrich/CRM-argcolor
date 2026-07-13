@@ -222,6 +222,9 @@ def process_incoming_email(
         estado=estado,
         fuente="mail",
         fecha_ultimo_movimiento=now,
+        # Seguimiento: el asunto y la fecha del pedido salen del mail original.
+        asunto=asunto,
+        fecha_pedido_cliente=(fecha or now).date(),
     )
     db.add(oportunidad)
     db.flush()  # asigna oportunidad.id

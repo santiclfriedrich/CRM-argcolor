@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import {
   abrirPdf,
   ESTADO_PRESUPUESTO,
@@ -77,16 +78,18 @@ export default function PresupuestosPage() {
                       <Button size="sm" variant="ghost" onClick={() => abrirPdf(p.id)}>
                         <FileText size={14} /> PDF
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => eliminar(p)}
-                        disabled={deleteMut.isPending}
-                        aria-label="Eliminar"
-                        className="text-slate-400 hover:text-red-600 dark:text-slate-500"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
+                      <Tooltip label="Eliminar">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => eliminar(p)}
+                          disabled={deleteMut.isPending}
+                          aria-label="Eliminar"
+                          className="text-slate-400 hover:text-red-600 dark:text-slate-500"
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </Tooltip>
                     </div>
                   </td>
                 </tr>

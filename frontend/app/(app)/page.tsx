@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Tooltip } from "@/components/ui/tooltip";
 import { ESTADO_META, useDeleteOportunidad, useOportunidades } from "@/lib/oportunidades";
 import {
   diasSinMovimiento,
@@ -124,15 +125,17 @@ function OportunidadCard({ oportunidad: o }: { oportunidad: Oportunidad }) {
         <span>{o.vendedor?.nombre ?? "Sin vendedor"}</span>
         <div className="flex items-center gap-2">
           <span>{dias === 0 ? "hoy" : `hace ${dias} día${dias === 1 ? "" : "s"}`}</span>
-          <button
-            type="button"
-            onClick={eliminar}
-            disabled={deleteMut.isPending}
-            aria-label="Eliminar oportunidad"
-            className="text-slate-300 transition hover:text-red-600 group-hover:text-slate-400"
-          >
-            <Trash2 size={14} />
-          </button>
+          <Tooltip label="Eliminar oportunidad">
+            <button
+              type="button"
+              onClick={eliminar}
+              disabled={deleteMut.isPending}
+              aria-label="Eliminar oportunidad"
+              className="text-slate-300 transition hover:text-red-600 group-hover:text-slate-400"
+            >
+              <Trash2 size={14} />
+            </button>
+          </Tooltip>
         </div>
       </div>
     </article>

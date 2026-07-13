@@ -154,9 +154,13 @@ def enviar_a_compras(db: Session, gmail: GmailSender, solicitud: SolicitudCompra
         body=preview["body"],
         cc=preview["cc"] or None,
     )
+    ahora = datetime.now(timezone.utc)
     solicitud.gmail_thread_id = sent.get("thread_id")
-    solicitud.fecha_envio = datetime.now(timezone.utc)
+    solicitud.fecha_envio = ahora
     solicitud.estado = EstadoSolicitud.enviada
+    # Seguimiento: registrar en la oportunidad cuándo se mandó a Compras.
+    if solicitud.oportunidad is not None and solicitud.oportunidad.fecha_enviado_compras is None:
+        solicitud.oportunidad.fecha_enviado_compras = ahora.date()
     db.commit()
     db.refresh(solicitud)
     return solicitud.gmail_thread_id

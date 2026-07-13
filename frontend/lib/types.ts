@@ -114,6 +114,12 @@ interface PersonaMini {
   nombre: string;
 }
 
+export interface Comentario {
+  fecha: string;
+  texto: string;
+  autor: string | null;
+}
+
 export interface Oportunidad {
   id: number;
   cliente_id: number | null;
@@ -121,6 +127,13 @@ export interface Oportunidad {
   vendedor_id: number | null;
   estado: EstadoOportunidad;
   fuente: string | null;
+  asunto: string | null;
+  valor_estimado: number | null;
+  fecha_pedido_cliente: string | null;
+  fecha_enviado_compras: string | null;
+  fecha_enviado_cliente: string | null;
+  fecha_limite: string | null;
+  comentarios: Comentario[];
   fecha_creacion: string;
   fecha_ultimo_movimiento: string;
   cliente: ClienteMini | null;
@@ -134,8 +147,29 @@ export type OportunidadCreate = {
   vendedor_id?: number | null;
   estado?: EstadoOportunidad;
   fuente?: string | null;
+  asunto?: string | null;
+  valor_estimado?: number | null;
+  fecha_pedido_cliente?: string | null;
+  fecha_enviado_compras?: string | null;
+  fecha_enviado_cliente?: string | null;
+  fecha_limite?: string | null;
 };
 export type OportunidadUpdate = Partial<OportunidadCreate>;
+
+// Filtros del listado de oportunidades.
+export type OportunidadFiltros = {
+  estado?: EstadoOportunidad | "";
+  cliente_id?: number | null;
+  desde?: string;
+  hasta?: string;
+};
+
+// --- Búsqueda global ---
+export interface SearchResults {
+  clientes: { id: number; razon_social: string }[];
+  contactos: { id: number; nombre: string; cliente_id: number | null; cliente_nombre: string | null }[];
+  oportunidades: { id: number; asunto: string | null; estado: EstadoOportunidad; cliente_nombre: string | null }[];
+}
 
 // ---- Solicitudes a Compras ----
 export type CondicionPago = "15" | "30" | "45" | "60" | "120" | "Transferencia";

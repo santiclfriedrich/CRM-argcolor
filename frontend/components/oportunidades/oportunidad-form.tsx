@@ -38,6 +38,14 @@ export function OportunidadForm({
   );
   const [estado, setEstado] = useState<EstadoOportunidad>(initial?.estado ?? "nueva");
   const [fuente, setFuente] = useState(initial?.fuente ?? "manual");
+  const [asunto, setAsunto] = useState(initial?.asunto ?? "");
+  const [valor, setValor] = useState(
+    initial?.valor_estimado != null ? String(initial.valor_estimado) : ""
+  );
+  const [fechaPedido, setFechaPedido] = useState(initial?.fecha_pedido_cliente ?? "");
+  const [fechaCompras, setFechaCompras] = useState(initial?.fecha_enviado_compras ?? "");
+  const [fechaCliente, setFechaCliente] = useState(initial?.fecha_enviado_cliente ?? "");
+  const [fechaLimite, setFechaLimite] = useState(initial?.fecha_limite ?? "");
 
   const { data: clientes } = useClientes();
   const { data: usuarios } = useUsuarios();
@@ -53,6 +61,12 @@ export function OportunidadForm({
       vendedor_id: vendedorId,
       estado,
       fuente: fuente.trim() || null,
+      asunto: asunto.trim() || null,
+      valor_estimado: valor ? Number(valor) : null,
+      fecha_pedido_cliente: fechaPedido || null,
+      fecha_enviado_compras: fechaCompras || null,
+      fecha_enviado_cliente: fechaCliente || null,
+      fecha_limite: fechaLimite || null,
     });
   };
 
@@ -93,6 +107,69 @@ export function OportunidadForm({
             </option>
           ))}
         </Select>
+      </div>
+
+      <div>
+        <Label htmlFor="o-asunto">Asunto / descripción</Label>
+        <Input
+          id="o-asunto"
+          value={asunto}
+          onChange={(e) => setAsunto(e.target.value)}
+          placeholder="Ej: Cotización 100kg pigmento rojo"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label htmlFor="o-valor">Valor estimado (USD)</Label>
+          <Input
+            id="o-valor"
+            type="number"
+            min="0"
+            step="0.01"
+            value={valor}
+            onChange={(e) => setValor(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="o-limite">Validez / fecha límite</Label>
+          <Input
+            id="o-limite"
+            type="date"
+            value={fechaLimite}
+            onChange={(e) => setFechaLimite(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <Label htmlFor="o-fpedido">Pedido cliente</Label>
+          <Input
+            id="o-fpedido"
+            type="date"
+            value={fechaPedido}
+            onChange={(e) => setFechaPedido(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="o-fcompras">Enviado a Compras</Label>
+          <Input
+            id="o-fcompras"
+            type="date"
+            value={fechaCompras}
+            onChange={(e) => setFechaCompras(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="o-fcliente">Enviado al cliente</Label>
+          <Input
+            id="o-fcliente"
+            type="date"
+            value={fechaCliente}
+            onChange={(e) => setFechaCliente(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">

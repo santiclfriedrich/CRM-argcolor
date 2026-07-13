@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db.models.oportunidades import EstadoOportunidad
 from app.db.models.presupuesto_items import PresupuestoItem
-from app.db.models.presupuestos import Presupuesto
+from app.db.models.presupuestos import EstadoPresupuesto, Presupuesto
 from app.db.models.solicitudes_compras import SolicitudCompras
 from app.integrations.ai.base import QuoteDraft
 from app.schemas.presupuesto import ItemBase, PresupuestoCreate, PresupuestoUpdate
@@ -157,6 +157,15 @@ def actualizar_presupuesto(
         for viejo in list(presupuesto.items):
             db.delete(viejo)
         presupuesto.items = _items_desde_schema(data.items)
+
+    # Seguimiento: al marcar el presupuesto como "enviado", registrar en la
+    # oportunidad cuándo se cotizó al cliente.
+    if (
+        presupuesto.estado == EstadoPresupuesto.enviado
+        and presupuesto.oportunidad is not None
+        and presupuesto.oportunidad.fecha_enviado_cliente is None
+    ):
+        presupuesto.oportunidad.fecha_enviado_cliente = now_utc().date()
 
     recalcular_totales(presupuesto)
     # Cualquier cambio invalida el PDF anterior: se regenera al descargar.
