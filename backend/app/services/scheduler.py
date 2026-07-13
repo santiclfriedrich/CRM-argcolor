@@ -48,6 +48,22 @@ def _run_seguimiento() -> None:
         db.close()
 
 
+def _run_recordatorios() -> None:
+    """Dispara los recordatorios de tareas cuya hora ya llegó."""
+    from app.db.session import SessionLocal
+    from app.services.seguimiento import disparar_recordatorios
+
+    db = SessionLocal()
+    try:
+        n = disparar_recordatorios(db)
+        if n:
+            logger.info("Recordatorios: %s notificación(es) creadas", n)
+    except Exception:  # noqa: BLE001 - el job no debe tirar el scheduler
+        logger.exception("Falló el chequeo de recordatorios")
+    finally:
+        db.close()
+
+
 def start_scheduler() -> None:
     global _scheduler
     _scheduler = BackgroundScheduler(timezone="UTC")
@@ -66,8 +82,10 @@ def start_scheduler() -> None:
 
     # Seguimiento diario: siempre (independiente de Gmail). 11:00 UTC ≈ 08:00 ART.
     _scheduler.add_job(_run_seguimiento, "cron", hour=11, minute=0, id="seguimiento_diario")
+    # Recordatorios de tareas: chequeo frecuente (granularidad de ~5 min).
+    _scheduler.add_job(_run_recordatorios, "interval", minutes=5, id="recordatorios")
     _scheduler.start()
-    logger.info("Scheduler activo (seguimiento diario 11:00 UTC)")
+    logger.info("Scheduler activo (seguimiento diario + recordatorios cada 5 min)")
 
 
 def stop_scheduler() -> None:

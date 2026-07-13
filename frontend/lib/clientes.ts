@@ -59,6 +59,21 @@ export function useUpdateCliente(id: number) {
   });
 }
 
+// Elimina el cliente y todo lo que cuelga (contactos, dominios, oportunidades).
+export function useDeleteCliente() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`${BASE}/${id}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: clienteKeys.all });
+      qc.invalidateQueries({ queryKey: ["oportunidades"] });
+      qc.invalidateQueries({ queryKey: ["mails"] });
+    },
+  });
+}
+
 // ---------- Contactos (anidados) ----------
 
 export function useCreateContacto(clienteId: number) {

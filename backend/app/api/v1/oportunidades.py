@@ -1,23 +1,14 @@
 """CRUD endpoints for oportunidades."""
 
 from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user
 from app.core.exceptions import NotFoundError
-from app.db.models.adjuntos import Adjunto
-from app.db.models.mails import Mail
-from app.db.models.mails_descartados import MailDescartado
 from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
-from app.db.models.presupuesto_items import PresupuestoItem
-from app.db.models.presupuestos import Presupuesto
-from app.db.models.recordatorios import Recordatorio
-from app.db.models.respuestas_compras import RespuestaCompras
-from app.db.models.solicitudes_compras import SolicitudCompras
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.schemas.oportunidad import (
@@ -27,6 +18,7 @@ from app.schemas.oportunidad import (
     OportunidadUpdate,
 )
 from app.schemas.solicitud import SugerenciaCompras
+from app.services.borrado import eliminar_oportunidades
 from app.services.solicitudes import sugerir_requerimiento
 
 router = APIRouter(prefix="/oportunidades", tags=["oportunidades"])
@@ -153,60 +145,6 @@ def delete_oportunidad(
     oportunidad = db.get(Oportunidad, oportunidad_id)
     if oportunidad is None:
         raise NotFoundError("Oportunidad no encontrada")
-
-    mail_ids = list(db.scalars(select(Mail.id).where(Mail.oportunidad_id == oportunidad_id)))
-    if mail_ids:
-        # Borramos primero los archivos de los adjuntos del disco.
-        for path in db.scalars(
-            select(Adjunto.path_storage).where(Adjunto.mail_id.in_(mail_ids))
-        ):
-            if path:
-                Path(path).unlink(missing_ok=True)
-        db.execute(delete(Adjunto).where(Adjunto.mail_id.in_(mail_ids)))
-
-    # Para los mails que vinieron de Gmail, dejamos su id marcado como eliminado
-    # así el poller no los vuelve a ingestar mientras sigan en la ventana de búsqueda.
-    gmail_ids = [
-        g
-        for g in db.scalars(
-            select(Mail.gmail_message_id).where(Mail.oportunidad_id == oportunidad_id)
-        )
-        if g
-    ]
-    if gmail_ids:
-        ya = set(
-            db.scalars(
-                select(MailDescartado.gmail_message_id).where(
-                    MailDescartado.gmail_message_id.in_(gmail_ids)
-                )
-            )
-        )
-        for gid in gmail_ids:
-            if gid not in ya:
-                db.add(MailDescartado(gmail_message_id=gid, categoria="eliminado_manual"))
-
-    sol_ids = list(
-        db.scalars(
-            select(SolicitudCompras.id).where(SolicitudCompras.oportunidad_id == oportunidad_id)
-        )
-    )
-    if sol_ids:
-        db.execute(
-            delete(RespuestaCompras).where(RespuestaCompras.solicitud_compras_id.in_(sol_ids))
-        )
-
-    pres_ids = list(
-        db.scalars(
-            select(Presupuesto.id).where(Presupuesto.oportunidad_id == oportunidad_id)
-        )
-    )
-    if pres_ids:
-        db.execute(delete(PresupuestoItem).where(PresupuestoItem.presupuesto_id.in_(pres_ids)))
-
-    db.execute(delete(Mail).where(Mail.oportunidad_id == oportunidad_id))
-    db.execute(delete(SolicitudCompras).where(SolicitudCompras.oportunidad_id == oportunidad_id))
-    db.execute(delete(Presupuesto).where(Presupuesto.oportunidad_id == oportunidad_id))
-    db.execute(delete(Recordatorio).where(Recordatorio.oportunidad_id == oportunidad_id))
-    db.delete(oportunidad)
+    eliminar_oportunidades(db, [oportunidad_id])
     db.commit()
     return Response(status_code=204)

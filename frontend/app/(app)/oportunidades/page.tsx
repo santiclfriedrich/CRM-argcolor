@@ -199,7 +199,7 @@ export default function OportunidadesPage() {
                   <td className="px-3 py-2">
                     <span className={estaVencida(o) ? "font-semibold text-red-600" : "text-slate-500 dark:text-slate-400"}>
                       {fmtDate(o.fecha_limite)}
-                      {estaVencida(o) ? " ⚠" : ""}
+                      {estaVencida(o) ? " (vencida)" : ""}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-slate-500 dark:text-slate-400">
@@ -357,7 +357,7 @@ function Fecha({ label, value, alerta }: { label: string; value: string | null; 
       <div className="text-xs text-slate-400 dark:text-slate-500">{label}</div>
       <div className={alerta ? "font-semibold text-red-600" : "text-slate-700 dark:text-slate-200"}>
         {fmtDate(value)}
-        {alerta ? " ⚠" : ""}
+        {alerta ? " (vencida)" : ""}
       </div>
     </div>
   );

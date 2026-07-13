@@ -1,6 +1,14 @@
 "use client";
 
-import { AlarmClock, BellRing, Building2, Clock, FileText, Target } from "lucide-react";
+import {
+  AlarmClock,
+  BellRing,
+  Building2,
+  Clock,
+  FileText,
+  Plus,
+  Target,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,6 +21,14 @@ import { useClientes } from "@/lib/clientes";
 import { useGenerarSeguimiento } from "@/lib/notificaciones";
 import { useOportunidades } from "@/lib/oportunidades";
 import { type TipoRegistro, useRegistrosRecientes } from "@/lib/recientes";
+import { TareaModal } from "@/components/tareas/tarea-modal";
+import {
+  estaVencidaTarea,
+  PRIORIDAD_META,
+  type Tarea,
+  useTareas,
+  useUpdateTarea,
+} from "@/lib/tareas";
 import {
   bucketsSeguimiento,
   type BucketsSeguimiento,
@@ -27,7 +43,10 @@ type Filtro = "todas" | "mias";
 
 const GANADAS: EstadoOportunidad[] = ["ganada", "cargada_en_gbp", "facturada"];
 
-const RECIENTE_ICONO: Record<TipoRegistro, { icon: typeof Target; bg: string }> = {
+const RECIENTE_ICONO: Record<
+  TipoRegistro,
+  { icon: typeof Target; bg: string }
+> = {
   Cuenta: { icon: Building2, bg: "bg-blue-500" },
   Oportunidad: { icon: Target, bg: "bg-orange-500" },
   Presupuesto: { icon: FileText, bg: "bg-violet-500" },
@@ -50,7 +69,8 @@ function montoCompacto(n: number): string {
 export default function InicioPage() {
   const { data: session } = useSession();
   const currentUserId = Number(session?.usuario?.id) || null;
-  const nombre = (session?.usuario?.nombre as string) ?? session?.user?.name ?? "";
+  const nombre =
+    (session?.usuario?.nombre as string) ?? session?.user?.name ?? "";
   const [filtro, setFiltro] = useState<Filtro>("todas");
 
   const { data: opps, isLoading } = useOportunidades();
@@ -124,7 +144,7 @@ export default function InicioPage() {
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             {saludo()}
-            {nombre ? `, ${nombre.split(" ")[0]}` : ""}. ¡A vender! 🐻
+            {nombre ? `, ${nombre.split(" ")[0]}` : ""}. ¡Empecemos a vender!
           </p>
         </div>
         <div className="flex rounded-md border border-slate-200 p-0.5 text-sm dark:border-slate-800">
@@ -144,7 +164,9 @@ export default function InicioPage() {
         </div>
       </div>
 
-      {isLoading && <p className="mt-6 text-slate-500 dark:text-slate-400">Cargando…</p>}
+      {isLoading && (
+        <p className="mt-6 text-slate-500 dark:text-slate-400">Cargando…</p>
+      )}
 
       {/* Cards principales estilo Salesforce */}
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
@@ -159,9 +181,18 @@ export default function InicioPage() {
             { value: vista.montos.perdidas, color: "#ef4444" },
           ]}
           legend={[
-            { dot: "#22c55e", label: `${montoCompacto(vista.montos.abiertas)} Abiertas` },
-            { dot: "#3b82f6", label: `${montoCompacto(vista.montos.ganadas)} Ganadas` },
-            { dot: "#ef4444", label: `${montoCompacto(vista.montos.perdidas)} Perdidas` },
+            {
+              dot: "#22c55e",
+              label: `${montoCompacto(vista.montos.abiertas)} Abiertas`,
+            },
+            {
+              dot: "#3b82f6",
+              label: `${montoCompacto(vista.montos.ganadas)} Ganadas`,
+            },
+            {
+              dot: "#ef4444",
+              label: `${montoCompacto(vista.montos.perdidas)} Perdidas`,
+            },
           ]}
           href="/oportunidades"
           hrefLabel="Ver oportunidades"
@@ -178,9 +209,18 @@ export default function InicioPage() {
             { value: vista.sem.verde, color: "#22c55e" },
           ]}
           legend={[
-            { dot: "#ef4444", label: `${vista.sem.rojo} ${SEMAFORO_META.rojo.label}` },
-            { dot: "#f59e0b", label: `${vista.sem.amarillo} ${SEMAFORO_META.amarillo.label}` },
-            { dot: "#22c55e", label: `${vista.sem.verde} ${SEMAFORO_META.verde.label}` },
+            {
+              dot: "#ef4444",
+              label: `${vista.sem.rojo} ${SEMAFORO_META.rojo.label}`,
+            },
+            {
+              dot: "#f59e0b",
+              label: `${vista.sem.amarillo} ${SEMAFORO_META.amarillo.label}`,
+            },
+            {
+              dot: "#22c55e",
+              label: `${vista.sem.verde} ${SEMAFORO_META.verde.label}`,
+            },
           ]}
           href="/oportunidades"
           hrefLabel="Ver oportunidades"
@@ -197,9 +237,18 @@ export default function InicioPage() {
             { value: vista.cuentas.sinActividad, color: "#ef4444" },
           ]}
           legend={[
-            { dot: "#22c55e", label: `${vista.cuentas.conActiva} Con oportunidad activa` },
-            { dot: "#3b82f6", label: `${vista.cuentas.soloCerradas} Solo cerradas` },
-            { dot: "#ef4444", label: `${vista.cuentas.sinActividad} Sin actividad` },
+            {
+              dot: "#22c55e",
+              label: `${vista.cuentas.conActiva} Con oportunidad activa`,
+            },
+            {
+              dot: "#3b82f6",
+              label: `${vista.cuentas.soloCerradas} Solo cerradas`,
+            },
+            {
+              dot: "#ef4444",
+              label: `${vista.cuentas.sinActividad} Sin actividad`,
+            },
           ]}
           href="/clientes"
           hrefLabel="Ver cuentas"
@@ -208,8 +257,78 @@ export default function InicioPage() {
 
       <SeguimientoHoy buckets={vista.buckets} />
 
-      <RegistrosRecientes />
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <TareasDeHoy />
+        <RegistrosRecientes />
+      </div>
     </div>
+  );
+}
+
+// Tareas del vendedor que vencen hoy o están atrasadas.
+function TareasDeHoy() {
+  const { data } = useTareas(false);
+  const actualizar = useUpdateTarea();
+  const [creando, setCreando] = useState(false);
+  const [editar, setEditar] = useState<Tarea | null>(null);
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  const items = (data ?? [])
+    .filter((t) => t.fecha_vencimiento && t.fecha_vencimiento <= hoy)
+    .sort((a, b) =>
+      (a.fecha_vencimiento ?? "").localeCompare(b.fecha_vencimiento ?? "")
+    );
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Tareas de hoy</h2>
+        <Button size="sm" variant="outline" onClick={() => setCreando(true)}>
+          <Plus size={14} /> Nueva tarea
+        </Button>
+      </div>
+
+      {items.length === 0 ? (
+        <p className="py-6 text-center text-sm text-slate-400 dark:text-slate-500">
+          No hay nada pendiente para hoy. Tomá la iniciativa.
+        </p>
+      ) : (
+        <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+          {items.map((t) => (
+            <li key={t.id} className="flex items-center gap-3 py-2">
+              <input
+                type="checkbox"
+                onChange={() => actualizar.mutate({ id: t.id, body: { completada: true } })}
+                className="h-4 w-4 shrink-0 cursor-pointer accent-brand"
+                title="Marcar como hecha"
+              />
+              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${PRIORIDAD_META[t.prioridad].color}`} />
+              <button
+                type="button"
+                onClick={() => setEditar(t)}
+                className="min-w-0 flex-1 truncate text-left text-sm text-slate-800 hover:text-brand dark:text-slate-100"
+              >
+                {t.titulo}
+              </button>
+              {estaVencidaTarea(t) && (
+                <span className="shrink-0 text-xs font-semibold text-red-600">atrasada</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-3 border-t border-slate-100 pt-3 text-center dark:border-slate-800">
+        <Link href="/tareas" className="text-sm font-semibold text-brand hover:underline">
+          Ver todas
+        </Link>
+      </div>
+
+      {creando && (
+        <TareaModal open onClose={() => setCreando(false)} fechaPorDefecto={hoy} />
+      )}
+      {editar && <TareaModal open tarea={editar} onClose={() => setEditar(null)} />}
+    </section>
   );
 }
 
@@ -236,8 +355,12 @@ function DashCard({
   return (
     <section className="flex flex-col rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div>
-        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{titulo}</h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400">{subtitulo}</p>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+          {titulo}
+        </h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          {subtitulo}
+        </p>
       </div>
       <div className="mt-4 flex flex-1 items-center gap-4">
         <Donut segments={segments} centro={centro} centroLabel={centroLabel} />
@@ -247,14 +370,20 @@ function DashCard({
               key={i}
               className="flex items-center gap-2 rounded-md bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700 dark:bg-slate-800/60 dark:text-slate-200"
             >
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: l.dot }} />
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ background: l.dot }}
+              />
               {l.label}
             </li>
           ))}
         </ul>
       </div>
       <div className="mt-4 border-t border-slate-100 pt-3 text-center dark:border-slate-800">
-        <Link href={href} className="text-sm font-semibold text-brand hover:underline">
+        <Link
+          href={href}
+          className="text-sm font-semibold text-brand hover:underline"
+        >
           {hrefLabel}
         </Link>
       </div>
@@ -280,7 +409,14 @@ function Donut({
   return (
     <div className="relative shrink-0" style={{ width: 128, height: 128 }}>
       <svg viewBox="0 0 100 100" className="h-32 w-32 -rotate-90">
-        <circle cx="50" cy="50" r={r} fill="none" strokeWidth={thickness} className="stroke-slate-100 dark:stroke-slate-800" />
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          fill="none"
+          strokeWidth={thickness}
+          className="stroke-slate-100 dark:stroke-slate-800"
+        />
         {total > 0 &&
           segments.map((s, i) => {
             const len = (s.value / total) * circ;
@@ -302,8 +438,12 @@ function Donut({
           })}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">{centro}</span>
-        <span className="text-[11px] text-slate-400 dark:text-slate-500">{centroLabel}</span>
+        <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+          {centro}
+        </span>
+        <span className="text-[11px] text-slate-400 dark:text-slate-500">
+          {centroLabel}
+        </span>
       </div>
     </div>
   );
@@ -320,9 +460,24 @@ function SeguimientoHoy({ buckets }: { buckets: BucketsSeguimiento }) {
     icon: React.ReactNode;
     tono: string;
   }[] = [
-    { key: "vencida", label: "Vencidas", icon: <AlarmClock size={15} />, tono: "text-red-600" },
-    { key: "sin_avance", label: "Sin avance (+3 días)", icon: <Clock size={15} />, tono: "text-amber-600" },
-    { key: "por_vencer", label: "Por vencer", icon: <BellRing size={15} />, tono: "text-blue-600" },
+    {
+      key: "vencida",
+      label: "Vencidas",
+      icon: <AlarmClock size={15} />,
+      tono: "text-red-600",
+    },
+    {
+      key: "sin_avance",
+      label: "Sin avance (+3 días)",
+      icon: <Clock size={15} />,
+      tono: "text-amber-600",
+    },
+    {
+      key: "por_vencer",
+      label: "Por vencer",
+      icon: <BellRing size={15} />,
+      tono: "text-blue-600",
+    },
   ];
 
   const totalAcciones = buckets.vencida.length + buckets.sin_avance.length;
@@ -331,13 +486,21 @@ function SeguimientoHoy({ buckets }: { buckets: BucketsSeguimiento }) {
     <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Seguimiento de hoy</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Seguimiento de hoy
+          </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Lo que necesita acción hoy. Se avisa al vendedor en la campana (auto cada mañana).
+            Lo que necesita acción hoy. Se avisa al vendedor en la campana (auto
+            cada mañana).
           </p>
         </div>
         <Tooltip label="Crear avisos ahora en la campana">
-          <Button variant="outline" size="sm" onClick={() => generar.mutate()} disabled={generar.isPending}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => generar.mutate()}
+            disabled={generar.isPending}
+          >
             <BellRing size={14} />
             {generar.isPending
               ? "Revisando…"
@@ -352,16 +515,23 @@ function SeguimientoHoy({ buckets }: { buckets: BucketsSeguimiento }) {
         {cols.map((c) => {
           const items = buckets[c.key];
           return (
-            <div key={c.key} className="rounded-md border border-slate-200 dark:border-slate-800">
+            <div
+              key={c.key}
+              className="rounded-md border border-slate-200 dark:border-slate-800"
+            >
               <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2 dark:border-slate-800">
-                <span className={`flex items-center gap-1.5 text-sm font-semibold ${c.tono}`}>
+                <span
+                  className={`flex items-center gap-1.5 text-sm font-semibold ${c.tono}`}
+                >
                   {c.icon} {c.label}
                 </span>
                 <Badge>{items.length}</Badge>
               </div>
               <div className="max-h-52 space-y-1 overflow-y-auto p-2">
                 {items.length === 0 ? (
-                  <p className="px-1 py-3 text-center text-xs text-slate-400 dark:text-slate-500">Nada por acá 👌</p>
+                  <p className="px-1 py-3 text-center text-xs text-slate-400 dark:text-slate-500">
+                    Nada por acá.
+                  </p>
                 ) : (
                   items.map((o) => (
                     <button
@@ -388,7 +558,9 @@ function SeguimientoHoy({ buckets }: { buckets: BucketsSeguimiento }) {
       </div>
 
       {totalAcciones === 0 && (
-        <p className="mt-3 text-center text-sm text-green-600">Estás al día con los seguimientos. 🎉</p>
+        <p className="mt-3 text-center text-sm text-green-600">
+          Estás al día con los seguimientos.
+        </p>
       )}
     </section>
   );
@@ -399,10 +571,14 @@ function RegistrosRecientes() {
   const { data } = useRegistrosRecientes(6);
 
   return (
-    <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-slate-100">Registros recientes</h2>
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-slate-100">
+        Registros recientes
+      </h2>
       {data.length === 0 ? (
-        <p className="py-4 text-center text-sm text-slate-400 dark:text-slate-500">Todavía no hay movimientos.</p>
+        <p className="py-4 text-center text-sm text-slate-400 dark:text-slate-500">
+          Todavía no hay movimientos.
+        </p>
       ) : (
         <ul className="divide-y divide-slate-100 dark:divide-slate-800">
           {data.map((r) => {
@@ -415,12 +591,18 @@ function RegistrosRecientes() {
                   className="flex w-full items-center justify-between gap-3 py-2 text-left"
                 >
                   <span className="flex min-w-0 items-center gap-2.5">
-                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white ${bg}`}>
+                    <span
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white ${bg}`}
+                    >
                       <Icon size={14} />
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate font-medium text-brand">{r.nombre}</span>
-                      <span className="block truncate text-xs text-slate-400 dark:text-slate-500">{r.tipo}</span>
+                      <span className="block truncate font-medium text-brand">
+                        {r.nombre}
+                      </span>
+                      <span className="block truncate text-xs text-slate-400 dark:text-slate-500">
+                        {r.tipo}
+                      </span>
                     </span>
                   </span>
                   <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">
@@ -433,7 +615,10 @@ function RegistrosRecientes() {
         </ul>
       )}
       <div className="mt-3 border-t border-slate-100 pt-3 text-center dark:border-slate-800">
-        <Link href="/recientes" className="text-sm font-semibold text-brand hover:underline">
+        <Link
+          href="/recientes"
+          className="text-sm font-semibold text-brand hover:underline"
+        >
           Ver todos
         </Link>
       </div>

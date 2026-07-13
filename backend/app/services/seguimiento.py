@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.db.models.notificaciones import Notificacion
 from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
+from app.db.models.tareas import Tarea
 from app.services.notificaciones import crear_notificacion
 
 # Estados cerrados: no se siguen.
@@ -65,7 +66,7 @@ def generar_notificaciones_seguimiento(db: Session) -> int:
 
         if o.fecha_limite and o.fecha_limite < hoy:
             avisos.append(
-                f"⏰ Vencida: {cliente} venció el {o.fecha_limite:%d/%m}. Seguí o cerrala."
+                f"Vencida: {cliente} venció el {o.fecha_limite:%d/%m}. Seguí o cerrala."
             )
 
         # SQLite (tests) devuelve el datetime sin tz; lo normalizamos a UTC.
@@ -74,7 +75,7 @@ def generar_notificaciones_seguimiento(db: Session) -> int:
             ultimo = ultimo.replace(tzinfo=timezone.utc)
         dias = (ahora - ultimo).days
         if dias >= DIAS_SIN_AVANCE:
-            avisos.append(f"🔔 Sin avance hace {dias} días: {cliente}.")
+            avisos.append(f"Sin avance hace {dias} días: {cliente}.")
 
         for mensaje in avisos:
             if not _ya_notificado_hoy(db, o.vendedor_id, mensaje, inicio_dia):
@@ -84,3 +85,30 @@ def generar_notificaciones_seguimiento(db: Session) -> int:
     if creadas:
         db.commit()
     return creadas
+
+
+def disparar_recordatorios(db: Session) -> int:
+    """Crea la notificación de los recordatorios de tareas cuya hora ya llegó
+    (y que no se avisaron todavía). Devuelve cuántos disparó."""
+    ahora = datetime.now(timezone.utc)
+    tareas = db.scalars(
+        select(Tarea).where(
+            Tarea.completada.is_(False),
+            Tarea.recordatorio.is_not(None),
+            Tarea.recordatorio <= ahora,
+            Tarea.recordatorio_notificado.is_(False),
+        )
+    )
+    disparados = 0
+    for t in tareas:
+        crear_notificacion(
+            db,
+            usuario_id=t.usuario_id,
+            mensaje=f"Recordatorio: {t.titulo}",
+            link="/tareas",
+        )
+        t.recordatorio_notificado = True
+        disparados += 1
+    if disparados:
+        db.commit()
+    return disparados

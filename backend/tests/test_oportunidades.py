@@ -22,6 +22,7 @@ from app.db.models.presupuestos import Presupuesto
 from app.db.models.recordatorios import Recordatorio
 from app.db.models.respuestas_compras import RespuestaCompras
 from app.db.models.solicitudes_compras import SolicitudCompras
+from app.db.models.tareas import Tarea
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.main import app
@@ -50,6 +51,7 @@ def client() -> Iterator[TestClient]:
         PresupuestoItem.__table__,
         Recordatorio.__table__,
         Notificacion.__table__,
+        Tarea.__table__,
     ]
     Base.metadata.create_all(bind=engine, tables=tables)
 

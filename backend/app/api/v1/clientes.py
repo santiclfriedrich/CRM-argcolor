@@ -1,6 +1,6 @@
 """CRUD endpoints for clientes."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -10,6 +10,7 @@ from app.db.models.clientes import Cliente
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.schemas.cliente import ClienteCreate, ClienteDetail, ClienteRead, ClienteUpdate
+from app.services.borrado import eliminar_cliente
 
 router = APIRouter(prefix="/clientes", tags=["clientes"])
 
@@ -57,3 +58,18 @@ def update_cliente(
     db.commit()
     db.refresh(cliente)
     return cliente
+
+
+@router.delete("/{cliente_id}", status_code=204)
+def delete_cliente(
+    cliente_id: int,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> Response:
+    """Elimina el cliente y todo lo que cuelga: contactos, dominios y sus
+    oportunidades (con mails, presupuestos, solicitudes). Desvincula tareas."""
+    cliente = db.get(Cliente, cliente_id)
+    if cliente is None:
+        raise NotFoundError("Cliente no encontrado")
+    eliminar_cliente(db, cliente)
+    return Response(status_code=204)

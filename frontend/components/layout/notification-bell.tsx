@@ -53,7 +53,7 @@ export function NotificationBell() {
             className="fixed inset-0 z-40 cursor-default"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute left-0 top-9 z-50 w-80 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+          <div className="absolute right-0 top-9 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
             <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2 dark:border-slate-800">
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                 Notificaciones

@@ -10,7 +10,10 @@ from app.db.models.notificaciones import Notificacion
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.schemas.notificacion import NotificacionRead
-from app.services.seguimiento import generar_notificaciones_seguimiento
+from app.services.seguimiento import (
+    disparar_recordatorios,
+    generar_notificaciones_seguimiento,
+)
 
 router = APIRouter(prefix="/notificaciones", tags=["notificaciones"])
 
@@ -35,9 +38,11 @@ def generar_seguimiento(
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ) -> dict[str, int]:
-    """Corre el chequeo de seguimiento ahora (vencidas / sin avance) y crea las
-    notificaciones del día. También lo dispara el scheduler una vez por día."""
-    return {"creadas": generar_notificaciones_seguimiento(db)}
+    """Corre el chequeo de seguimiento ahora (vencidas / sin avance + recordatorios
+    de tareas vencidos) y crea las notificaciones. También corre por scheduler."""
+    creadas = generar_notificaciones_seguimiento(db)
+    creadas += disparar_recordatorios(db)
+    return {"creadas": creadas}
 
 
 @router.post("/leer-todas", status_code=204)

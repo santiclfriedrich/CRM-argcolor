@@ -50,7 +50,7 @@ export function GlobalSearch() {
             className="fixed inset-0 z-40 cursor-default"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute left-0 top-9 z-50 max-h-96 w-72 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+          <div className="absolute right-0 top-9 z-50 max-h-96 w-72 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
             {total === 0 ? (
               <p className="px-3 py-4 text-center text-sm text-slate-400 dark:text-slate-500">
                 Sin coincidencias.

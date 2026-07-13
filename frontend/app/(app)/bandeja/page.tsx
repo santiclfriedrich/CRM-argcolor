@@ -518,7 +518,7 @@ function AttachmentImage({ adjunto }: { adjunto: Adjunto }) {
 
   const isImage = (adjunto.mime_type ?? "").startsWith("image/");
   if (!isImage) {
-    return <span className="text-xs text-slate-500 dark:text-slate-400">📎 {adjunto.nombre_archivo}</span>;
+    return <span className="text-xs text-slate-500 dark:text-slate-400">{adjunto.nombre_archivo}</span>;
   }
   return (
     <a href={url ?? undefined} target="_blank" rel="noreferrer" title={adjunto.nombre_archivo}>

@@ -19,6 +19,7 @@ from app.db.models.solicitudes_compras import (
     EstadoSolicitud,
     SolicitudCompras,
 )
+from app.db.models.tareas import PrioridadTarea, Tarea
 from app.db.models.usuarios import RolUsuario, Usuario
 
 __all__ = [
@@ -44,6 +45,8 @@ __all__ = [
     "CondicionPago",
     "EstadoSolicitud",
     "SolicitudCompras",
+    "PrioridadTarea",
+    "Tarea",
     "RolUsuario",
     "Usuario",
 ]

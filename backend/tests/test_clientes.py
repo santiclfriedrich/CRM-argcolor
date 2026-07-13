@@ -14,9 +14,19 @@ from sqlalchemy.pool import StaticPool
 
 from app.api.deps import get_current_user
 from app.db.base import Base
+from app.db.models.adjuntos import Adjunto
 from app.db.models.clientes import Cliente
 from app.db.models.contactos_cliente import ContactoCliente
 from app.db.models.dominios_cliente import DominioCliente
+from app.db.models.mails import Mail
+from app.db.models.mails_descartados import MailDescartado
+from app.db.models.oportunidades import Oportunidad
+from app.db.models.presupuesto_items import PresupuestoItem
+from app.db.models.presupuestos import Presupuesto
+from app.db.models.recordatorios import Recordatorio
+from app.db.models.respuestas_compras import RespuestaCompras
+from app.db.models.solicitudes_compras import SolicitudCompras
+from app.db.models.tareas import Tarea
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.main import app
@@ -38,6 +48,16 @@ def client() -> Iterator[TestClient]:
         Cliente.__table__,
         ContactoCliente.__table__,
         DominioCliente.__table__,
+        Oportunidad.__table__,
+        Mail.__table__,
+        MailDescartado.__table__,
+        SolicitudCompras.__table__,
+        RespuestaCompras.__table__,
+        Presupuesto.__table__,
+        PresupuestoItem.__table__,
+        Recordatorio.__table__,
+        Adjunto.__table__,
+        Tarea.__table__,
     ]
     Base.metadata.create_all(bind=engine, tables=tables)
 
@@ -141,3 +161,26 @@ def test_contacto_de_otro_cliente_no_se_cruza(client: TestClient) -> None:
         ).status_code
         == 404
     )
+
+
+def test_delete_cliente_cascada(client: TestClient) -> None:
+    from sqlalchemy import func, select
+
+    cid = client.post("/api/v1/clientes", json={"razon_social": "ACME"}).json()["id"]
+    with TestingSessionLocal() as db:
+        db.add(ContactoCliente(cliente_id=cid, nombre="Juan"))
+        db.add(DominioCliente(cliente_id=cid, dominio="acme.com"))
+        db.add(Oportunidad(id=1, cliente_id=cid))
+        db.add(Tarea(id=1, usuario_id=1, titulo="Llamar", cliente_id=cid))
+        db.commit()
+
+    assert client.delete(f"/api/v1/clientes/{cid}").status_code == 204
+
+    with TestingSessionLocal() as db:
+        assert db.get(Cliente, cid) is None
+        assert db.scalar(select(func.count()).select_from(Oportunidad)) == 0
+        assert db.scalar(select(func.count()).select_from(ContactoCliente)) == 0
+        assert db.scalar(select(func.count()).select_from(DominioCliente)) == 0
+        # La tarea NO se borra: queda desvinculada del cliente.
+        tarea = db.get(Tarea, 1)
+        assert tarea is not None and tarea.cliente_id is None
