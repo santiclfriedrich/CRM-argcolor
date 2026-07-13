@@ -254,6 +254,7 @@ class GmailClient:
         body: str,
         thread_id: str | None = None,
         in_reply_to: str | None = None,
+        cc: list[str] | None = None,
     ) -> dict[str, str | None]:
         """Envía un mail desde la casilla.
 
@@ -262,9 +263,12 @@ class GmailClient:
         - ``in_reply_to``: Message-ID (RFC) del mail al que se responde. Setea los
           headers ``In-Reply-To``/``References`` para que la respuesta se encadene
           en el cliente del destinatario aunque salga de otra casilla.
+        - ``cc``: lista de destinatarios en copia.
         """
         message = EmailMessage()
         message["To"] = to
+        if cc:
+            message["Cc"] = ", ".join(cc)
         # En modo por-cuenta el From lo pone Gmail (la casilla autenticada).
         if not self._per_user and "@" in (settings.GMAIL_USER or ""):
             message["From"] = settings.GMAIL_USER

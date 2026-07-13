@@ -157,11 +157,36 @@ export interface Solicitud {
   presupuesto_gbp_referencia: string | null;
   ccs_extra: string[] | null;
   estado: EstadoSolicitud;
+  gmail_thread_id: string | null;
   fecha_envio: string | null;
   fecha_respuesta: string | null;
   created_at: string;
   oportunidad: SolicitudOportunidadMini | null;
   solicitante: PersonaMini | null;
+}
+
+// Ítem parseado por la IA de la respuesta de Compras.
+export interface QuoteItem {
+  fabricante: string | null;
+  sku: string | null;
+  descripcion: string;
+  cantidad: number;
+  precio_unitario: number;
+  iva: number | null;
+  observaciones: string | null;
+}
+
+export interface QuoteDraft {
+  items: QuoteItem[];
+  notas: string | null;
+}
+
+export interface RespuestaCompras {
+  id: number;
+  contenido_raw: string | null;
+  datos_parseados_ia: QuoteDraft | null;
+  notas_compras: string | null;
+  fecha_recepcion: string;
 }
 
 export interface EmailPreview {
@@ -173,6 +198,7 @@ export interface EmailPreview {
 
 export interface SolicitudDetail extends Solicitud {
   email_preview: EmailPreview;
+  respuestas: RespuestaCompras[];
 }
 
 export type SolicitudCreate = {
@@ -267,3 +293,70 @@ export interface Notificacion {
   leida: boolean;
   fecha_creacion: string;
 }
+
+// ---- Presupuestos ----
+export type EstadoPresupuesto =
+  | "borrador"
+  | "enviado"
+  | "aceptado"
+  | "rechazado"
+  | "negociando";
+
+export interface PresupuestoItem {
+  id: number;
+  descripcion: string;
+  cantidad: number;
+  precio_unitario: number;
+  descuento_pct: number;
+  subtotal: number;
+  sku: string | null;
+  fabricante: string | null;
+  orden: number;
+}
+
+export interface Presupuesto {
+  id: number;
+  oportunidad_id: number;
+  codigo: string;
+  estado: EstadoPresupuesto;
+  monto_total: number | null;
+  moneda: string;
+  condicion_pago: string | null;
+  plazo_entrega: string | null;
+  validez: string | null;
+  version: number;
+  pdf_url: string | null;
+  fecha_envio: string | null;
+  fecha_validez: string | null;
+  created_at: string;
+  items: PresupuestoItem[];
+  oportunidad: MailOportunidadMini | null;
+}
+
+// Payloads de escritura. Los ítems del armador se mandan sin id (los crea el back).
+export type ItemInput = {
+  descripcion: string;
+  cantidad: number;
+  precio_unitario: number;
+  descuento_pct?: number;
+  sku?: string | null;
+  fabricante?: string | null;
+};
+
+export type PresupuestoCreate = {
+  oportunidad_id: number;
+  condicion_pago?: string | null;
+  plazo_entrega?: string | null;
+  validez?: string | null;
+  moneda?: string;
+  items?: ItemInput[];
+};
+
+export type PresupuestoUpdate = {
+  condicion_pago?: string | null;
+  plazo_entrega?: string | null;
+  validez?: string | null;
+  moneda?: string;
+  estado?: EstadoPresupuesto;
+  items?: ItemInput[];
+};

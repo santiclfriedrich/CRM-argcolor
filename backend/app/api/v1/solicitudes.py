@@ -2,23 +2,27 @@
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import get_current_user
+from app.api.deps import get_ai, get_current_user, get_user_gmail
 from app.core.exceptions import NotFoundError
 from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
+from app.db.models.respuestas_compras import RespuestaCompras
 from app.db.models.solicitudes_compras import EstadoSolicitud, SolicitudCompras
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
+from app.integrations.ai.base import AIProvider
 from app.schemas.solicitud import (
+    ParseRespuestaRequest,
+    RespuestaComprasRead,
     SolicitudCreate,
     SolicitudDetail,
     SolicitudRead,
     SolicitudUpdate,
 )
-from app.services.solicitudes import build_email_preview
+from app.services.solicitudes import build_email_preview, enviar_a_compras
 
 router = APIRouter(prefix="/solicitudes", tags=["solicitudes"])
 
@@ -26,6 +30,7 @@ router = APIRouter(prefix="/solicitudes", tags=["solicitudes"])
 _RELATIONS = (
     selectinload(SolicitudCompras.oportunidad).selectinload(Oportunidad.cliente),
     selectinload(SolicitudCompras.solicitante),
+    selectinload(SolicitudCompras.respuestas),
 )
 
 
@@ -95,7 +100,67 @@ def get_solicitud(
     solicitud = _get_loaded(db, solicitud_id)
     read = SolicitudRead.model_validate(solicitud)
     preview = build_email_preview(solicitud, db)
-    return SolicitudDetail(**read.model_dump(), email_preview=preview)
+    respuestas = [RespuestaComprasRead.model_validate(r) for r in solicitud.respuestas]
+    return SolicitudDetail(**read.model_dump(), email_preview=preview, respuestas=respuestas)
+
+
+@router.post("/{solicitud_id}/enviar", response_model=SolicitudRead)
+def enviar_solicitud(
+    solicitud_id: int,
+    db: Session = Depends(get_db),
+    gmail=Depends(get_user_gmail),  # noqa: ANN001 - GmailClient del usuario logueado
+    _: Usuario = Depends(get_current_user),
+) -> SolicitudCompras:
+    """Envía la solicitud a Compras por Gmail (desde la casilla del vendedor)."""
+    solicitud = _get_loaded(db, solicitud_id)
+    try:
+        enviar_a_compras(db, gmail, solicitud)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001 - frontera con Gmail
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"No se pudo enviar a Compras: {exc}",
+        ) from exc
+    return _get_loaded(db, solicitud_id)
+
+
+@router.post(
+    "/{solicitud_id}/respuesta", response_model=RespuestaComprasRead, status_code=201
+)
+def cargar_respuesta(
+    solicitud_id: int,
+    body: ParseRespuestaRequest,
+    db: Session = Depends(get_db),
+    ai: AIProvider = Depends(get_ai),
+    _: Usuario = Depends(get_current_user),
+) -> RespuestaCompras:
+    """Parsea con IA la respuesta de Compras (tabla de precios) y la registra.
+
+    Marca la solicitud como respondida. Los ítems quedan listos para armar el
+    presupuesto (POST /presupuestos/desde-solicitud/{id})."""
+    solicitud = _get_loaded(db, solicitud_id)
+    try:
+        draft = ai.draft_quote(body.contenido)
+    except Exception as exc:  # noqa: BLE001 - frontera con IA
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Error al parsear con IA: {exc}",
+        ) from exc
+
+    respuesta = RespuestaCompras(
+        solicitud_compras_id=solicitud.id,
+        contenido_raw=body.contenido,
+        datos_parseados_ia=draft.model_dump(),
+        notas_compras=draft.notas,
+    )
+    db.add(respuesta)
+    solicitud.estado = EstadoSolicitud.respondida
+    if solicitud.fecha_respuesta is None:
+        solicitud.fecha_respuesta = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(respuesta)
+    return respuesta
 
 
 @router.patch("/{solicitud_id}", response_model=SolicitudRead)

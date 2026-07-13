@@ -15,6 +15,11 @@ interface Props {
   isPending: boolean;
   onSubmit: (values: SolicitudCreate) => void;
   onCancel: () => void;
+  // Pre-carga (ej. desde una oportunidad, con el requerimiento ya extraído por IA).
+  defaultOportunidadId?: number | null;
+  defaultRequerimiento?: string;
+  // Si la oportunidad viene fijada, no se puede cambiar en el form.
+  lockOportunidad?: boolean;
 }
 
 // "a@x.com, b@y.com" -> ["a@x.com", "b@y.com"]
@@ -24,11 +29,18 @@ const parseEmails = (raw: string): string[] =>
     .map((e) => e.trim())
     .filter(Boolean);
 
-export function SolicitudForm({ isPending, onSubmit, onCancel }: Props) {
+export function SolicitudForm({
+  isPending,
+  onSubmit,
+  onCancel,
+  defaultOportunidadId = null,
+  defaultRequerimiento = "",
+  lockOportunidad = false,
+}: Props) {
   const { data: oportunidades } = useOportunidades();
 
-  const [oportunidadId, setOportunidadId] = useState<number | null>(null);
-  const [requerimiento, setRequerimiento] = useState("");
+  const [oportunidadId, setOportunidadId] = useState<number | null>(defaultOportunidadId);
+  const [requerimiento, setRequerimiento] = useState(defaultRequerimiento);
   const [condicionPago, setCondicionPago] = useState<CondicionPago | "">("");
   const [importe, setImporte] = useState("");
   const [fechaLimite, setFechaLimite] = useState("");
@@ -58,6 +70,7 @@ export function SolicitudForm({ isPending, onSubmit, onCancel }: Props) {
           value={oportunidadId ?? ""}
           onChange={(e) => setOportunidadId(e.target.value ? Number(e.target.value) : null)}
           required
+          disabled={lockOportunidad}
         >
           <option value="">— Elegí una oportunidad —</option>
           {oportunidades?.map((o) => (

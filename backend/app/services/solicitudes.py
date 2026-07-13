@@ -1,13 +1,30 @@
-"""Lógica de negocio de solicitudes a Compras: armado del mail borrador.
+"""Lógica de negocio de solicitudes a Compras: armado y envío del mail.
 
-El envío real por Gmail llega en Fase 2. Por ahora generamos el texto con el
-mismo formato que el Google Form actual para que el vendedor lo copie/envíe.
+`build_email_preview` arma el texto (mismo formato que el Google Form) y
+`enviar_a_compras` lo manda por Gmail desde la casilla del vendedor.
 """
 
+from datetime import datetime, timezone
+from typing import Protocol
+
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models.configuracion import Configuracion
-from app.db.models.solicitudes_compras import SolicitudCompras
+from app.db.models.mails import DireccionMail, Mail
+from app.db.models.solicitudes_compras import EstadoSolicitud, SolicitudCompras
+
+
+class GmailSender(Protocol):
+    def send_message(
+        self,
+        to: str,
+        subject: str,
+        body: str,
+        thread_id: str | None = None,
+        in_reply_to: str | None = None,
+        cc: list[str] | None = None,
+    ) -> dict[str, str | None]: ...
 
 # Clave en la tabla `configuracion` con destinatarios por defecto:
 #   {"to": "carlos@...", "cc": ["marcos@...", "karen@...", "diego@..."]}
@@ -22,8 +39,59 @@ def _default_recipients(db: Session) -> tuple[str | None, list[str]]:
     return to, cc
 
 
+def get_destinatarios_compras(db: Session) -> dict:
+    """Destinatarios configurados del mail a Compras: {to, cc}."""
+    to, cc = _default_recipients(db)
+    return {"to": to, "cc": cc}
+
+
+def set_destinatarios_compras(
+    db: Session, to: str | None, cc: list[str]
+) -> dict:
+    """Guarda los destinatarios del mail a Compras (clave `solicitudes_compras`)."""
+    valor = {"to": to or None, "cc": cc or []}
+    cfg = db.get(Configuracion, CONFIG_KEY)
+    if cfg is None:
+        db.add(Configuracion(clave=CONFIG_KEY, valor=valor))
+    else:
+        cfg.valor = valor  # reasignar dispara el UPDATE del JSONB
+    db.commit()
+    return valor
+
+
 def _fmt(value: object | None) -> str:
     return str(value) if value not in (None, "") else "—"
+
+
+def sugerir_requerimiento(db: Session, oportunidad_id: int) -> str:
+    """Arma un requerimiento para Compras a partir de lo que la IA ya extrajo
+    del mail original del cliente (producto, cantidad, detalle, plazo).
+
+    Toma el primer mail entrante de la oportunidad con datos de IA (el pedido
+    original). Devuelve "" si no hay nada para sugerir."""
+    mail = db.scalar(
+        select(Mail)
+        .where(
+            Mail.oportunidad_id == oportunidad_id,
+            Mail.direccion == DireccionMail.entrante,
+            Mail.datos_extraidos_ia.is_not(None),
+        )
+        .order_by(Mail.id.asc())
+    )
+    datos = mail.datos_extraidos_ia if mail else None
+    if not datos:
+        return ""
+
+    partes: list[str] = []
+    if datos.get("producto"):
+        partes.append(f"Producto: {datos['producto']}")
+    if datos.get("cantidad"):
+        partes.append(f"Cantidad: {datos['cantidad']}")
+    if datos.get("requerimiento"):
+        partes.append(datos["requerimiento"])
+    if datos.get("plazo"):
+        partes.append(f"Plazo requerido: {datos['plazo']}")
+    return "\n".join(partes)
 
 
 def build_email_preview(solicitud: SolicitudCompras, db: Session) -> dict:
@@ -67,3 +135,28 @@ def build_email_preview(solicitud: SolicitudCompras, db: Session) -> dict:
     )
 
     return {"to": to, "cc": cc, "subject": subject, "body": body}
+
+
+def enviar_a_compras(db: Session, gmail: GmailSender, solicitud: SolicitudCompras) -> str | None:
+    """Envía el mail de solicitud a Compras y guarda el hilo de Gmail.
+
+    Devuelve el thread_id del envío. Lanza ValueError si no hay destinatario
+    configurado (clave `solicitudes_compras` en `configuracion`)."""
+    preview = build_email_preview(solicitud, db)
+    if not preview["to"]:
+        raise ValueError(
+            "No hay email de Compras configurado. Cargalo en Configuración "
+            "(destinatarios de solicitudes)."
+        )
+    sent = gmail.send_message(
+        to=preview["to"],
+        subject=preview["subject"],
+        body=preview["body"],
+        cc=preview["cc"] or None,
+    )
+    solicitud.gmail_thread_id = sent.get("thread_id")
+    solicitud.fecha_envio = datetime.now(timezone.utc)
+    solicitud.estado = EstadoSolicitud.enviada
+    db.commit()
+    db.refresh(solicitud)
+    return solicitud.gmail_thread_id

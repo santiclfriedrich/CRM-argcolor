@@ -6,6 +6,7 @@ import { oportunidadKeys } from "@/lib/oportunidades";
 import type {
   CondicionPago,
   EstadoSolicitud,
+  RespuestaCompras,
   Solicitud,
   SolicitudCreate,
   SolicitudDetail,
@@ -62,6 +63,31 @@ export function useUpdateSolicitud(id: number) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: solicitudKeys.all });
       qc.invalidateQueries({ queryKey: solicitudKeys.detail(id) });
+    },
+  });
+}
+
+// Envía la solicitud a Compras por Gmail (desde la casilla del vendedor).
+export function useEnviarSolicitud(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => (await api.post<Solicitud>(`${BASE}/${id}/enviar`)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: solicitudKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: solicitudKeys.all });
+    },
+  });
+}
+
+// Pega el texto de la respuesta de Compras y la IA extrae los ítems.
+export function useCargarRespuesta(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (contenido: string) =>
+      (await api.post<RespuestaCompras>(`${BASE}/${id}/respuesta`, { contenido })).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: solicitudKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: solicitudKeys.all });
     },
   });
 }

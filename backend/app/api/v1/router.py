@@ -12,6 +12,7 @@ from app.api.v1 import (
     mails,
     notificaciones,
     oportunidades,
+    presupuestos,
     solicitudes,
     usuarios,
 )
@@ -24,6 +25,7 @@ api_router.include_router(clientes.router)
 api_router.include_router(contactos.router)
 api_router.include_router(dominios.router)
 api_router.include_router(oportunidades.router)
+api_router.include_router(presupuestos.router)
 api_router.include_router(solicitudes.router)
 api_router.include_router(mails.router)
 api_router.include_router(notificaciones.router)

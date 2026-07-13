@@ -40,6 +40,16 @@ export function useOportunidades() {
   });
 }
 
+// Requerimiento pre-armado (por la IA) para la solicitud a Compras de esa oportunidad.
+export function useSugerenciaCompras(id: number | null) {
+  return useQuery({
+    queryKey: [...oportunidadKeys.all, id, "sugerencia-compras"],
+    queryFn: async () =>
+      (await api.get<{ requerimiento: string }>(`${BASE}/${id}/sugerencia-compras`)).data,
+    enabled: id !== null && id > 0,
+  });
+}
+
 export function useCreateOportunidad() {
   const qc = useQueryClient();
   return useMutation({

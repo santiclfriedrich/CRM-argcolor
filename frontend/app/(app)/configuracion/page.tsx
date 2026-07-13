@@ -1,7 +1,17 @@
 "use client";
 
+import { useEffect, useState, type FormEvent } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useAutomatizacion, useUpdateAutomatizacion } from "@/lib/config";
+import {
+  useAutomatizacion,
+  useDestinatariosCompras,
+  useUpdateAutomatizacion,
+  useUpdateDestinatariosCompras,
+} from "@/lib/config";
 
 export default function ConfiguracionPage() {
   const { data, isLoading, isError } = useAutomatizacion();
@@ -11,14 +21,14 @@ export default function ConfiguracionPage() {
     <div className="max-w-2xl">
       <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Configuración</h1>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        Automatización de las respuestas que genera la IA en la bandeja.
+        Automatización de las respuestas de la IA y destinatarios de Compras.
       </p>
 
       {isLoading && <p className="mt-6 text-slate-500 dark:text-slate-400">Cargando…</p>}
       {isError && <p className="mt-6 text-red-600">No se pudo cargar la configuración.</p>}
 
       {data && (
-        <div className="mt-6 divide-y divide-slate-100 rounded-lg border border-slate-200 dark:border-slate-800">
+        <div className="mt-6 divide-y divide-slate-100 rounded-lg border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
           <Row
             titulo="Acuse de recibo automático"
             detalle="Cuando entra un pedido claro, el cliente recibe automáticamente un acuse de recibo."
@@ -34,6 +44,87 @@ export default function ConfiguracionPage() {
             onChange={(v) => updateMut.mutate({ aclaracion_automatica: v })}
           />
         </div>
+      )}
+
+      <DestinatariosCompras />
+    </div>
+  );
+}
+
+// Destinatarios del mail que se envía a Compras al pedir una cotización.
+function DestinatariosCompras() {
+  const { data, isLoading } = useDestinatariosCompras();
+  const updateMut = useUpdateDestinatariosCompras();
+
+  const [to, setTo] = useState("");
+  const [cc, setCc] = useState("");
+  const [cargado, setCargado] = useState(false);
+
+  useEffect(() => {
+    if (data && !cargado) {
+      setTo(data.to ?? "");
+      setCc(data.cc.join(", "));
+      setCargado(true);
+    }
+  }, [data, cargado]);
+
+  const guardar = (e: FormEvent) => {
+    e.preventDefault();
+    const ccList = cc
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    updateMut.mutate({ to: to.trim() || null, cc: ccList });
+  };
+
+  return (
+    <div className="mt-8">
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+        Destinatarios de Compras
+      </h2>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        A quién se le envía el mail al pedir una cotización a Compras.
+      </p>
+
+      {isLoading ? (
+        <p className="mt-4 text-slate-500 dark:text-slate-400">Cargando…</p>
+      ) : (
+        <form
+          onSubmit={guardar}
+          className="mt-4 space-y-4 rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+        >
+          <div>
+            <Label htmlFor="c-to">Email de Compras (principal) *</Label>
+            <Input
+              id="c-to"
+              type="email"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              placeholder="compras@argentinacolor.com"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="c-cc">CC (opcional, separados por coma)</Label>
+            <Input
+              id="c-cc"
+              value={cc}
+              onChange={(e) => setCc(e.target.value)}
+              placeholder="jefe@argentinacolor.com, otro@argentinacolor.com"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button type="submit" disabled={updateMut.isPending || !to.trim()}>
+              {updateMut.isPending ? "Guardando…" : "Guardar"}
+            </Button>
+            {updateMut.isSuccess && <span className="text-xs text-green-600">Guardado ✓</span>}
+            {updateMut.isError && (
+              <span className="text-xs text-red-600">
+                No se pudo guardar. Revisá que los emails sean válidos.
+              </span>
+            )}
+          </div>
+        </form>
       )}
     </div>
   );

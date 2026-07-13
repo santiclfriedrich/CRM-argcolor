@@ -26,3 +26,28 @@ export function useUpdateAutomatizacion() {
     onSuccess: (data) => qc.setQueryData(KEY, data),
   });
 }
+
+// --- Destinatarios del mail a Compras ---
+export interface DestinatariosCompras {
+  to: string | null;
+  cc: string[];
+}
+
+const COMPRAS_KEY = ["configuracion", "compras"] as const;
+const COMPRAS_URL = "/api/v1/configuracion/compras";
+
+export function useDestinatariosCompras() {
+  return useQuery({
+    queryKey: COMPRAS_KEY,
+    queryFn: async () => (await api.get<DestinatariosCompras>(COMPRAS_URL)).data,
+  });
+}
+
+export function useUpdateDestinatariosCompras() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: DestinatariosCompras) =>
+      (await api.put<DestinatariosCompras>(COMPRAS_URL, body)).data,
+    onSuccess: (data) => qc.setQueryData(COMPRAS_KEY, data),
+  });
+}

@@ -5,6 +5,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 from app.db.models.solicitudes_compras import CondicionPago, EstadoSolicitud
+from app.integrations.ai.base import QuoteDraft
 
 
 class SolicitudBase(BaseModel):
@@ -54,11 +55,24 @@ class SolicitanteMini(BaseModel):
     nombre: str
 
 
+class RespuestaComprasRead(BaseModel):
+    """Respuesta de Compras parseada por la IA (ítems para el presupuesto)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    contenido_raw: str | None = None
+    datos_parseados_ia: QuoteDraft | None = None
+    notas_compras: str | None = None
+    fecha_recepcion: datetime
+
+
 class SolicitudRead(SolicitudBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     estado: EstadoSolicitud
+    gmail_thread_id: str | None = None
     fecha_envio: datetime | None = None
     fecha_respuesta: datetime | None = None
     created_at: datetime
@@ -67,7 +81,7 @@ class SolicitudRead(SolicitudBase):
 
 
 class EmailPreview(BaseModel):
-    """Borrador del mail a Compras (envío real = Fase 2 con Gmail API)."""
+    """Borrador del mail a Compras."""
 
     to: str | None = None
     cc: list[str] = []
@@ -75,5 +89,18 @@ class EmailPreview(BaseModel):
     body: str
 
 
+class ParseRespuestaRequest(BaseModel):
+    """Texto de la respuesta de Compras a parsear con la IA."""
+
+    contenido: str
+
+
+class SugerenciaCompras(BaseModel):
+    """Requerimiento pre-armado desde lo que la IA extrajo del mail del cliente."""
+
+    requerimiento: str
+
+
 class SolicitudDetail(SolicitudRead):
     email_preview: EmailPreview
+    respuestas: list[RespuestaComprasRead] = []

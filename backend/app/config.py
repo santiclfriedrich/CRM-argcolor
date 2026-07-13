@@ -61,6 +61,13 @@ class Settings(BaseSettings):
     # --- Almacenamiento de adjuntos (imágenes de mails) ---
     MEDIA_DIR: str = "media"
 
+    # --- Datos de la empresa (encabezado de los PDF de presupuesto) ---
+    EMPRESA_NOMBRE: str = "ARG COLOR S.R.L."
+    EMPRESA_CUIT: str = ""
+    EMPRESA_DIRECCION: str = ""
+    EMPRESA_TELEFONO: str = ""
+    EMPRESA_EMAIL: str = "ventas@argentinacolor.com"
+
     # --- CORS ---
     ALLOWED_ORIGINS: str = "http://localhost:3000"
 

@@ -1,10 +1,12 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { ClipboardList, FileText, Pencil, Plus, Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { OportunidadForm } from "@/components/oportunidades/oportunidad-form";
+import { SolicitudForm } from "@/components/solicitudes/solicitud-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -13,8 +15,11 @@ import {
   useCreateOportunidad,
   useDeleteOportunidad,
   useOportunidades,
+  useSugerenciaCompras,
   useUpdateOportunidad,
 } from "@/lib/oportunidades";
+import { useCreatePresupuesto } from "@/lib/presupuestos";
+import { useCreateSolicitud } from "@/lib/solicitudes";
 import type { Oportunidad, OportunidadCreate } from "@/lib/types";
 
 export default function OportunidadesPage() {
@@ -23,10 +28,13 @@ export default function OportunidadesPage() {
 
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Oportunidad | null>(null);
+  const [pidiendo, setPidiendo] = useState<Oportunidad | null>(null);
 
+  const router = useRouter();
   const { data, isLoading, isError } = useOportunidades();
   const createMut = useCreateOportunidad();
   const deleteMut = useDeleteOportunidad();
+  const crearPresupuesto = useCreatePresupuesto();
 
   const eliminar = (o: Oportunidad) => {
     const quien = o.cliente?.razon_social ?? `#${o.id}`;
@@ -34,6 +42,13 @@ export default function OportunidadesPage() {
       deleteMut.mutate(o.id);
     }
   };
+
+  // Crea un presupuesto en borrador y abre el armador.
+  const armarPresupuesto = (o: Oportunidad) =>
+    crearPresupuesto.mutate(
+      { oportunidad_id: o.id, items: [] },
+      { onSuccess: (p) => router.push(`/presupuestos/${p.id}`) }
+    );
 
   return (
     <div>
@@ -86,6 +101,27 @@ export default function OportunidadesPage() {
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => setPidiendo(o)}
+                        aria-label="Pedir a Compras"
+                        title="Pedir a Compras"
+                        className="text-slate-400 hover:text-brand dark:text-slate-500"
+                      >
+                        <ClipboardList size={15} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => armarPresupuesto(o)}
+                        disabled={crearPresupuesto.isPending}
+                        aria-label="Armar presupuesto"
+                        title="Armar presupuesto"
+                        className="text-slate-400 hover:text-brand dark:text-slate-500"
+                      >
+                        <FileText size={15} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => setEditing(o)}
                         aria-label="Editar"
                       >
@@ -131,7 +167,51 @@ export default function OportunidadesPage() {
       {editing && (
         <EditOportunidadModal oportunidad={editing} onClose={() => setEditing(null)} />
       )}
+
+      {pidiendo && (
+        <PedirComprasModal oportunidad={pidiendo} onClose={() => setPidiendo(null)} />
+      )}
     </div>
+  );
+}
+
+// Abre la solicitud a Compras pre-cargada con el requerimiento que la IA extrajo
+// del mail del cliente. El vendedor revisa y crea; el envío se hace en Solicitudes.
+function PedirComprasModal({
+  oportunidad,
+  onClose,
+}: {
+  oportunidad: Oportunidad;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const { data: sugerencia, isLoading } = useSugerenciaCompras(oportunidad.id);
+  const createSolicitud = useCreateSolicitud();
+
+  const cliente = oportunidad.cliente?.razon_social ?? `#${oportunidad.id}`;
+
+  return (
+    <Modal open onClose={onClose} title={`Pedir a Compras — ${cliente}`}>
+      {isLoading ? (
+        <p className="text-slate-500 dark:text-slate-400">Cargando sugerencia…</p>
+      ) : (
+        <SolicitudForm
+          isPending={createSolicitud.isPending}
+          defaultOportunidadId={oportunidad.id}
+          defaultRequerimiento={sugerencia?.requerimiento ?? ""}
+          lockOportunidad
+          onCancel={onClose}
+          onSubmit={(values) =>
+            createSolicitud.mutate(values, {
+              onSuccess: () => {
+                onClose();
+                router.push("/solicitudes");
+              },
+            })
+          }
+        />
+      )}
+    </Modal>
   );
 }
 

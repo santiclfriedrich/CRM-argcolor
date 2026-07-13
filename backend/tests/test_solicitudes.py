@@ -14,6 +14,7 @@ from app.db.models.clientes import Cliente
 from app.db.models.configuracion import Configuracion
 from app.db.models.contactos_cliente import ContactoCliente
 from app.db.models.oportunidades import Oportunidad
+from app.db.models.respuestas_compras import RespuestaCompras
 from app.db.models.solicitudes_compras import SolicitudCompras
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
@@ -35,6 +36,7 @@ def client() -> Iterator[TestClient]:
         ContactoCliente.__table__,
         Oportunidad.__table__,
         SolicitudCompras.__table__,
+        RespuestaCompras.__table__,
         Configuracion.__table__,
     ]
     Base.metadata.create_all(bind=engine, tables=tables)

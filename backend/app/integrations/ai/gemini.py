@@ -8,7 +8,12 @@ from google import genai
 from google.genai import types
 
 from app.config import settings
-from app.integrations.ai.base import AIProvider, EmailData, ImagePart, QuoteDraft
+from app.integrations.ai.base import (
+    AIProvider,
+    EmailData,
+    ImagePart,
+    QuoteDraft,
+)
 
 _EXTRACT_SYSTEM = """\
 Sos un asistente del equipo comercial de una empresa industrial argentina.
@@ -46,6 +51,29 @@ Reglas (solo para consulta_comercial):
 
 _SUMMARY_SYSTEM = "Resumí el siguiente hilo de mails en español, en 3-5 líneas accionables."
 
+_QUOTE_SYSTEM = """\
+Sos un asistente del equipo comercial de una empresa industrial argentina.
+Recibís la respuesta de Compras a un pedido de cotización: suele venir como una
+tabla o lista con los productos y sus precios. Extraé cada ítem cotizado.
+
+Para cada ítem completá lo que puedas:
+- fabricante: marca o fabricante, si aparece.
+- sku: código de producto/artículo, si aparece.
+- descripcion: nombre o detalle del producto (obligatorio).
+- cantidad: cantidad cotizada (si no está, 1).
+- precio_unitario: precio por unidad, como número (sin símbolos ni miles con
+  punto; usá punto decimal). Si el precio viene con IVA incluido o discriminado,
+  cargá el neto en precio_unitario y el porcentaje en 'iva' si se aclara.
+- iva: porcentaje de IVA si se menciona (ej. 21), si no dejá null.
+- observaciones: plazo, stock, condiciones u otras notas del ítem.
+
+Reglas:
+- Respondé SIEMPRE en español.
+- No inventes datos: si un campo no está, dejalo en null.
+- Poné en 'notas' cualquier comentario general de Compras (plazos globales,
+  condiciones de pago, aclaraciones) que no sea de un ítem puntual.
+"""
+
 
 class GeminiProvider(AIProvider):
     def __init__(self) -> None:
@@ -82,8 +110,19 @@ class GeminiProvider(AIProvider):
         return EmailData.model_validate_json(response.text or "{}")
 
     def draft_quote(self, compras_response: str) -> QuoteDraft:
-        # TODO(Fase 4): prompt para parsear tabla Fabricante/SKU/Desc/Cant/Precio/IVA/Obs.
-        raise NotImplementedError("draft_quote se implementa en Fase 4")
+        response = self._client.models.generate_content(
+            model=self._model,
+            contents=compras_response,
+            config=types.GenerateContentConfig(
+                system_instruction=_QUOTE_SYSTEM,
+                response_mime_type="application/json",
+                response_schema=QuoteDraft,
+            ),
+        )
+        parsed = response.parsed
+        if isinstance(parsed, QuoteDraft):
+            return parsed
+        return QuoteDraft.model_validate_json(response.text or "{}")
 
     def summarize_thread(self, messages: list[str]) -> str:
         response = self._client.models.generate_content(

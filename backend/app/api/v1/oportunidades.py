@@ -25,6 +25,8 @@ from app.schemas.oportunidad import (
     OportunidadRead,
     OportunidadUpdate,
 )
+from app.schemas.solicitud import SugerenciaCompras
+from app.services.solicitudes import sugerir_requerimiento
 
 router = APIRouter(prefix="/oportunidades", tags=["oportunidades"])
 
@@ -70,6 +72,19 @@ def get_oportunidad(
     if oportunidad is None:
         raise NotFoundError("Oportunidad no encontrada")
     return oportunidad
+
+
+@router.get("/{oportunidad_id}/sugerencia-compras", response_model=SugerenciaCompras)
+def sugerencia_compras(
+    oportunidad_id: int,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> SugerenciaCompras:
+    """Requerimiento pre-armado para la solicitud a Compras, desde el mail del
+    cliente ya parseado por la IA. Alimenta el botón 'Pedir a Compras'."""
+    if db.get(Oportunidad, oportunidad_id) is None:
+        raise NotFoundError("Oportunidad no encontrada")
+    return SugerenciaCompras(requerimiento=sugerir_requerimiento(db, oportunidad_id))
 
 
 @router.patch("/{oportunidad_id}", response_model=OportunidadRead)
