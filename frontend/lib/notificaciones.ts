@@ -30,6 +30,16 @@ export function useMarcarLeida() {
   });
 }
 
+// Corre el chequeo de seguimiento del día (vencidas / sin avance) y crea avisos.
+export function useGenerarSeguimiento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      (await api.post<{ creadas: number }>(`${BASE}/generar-seguimiento`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: notificacionKeys.all }),
+  });
+}
+
 export function useMarcarTodasLeidas() {
   const qc = useQueryClient();
   return useMutation({

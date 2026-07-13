@@ -32,20 +32,42 @@ def _run_poll() -> None:
         db.close()
 
 
+def _run_seguimiento() -> None:
+    """Chequeo diario de seguimiento (vencidas / sin avance) -> notificaciones."""
+    from app.db.session import SessionLocal
+    from app.services.seguimiento import generar_notificaciones_seguimiento
+
+    db = SessionLocal()
+    try:
+        n = generar_notificaciones_seguimiento(db)
+        if n:
+            logger.info("Seguimiento diario: %s notificación(es) creadas", n)
+    except Exception:  # noqa: BLE001 - el job no debe tirar el scheduler
+        logger.exception("Falló el seguimiento diario")
+    finally:
+        db.close()
+
+
 def start_scheduler() -> None:
     global _scheduler
-    if not settings.GMAIL_ENABLED:
-        logger.info("GMAIL_ENABLED=false: polling de Gmail desactivado")
-        return
     _scheduler = BackgroundScheduler(timezone="UTC")
-    _scheduler.add_job(
-        _run_poll,
-        "interval",
-        seconds=settings.GMAIL_POLL_INTERVAL_SECONDS,
-        id="gmail_poll",
-    )
+
+    # Polling de Gmail: solo si está habilitado.
+    if settings.GMAIL_ENABLED:
+        _scheduler.add_job(
+            _run_poll,
+            "interval",
+            seconds=settings.GMAIL_POLL_INTERVAL_SECONDS,
+            id="gmail_poll",
+        )
+        logger.info("Polling de Gmail activo cada %ss", settings.GMAIL_POLL_INTERVAL_SECONDS)
+    else:
+        logger.info("GMAIL_ENABLED=false: polling de Gmail desactivado")
+
+    # Seguimiento diario: siempre (independiente de Gmail). 11:00 UTC ≈ 08:00 ART.
+    _scheduler.add_job(_run_seguimiento, "cron", hour=11, minute=0, id="seguimiento_diario")
     _scheduler.start()
-    logger.info("Polling de Gmail activo cada %ss", settings.GMAIL_POLL_INTERVAL_SECONDS)
+    logger.info("Scheduler activo (seguimiento diario 11:00 UTC)")
 
 
 def stop_scheduler() -> None:

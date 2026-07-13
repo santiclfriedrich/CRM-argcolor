@@ -57,3 +57,39 @@ export const SEMAFORO_META: Record<
 };
 
 export const SEMAFORO_ORDER: Semaforo[] = ["rojo", "amarillo", "verde"];
+
+// --- Seguimiento diario (accionables de hoy) ---
+export const DIAS_SIN_AVANCE = 3; // avisar si no hay movimiento hace N días
+export const DIAS_POR_VENCER = 3; // "por vencer" = la validez cae dentro de N días
+
+const hoyISO = (): string => new Date().toISOString().slice(0, 10);
+
+export type BucketSeguimiento = "vencida" | "sin_avance" | "por_vencer";
+
+export interface BucketsSeguimiento {
+  vencida: Oportunidad[];
+  sin_avance: Oportunidad[];
+  por_vencer: Oportunidad[];
+}
+
+// Clasifica cada oportunidad ACTIVA en un único bucket accionable (por prioridad:
+// vencida > sin avance > por vencer). Las que no requieren acción no entran.
+export function bucketsSeguimiento(opps: Oportunidad[], now: Date): BucketsSeguimiento {
+  const hoy = hoyISO();
+  const limite = new Date(now.getTime() + DIAS_POR_VENCER * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  const out: BucketsSeguimiento = { vencida: [], sin_avance: [], por_vencer: [] };
+
+  for (const o of opps) {
+    if (isTerminal(o.estado)) continue;
+    if (o.fecha_limite && o.fecha_limite < hoy) {
+      out.vencida.push(o);
+    } else if (diasSinMovimiento(o, now) >= DIAS_SIN_AVANCE) {
+      out.sin_avance.push(o);
+    } else if (o.fecha_limite && o.fecha_limite <= limite) {
+      out.por_vencer.push(o);
+    }
+  }
+  return out;
+}

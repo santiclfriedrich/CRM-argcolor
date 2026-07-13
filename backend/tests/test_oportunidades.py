@@ -15,6 +15,7 @@ from app.db.models.clientes import Cliente
 from app.db.models.contactos_cliente import ContactoCliente
 from app.db.models.mails import Mail
 from app.db.models.mails_descartados import MailDescartado
+from app.db.models.notificaciones import Notificacion
 from app.db.models.oportunidades import Oportunidad
 from app.db.models.presupuesto_items import PresupuestoItem
 from app.db.models.presupuestos import Presupuesto
@@ -48,6 +49,7 @@ def client() -> Iterator[TestClient]:
         Presupuesto.__table__,
         PresupuestoItem.__table__,
         Recordatorio.__table__,
+        Notificacion.__table__,
     ]
     Base.metadata.create_all(bind=engine, tables=tables)
 
@@ -154,6 +156,44 @@ def test_filtro_por_fecha(client: TestClient) -> None:
     hasta_ayer = {"hasta": str(hoy - timedelta(days=1))}
     ayer = client.get("/api/v1/oportunidades", params=hasta_ayer).json()
     assert len(ayer) == 0
+
+
+def test_seguimiento_genera_avisos_y_dedupe(client: TestClient) -> None:
+    from datetime import date, datetime, timedelta, timezone
+
+    op_id = client.post(
+        "/api/v1/oportunidades", json={"cliente_id": 1, "vendedor_id": 1}
+    ).json()["id"]
+
+    # Backdate: venció ayer y no tiene movimiento hace 5 días.
+    with TestingSessionLocal() as db:
+        o = db.get(Oportunidad, op_id)
+        o.fecha_limite = date.today() - timedelta(days=1)
+        o.fecha_ultimo_movimiento = datetime.now(timezone.utc) - timedelta(days=5)
+        db.commit()
+
+    creadas = client.post("/api/v1/notificaciones/generar-seguimiento").json()["creadas"]
+    assert creadas == 2  # vencida + sin avance
+
+    # Idempotente en el mismo día: no duplica.
+    creadas2 = client.post("/api/v1/notificaciones/generar-seguimiento").json()["creadas"]
+    assert creadas2 == 0
+
+    # Le aparecen al vendedor en la campana.
+    notis = client.get("/api/v1/notificaciones").json()
+    assert len(notis) == 2
+    assert all(n["link"] == f"/oportunidades?op={op_id}" for n in notis)
+
+
+def test_seguimiento_ignora_cerradas_y_al_dia(client: TestClient) -> None:
+    # Ganada (terminal) + reciente => no genera avisos.
+    client.post(
+        "/api/v1/oportunidades",
+        json={"cliente_id": 1, "vendedor_id": 1, "estado": "ganada"},
+    )
+    client.post("/api/v1/oportunidades", json={"cliente_id": 1, "vendedor_id": 1})
+    creadas = client.post("/api/v1/notificaciones/generar-seguimiento").json()["creadas"]
+    assert creadas == 0
 
 
 def test_busqueda_global(client: TestClient) -> None:
