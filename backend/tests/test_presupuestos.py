@@ -122,6 +122,34 @@ def test_actualizar_reemplaza_items_y_recalcula(client: TestClient) -> None:
     assert data["pdf_url"] is None  # el cambio invalida el PDF anterior
 
 
+def test_aceptado_gana_la_oportunidad(client: TestClient) -> None:
+    pid = client.post("/api/v1/presupuestos", json=_payload()).json()["id"]
+
+    resp = client.patch(f"/api/v1/presupuestos/{pid}", json={"estado": "aceptado"})
+    assert resp.status_code == 200
+    assert resp.json()["fecha_respuesta_cliente"] is not None
+    assert client.get("/api/v1/oportunidades/1").json()["estado"] == "ganada"
+
+
+def test_rechazado_pierde_la_oportunidad(client: TestClient) -> None:
+    pid = client.post("/api/v1/presupuestos", json=_payload()).json()["id"]
+
+    resp = client.patch(f"/api/v1/presupuestos/{pid}", json={"estado": "rechazado"})
+    assert resp.status_code == 200
+    assert resp.json()["fecha_respuesta_cliente"] is not None
+    assert client.get("/api/v1/oportunidades/1").json()["estado"] == "perdida"
+
+
+def test_negociando_registra_respuesta_sin_cerrar(client: TestClient) -> None:
+    pid = client.post("/api/v1/presupuestos", json=_payload()).json()["id"]
+
+    resp = client.patch(f"/api/v1/presupuestos/{pid}", json={"estado": "negociando"})
+    assert resp.status_code == 200
+    assert resp.json()["fecha_respuesta_cliente"] is not None
+    # La oportunidad sigue abierta (no gana ni pierde).
+    assert client.get("/api/v1/oportunidades/1").json()["estado"] == "presupuestada"
+
+
 def test_generar_pdf_devuelve_un_pdf(client: TestClient) -> None:
     pid = client.post("/api/v1/presupuestos", json=_payload()).json()["id"]
     resp = client.get(f"/api/v1/presupuestos/{pid}/pdf")

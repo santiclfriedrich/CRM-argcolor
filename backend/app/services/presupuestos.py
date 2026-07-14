@@ -159,14 +159,30 @@ def actualizar_presupuesto(
             db.delete(viejo)
         presupuesto.items = _items_desde_schema(data.items)
 
-    # Seguimiento: al marcar el presupuesto como "enviado", registrar en la
-    # oportunidad cuándo se cotizó al cliente.
-    if (
-        presupuesto.estado == EstadoPresupuesto.enviado
-        and presupuesto.oportunidad is not None
-        and presupuesto.oportunidad.fecha_enviado_cliente is None
-    ):
-        presupuesto.oportunidad.fecha_enviado_cliente = now_utc().date()
+    # Seguimiento: sincronizar la oportunidad con el estado del presupuesto.
+    op = presupuesto.oportunidad
+    if op is not None:
+        estado = presupuesto.estado
+        # Al marcar "enviado": registrar cuándo se cotizó al cliente.
+        if estado == EstadoPresupuesto.enviado and op.fecha_enviado_cliente is None:
+            op.fecha_enviado_cliente = now_utc().date()
+        # Respuesta del cliente (se marca a mano): registrar fecha y mover la
+        # oportunidad. No pisamos estados de post-venta (cargada_en_gbp/facturada).
+        respuestas = (
+            EstadoPresupuesto.aceptado,
+            EstadoPresupuesto.rechazado,
+            EstadoPresupuesto.negociando,
+        )
+        if estado in respuestas:
+            if presupuesto.fecha_respuesta_cliente is None:
+                presupuesto.fecha_respuesta_cliente = now_utc()
+            post_venta = (EstadoOportunidad.cargada_en_gbp, EstadoOportunidad.facturada)
+            if op.estado not in post_venta:
+                if estado == EstadoPresupuesto.aceptado:
+                    op.estado = EstadoOportunidad.ganada
+                elif estado == EstadoPresupuesto.rechazado:
+                    op.estado = EstadoOportunidad.perdida
+            op.fecha_ultimo_movimiento = now_utc()
 
     recalcular_totales(presupuesto)
     # Cualquier cambio invalida el PDF anterior: se regenera al descargar.

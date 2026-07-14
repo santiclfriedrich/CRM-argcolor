@@ -15,17 +15,23 @@ def _run_poll() -> None:
     """Una corrida del polling, con su propia sesión de DB (no request-scoped)."""
     from app.db.session import SessionLocal
     from app.integrations.ai.factory import get_ai_provider
+    from app.services.compras_ingest import ingerir_respuestas_compras
     from app.services.gmail_poller import poll_all_mailboxes
 
     db = SessionLocal()
     try:
-        r = poll_all_mailboxes(db, get_ai_provider())
+        ai = get_ai_provider()
+        r = poll_all_mailboxes(db, ai)
         if r["procesados"]:
             logger.info("Gmail poll: %s mail(s) nuevos procesados", r["procesados"])
         if r["errores"]:
             logger.warning(
                 "Gmail poll: %s mail(s) con error. Último: %s", r["errores"], r["ultimo_error"]
             )
+        # Auto-ingesta de respuestas de Compras desde los hilos de las solicitudes.
+        n = ingerir_respuestas_compras(db, ai)
+        if n:
+            logger.info("Compras: %s respuesta(s) ingeridas automáticamente", n)
     except Exception:  # noqa: BLE001 - el job no debe tirar el scheduler
         logger.exception("Falló el polling de Gmail")
     finally:

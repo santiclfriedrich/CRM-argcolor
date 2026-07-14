@@ -139,9 +139,25 @@ function SolicitudDetailModal({ id, onClose }: { id: number; onClose: () => void
               {ESTADO_SOLICITUD_META[solicitud.estado].label}
             </Badge>
             <div className="ml-auto flex gap-1">
-              {solicitud.estado !== "cerrada" && (
-                <Button size="sm" variant="ghost" onClick={() => setEstado("cerrada")}>
-                  Cerrar
+              {solicitud.estado === "cerrada" ? (
+                <Button size="sm" variant="ghost" onClick={() => setEstado("enviada")}>
+                  Reabrir
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Marcar la solicitud como cerrada. Dejará de recibir la respuesta de Compras automáticamente. ¿Continuar?",
+                      )
+                    ) {
+                      setEstado("cerrada");
+                    }
+                  }}
+                >
+                  Marcar como cerrada
                 </Button>
               )}
             </div>

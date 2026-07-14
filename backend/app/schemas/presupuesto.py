@@ -80,6 +80,7 @@ class PresupuestoRead(PresupuestoBase):
     version: int
     pdf_url: str | None = None
     fecha_envio: datetime | None = None
+    fecha_respuesta_cliente: datetime | None = None
     fecha_validez: date | None = None
     created_at: datetime
     items: list[ItemRead] = []

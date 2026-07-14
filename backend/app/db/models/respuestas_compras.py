@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Text, func
+from sqlalchemy import JSON, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,6 +16,9 @@ class RespuestaCompras(Base, TimestampMixin):
     solicitud_compras_id: Mapped[int] = mapped_column(
         ForeignKey("solicitudes_compras.id"), nullable=False
     )
+    # Message-ID de Gmail cuando la respuesta se ingirió automática (dedup). Null si
+    # se cargó a mano (copiar/pegar).
+    gmail_message_id: Mapped[str | None] = mapped_column(String(255), index=True)
     fecha_recepcion: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

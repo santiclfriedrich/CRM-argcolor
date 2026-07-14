@@ -118,6 +118,13 @@ def sync_gmail(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Error al sincronizar Gmail: {exc}",
         ) from exc
+    # Auto-ingesta de respuestas de Compras desde los hilos de las solicitudes.
+    from app.services.compras_ingest import ingerir_respuestas_compras
+
+    try:
+        resultado["respuestas_compras"] = ingerir_respuestas_compras(db, ai)
+    except Exception:  # noqa: BLE001 - no debe cortar el sync
+        resultado["respuestas_compras"] = 0
     return resultado
 
 

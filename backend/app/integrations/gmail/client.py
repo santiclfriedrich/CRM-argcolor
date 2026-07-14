@@ -210,6 +210,16 @@ class GmailClient:
         )
         return [m["id"] for m in resp.get("messages", [])]
 
+    def get_thread(self, thread_id: str) -> list[dict[str, Any]]:
+        """Devuelve los mensajes de un hilo (parseados), en orden cronológico."""
+        raw = (
+            self._service.users()
+            .threads()
+            .get(userId=self._user, id=thread_id, format="full")
+            .execute()
+        )
+        return [parse_gmail_message(m) for m in raw.get("messages", [])]
+
     def get_message(self, message_id: str) -> dict[str, Any]:
         raw = (
             self._service.users()
