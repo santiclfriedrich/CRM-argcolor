@@ -91,6 +91,20 @@ export function useUpdatePresupuesto(id: number) {
   });
 }
 
+// Envía el presupuesto (PDF) al cliente por Gmail y lo marca como enviado.
+export function useEnviarPresupuesto(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { to?: string; mensaje?: string }) =>
+      (await api.post<Presupuesto>(`${BASE}/${id}/enviar`, body)).data,
+    onSuccess: (data) => {
+      qc.setQueryData(presupuestoKeys.detail(id), data);
+      qc.invalidateQueries({ queryKey: presupuestoKeys.all });
+      qc.invalidateQueries({ queryKey: oportunidadKeys.all });
+    },
+  });
+}
+
 export function useDeletePresupuesto() {
   const qc = useQueryClient();
   return useMutation({

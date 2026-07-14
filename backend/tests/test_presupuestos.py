@@ -9,9 +9,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_user_gmail
 from app.db.base import Base
 from app.db.models.clientes import Cliente
+from app.db.models.mails import Mail
 from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
 from app.db.models.presupuesto_items import PresupuestoItem
 from app.db.models.presupuestos import Presupuesto
@@ -19,6 +20,18 @@ from app.db.models.productos import Producto
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.main import app
+
+
+class FakeGmail:
+    def __init__(self) -> None:
+        self.enviado: dict | None = None
+
+    def send_message(self, to, subject, body, thread_id=None, in_reply_to=None, cc=None, attachments=None):  # noqa: ANN001, E501
+        self.enviado = {"to": to, "subject": subject, "attachments": attachments or []}
+        return {"message_id": "m-1", "thread_id": None}
+
+
+_fake_gmail = FakeGmail()
 
 engine = create_engine(
     "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
@@ -35,6 +48,7 @@ def client() -> Iterator[TestClient]:
         Producto.__table__,
         Presupuesto.__table__,
         PresupuestoItem.__table__,
+        Mail.__table__,
     ]
     Base.metadata.create_all(bind=engine, tables=tables)
 
@@ -53,9 +67,11 @@ def client() -> Iterator[TestClient]:
         )
         seed.commit()
 
+    _fake_gmail.enviado = None
     fake_user = Usuario(id=1, email="v@argentinacolor.com", nombre="Vendedor", activo=True)
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = lambda: fake_user
+    app.dependency_overrides[get_user_gmail] = lambda: _fake_gmail
     try:
         yield TestClient(app)
     finally:
@@ -126,3 +142,25 @@ def test_calcular_subtotal_con_descuento() -> None:
         descuento_pct = Decimal(25)
 
     assert calcular_subtotal(_It()) == Decimal("76.50")  # 4*25.5*0.75
+
+
+def test_enviar_presupuesto_al_cliente(client: TestClient) -> None:
+    pid = client.post("/api/v1/presupuestos", json=_payload()).json()["id"]
+    resp = client.post(f"/api/v1/presupuestos/{pid}/enviar", json={"to": "cliente@bencen.com.ar"})
+    if resp.status_code == 503:
+        pytest.skip("weasyprint sin libs nativas en este entorno")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["estado"] == "enviado"
+    assert data["fecha_envio"] is not None
+    # Se envió al destinatario con el PDF adjunto.
+    assert _fake_gmail.enviado["to"] == "cliente@bencen.com.ar"
+    assert len(_fake_gmail.enviado["attachments"]) == 1
+    assert _fake_gmail.enviado["attachments"][0]["filename"].endswith(".pdf")
+
+
+def test_enviar_sin_email_da_400(client: TestClient) -> None:
+    pid = client.post("/api/v1/presupuestos", json=_payload()).json()["id"]
+    # Sin `to` y sin contacto en la oportunidad -> 400.
+    resp = client.post(f"/api/v1/presupuestos/{pid}/enviar", json={})
+    assert resp.status_code == 400

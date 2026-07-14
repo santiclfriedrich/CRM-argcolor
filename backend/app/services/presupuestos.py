@@ -17,6 +17,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.db.models.mails import DireccionMail, Mail
 from app.db.models.oportunidades import EstadoOportunidad
 from app.db.models.presupuesto_items import PresupuestoItem
 from app.db.models.presupuestos import EstadoPresupuesto, Presupuesto
@@ -279,6 +280,81 @@ def _render_html(presupuesto: Presupuesto) -> str:
   </div>
   <div class="foot">Documento generado por el CRM de {html.escape(settings.EMPRESA_NOMBRE)}.</div>
 </body></html>"""
+
+
+def _cuerpo_mail(presupuesto: Presupuesto) -> str:
+    lineas = [
+        "Hola,",
+        "",
+        f"Te enviamos el presupuesto {presupuesto.codigo} (adjunto en PDF).",
+    ]
+    extras = []
+    if presupuesto.condicion_pago:
+        extras.append(f"Condición de pago: {presupuesto.condicion_pago}")
+    if presupuesto.plazo_entrega:
+        extras.append(f"Plazo de entrega: {presupuesto.plazo_entrega}")
+    if presupuesto.validez:
+        extras.append(f"Validez: {presupuesto.validez}")
+    if extras:
+        lineas += ["", *extras]
+    lineas += ["", "Quedamos a disposición.", "", "Saludos,", settings.EMPRESA_NOMBRE]
+    return "\n".join(lineas)
+
+
+def enviar_al_cliente(
+    db: Session,
+    gmail,  # noqa: ANN001 - GmailClient
+    presupuesto: Presupuesto,
+    to: str,
+    mensaje: str | None = None,
+    remitente: str | None = None,
+) -> Presupuesto:
+    """Envía el presupuesto (PDF adjunto) al cliente por Gmail, lo marca como
+    enviado y registra el saliente. Lanza ValueError si no hay destinatario."""
+    if not to or not to.strip():
+        raise ValueError("No hay email del cliente para enviar el presupuesto.")
+
+    ruta = render_pdf(db, presupuesto)  # regenera con los datos actuales
+    contenido = ruta.read_bytes()
+
+    asunto = f"Presupuesto {presupuesto.codigo} — {settings.EMPRESA_NOMBRE}"
+    cuerpo = mensaje.strip() if mensaje and mensaje.strip() else _cuerpo_mail(presupuesto)
+
+    gmail.send_message(
+        to=to.strip(),
+        subject=asunto,
+        body=cuerpo,
+        attachments=[
+            {
+                "filename": f"{presupuesto.codigo}.pdf",
+                "content": contenido,
+                "mime": "application/pdf",
+            }
+        ],
+    )
+
+    ahora = now_utc()
+    presupuesto.estado = EstadoPresupuesto.enviado
+    presupuesto.fecha_envio = ahora
+    op = presupuesto.oportunidad
+    if op is not None and op.fecha_enviado_cliente is None:
+        op.fecha_enviado_cliente = ahora.date()
+
+    # Registrar el saliente para que quede en el historial de la oportunidad.
+    db.add(
+        Mail(
+            oportunidad_id=presupuesto.oportunidad_id,
+            direccion=DireccionMail.saliente,
+            de=remitente,
+            para=to.strip(),
+            asunto=asunto,
+            cuerpo=cuerpo,
+            fecha=ahora,
+        )
+    )
+    db.commit()
+    db.refresh(presupuesto)
+    return presupuesto
 
 
 def render_pdf(db: Session, presupuesto: Presupuesto) -> Path:

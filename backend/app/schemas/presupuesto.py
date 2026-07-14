@@ -3,9 +3,17 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 from app.db.models.presupuestos import EstadoPresupuesto
+
+
+class EnviarPresupuestoRequest(BaseModel):
+    """Datos para enviar el presupuesto al cliente. Si no se pasa `to`, se usa
+    el email del contacto de la oportunidad."""
+
+    to: EmailStr | None = None
+    mensaje: str | None = None
 
 
 class ItemBase(BaseModel):

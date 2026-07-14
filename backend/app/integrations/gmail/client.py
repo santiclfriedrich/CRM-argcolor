@@ -255,6 +255,7 @@ class GmailClient:
         thread_id: str | None = None,
         in_reply_to: str | None = None,
         cc: list[str] | None = None,
+        attachments: list[dict[str, Any]] | None = None,
     ) -> dict[str, str | None]:
         """Envía un mail desde la casilla.
 
@@ -264,6 +265,7 @@ class GmailClient:
           headers ``In-Reply-To``/``References`` para que la respuesta se encadene
           en el cliente del destinatario aunque salga de otra casilla.
         - ``cc``: lista de destinatarios en copia.
+        - ``attachments``: lista de {filename, content(bytes), mime} a adjuntar.
         """
         message = EmailMessage()
         message["To"] = to
@@ -277,6 +279,15 @@ class GmailClient:
             message["In-Reply-To"] = in_reply_to
             message["References"] = in_reply_to
         message.set_content(body)
+
+        for att in attachments or []:
+            maintype, _, subtype = (att.get("mime") or "application/octet-stream").partition("/")
+            message.add_attachment(
+                att["content"],
+                maintype=maintype,
+                subtype=subtype or "octet-stream",
+                filename=att["filename"],
+            )
 
         raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
 

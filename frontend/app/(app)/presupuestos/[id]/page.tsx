@@ -1,20 +1,23 @@
 "use client";
 
-import { ArrowLeft, FileText, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Save, Send, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Modal } from "@/components/ui/modal";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { Textarea } from "@/components/ui/textarea";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   abrirPdf,
   ESTADO_PRESUPUESTO,
   fmtMonto,
+  useEnviarPresupuesto,
   usePresupuesto,
   useUpdatePresupuesto,
 } from "@/lib/presupuestos";
@@ -76,6 +79,7 @@ export default function ArmadorPresupuestoPage() {
   const [moneda, setMoneda] = useState("USD");
   const [estado, setEstado] = useState<EstadoPresupuesto>("borrador");
   const [cargado, setCargado] = useState(false);
+  const [enviando, setEnviando] = useState(false);
 
   // Hidrata el formulario una vez cuando llega el presupuesto.
   useEffect(() => {
@@ -263,11 +267,84 @@ export default function ArmadorPresupuestoPage() {
           <Button variant="outline" onClick={verPdf} disabled={updateMut.isPending}>
             <FileText size={15} /> Ver PDF
           </Button>
+          <Button variant="outline" onClick={() => setEnviando(true)} disabled={updateMut.isPending}>
+            <Send size={15} /> Enviar al cliente
+          </Button>
           <Button onClick={guardar} disabled={updateMut.isPending}>
             <Save size={15} /> {updateMut.isPending ? "Guardando…" : "Guardar"}
           </Button>
         </div>
       </div>
+
+      {enviando && (
+        <EnviarModal id={id} codigo={presupuesto.codigo} onClose={() => setEnviando(false)} />
+      )}
     </div>
+  );
+}
+
+function EnviarModal({
+  id,
+  codigo,
+  onClose,
+}: {
+  id: number;
+  codigo: string;
+  onClose: () => void;
+}) {
+  const enviar = useEnviarPresupuesto(id);
+  const [to, setTo] = useState("");
+  const [mensaje, setMensaje] = useState("");
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    enviar.mutate(
+      { to: to.trim() || undefined, mensaje: mensaje.trim() || undefined },
+      { onSuccess: onClose }
+    );
+  };
+
+  return (
+    <Modal open onClose={onClose} title={`Enviar ${codigo} al cliente`}>
+      <form onSubmit={submit} className="space-y-4">
+        <div>
+          <Label htmlFor="env-to">Para (email del cliente)</Label>
+          <Input
+            id="env-to"
+            type="email"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            placeholder="cliente@empresa.com"
+          />
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+            Si lo dejás vacío, se usa el email del contacto de la oportunidad.
+          </p>
+        </div>
+        <div>
+          <Label htmlFor="env-msg">Mensaje (opcional)</Label>
+          <Textarea
+            id="env-msg"
+            rows={4}
+            value={mensaje}
+            onChange={(e) => setMensaje(e.target.value)}
+            placeholder="Si lo dejás vacío, se manda un texto por defecto con el PDF adjunto."
+          />
+        </div>
+        {enviar.isError && (
+          <p className="text-sm text-red-600">
+            {(enviar.error as { response?: { data?: { detail?: string } } })?.response?.data
+              ?.detail ?? "No se pudo enviar el presupuesto."}
+          </p>
+        )}
+        <div className="flex justify-end gap-2 pt-1">
+          <Button variant="outline" onClick={onClose} disabled={enviar.isPending}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={enviar.isPending}>
+            <Send size={15} /> {enviar.isPending ? "Enviando…" : "Enviar"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

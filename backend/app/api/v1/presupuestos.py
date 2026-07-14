@@ -7,18 +7,24 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_user_gmail
 from app.core.exceptions import NotFoundError
 from app.db.models.oportunidades import Oportunidad
 from app.db.models.presupuestos import Presupuesto
 from app.db.models.solicitudes_compras import SolicitudCompras
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
-from app.schemas.presupuesto import PresupuestoCreate, PresupuestoRead, PresupuestoUpdate
+from app.schemas.presupuesto import (
+    EnviarPresupuestoRequest,
+    PresupuestoCreate,
+    PresupuestoRead,
+    PresupuestoUpdate,
+)
 from app.services.presupuestos import (
     actualizar_presupuesto,
     crear_desde_solicitud,
     crear_presupuesto,
+    enviar_al_cliente,
     render_pdf,
 )
 
@@ -27,6 +33,7 @@ router = APIRouter(prefix="/presupuestos", tags=["presupuestos"])
 _RELATIONS = (
     selectinload(Presupuesto.items),
     selectinload(Presupuesto.oportunidad).selectinload(Oportunidad.cliente),
+    selectinload(Presupuesto.oportunidad).selectinload(Oportunidad.contacto),
 )
 
 
@@ -116,6 +123,40 @@ def delete_presupuesto(
     db.delete(presupuesto)
     db.commit()
     return Response(status_code=204)
+
+
+@router.post("/{presupuesto_id}/enviar", response_model=PresupuestoRead)
+def enviar_presupuesto(
+    presupuesto_id: int,
+    body: EnviarPresupuestoRequest,
+    db: Session = Depends(get_db),
+    gmail=Depends(get_user_gmail),  # noqa: ANN001 - GmailClient del usuario logueado
+    current_user: Usuario = Depends(get_current_user),
+) -> Presupuesto:
+    """Envía el presupuesto (PDF) al cliente por Gmail. Si no se indica `to`,
+    usa el email del contacto de la oportunidad."""
+    presupuesto = _get_loaded(db, presupuesto_id)
+    contacto = presupuesto.oportunidad.contacto if presupuesto.oportunidad else None
+    destino = (body.to and str(body.to)) or (contacto.email if contacto else None)
+    if not destino:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No hay email del cliente. Indicá uno o cargá el email del contacto.",
+        )
+    try:
+        enviar_al_cliente(
+            db, gmail, presupuesto, to=destino, mensaje=body.mensaje, remitente=current_user.email
+        )
+    except RuntimeError as exc:  # weasyprint / PDF no disponible
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc
+    except Exception as exc:  # noqa: BLE001 - frontera con Gmail
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"No se pudo enviar el presupuesto: {exc}",
+        ) from exc
+    return _get_loaded(db, presupuesto_id)
 
 
 @router.get("/{presupuesto_id}/pdf")
