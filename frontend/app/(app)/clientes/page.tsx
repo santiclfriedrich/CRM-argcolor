@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Building2, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -11,19 +11,33 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useClientes, useCreateCliente } from "@/lib/clientes";
 
-export default function ClientesPage() {
+export default function CuentasPage() {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
+  const [q, setQ] = useState("");
   const { data, isLoading, isError } = useClientes();
   const createMut = useCreateCliente();
 
+  const termino = q.trim().toLowerCase();
+  const cuentas = (data ?? []).filter(
+    (c) =>
+      !termino ||
+      c.razon_social.toLowerCase().includes(termino) ||
+      (c.cuit ?? "").toLowerCase().includes(termino)
+  );
+
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Clientes</h1>
-        <Button onClick={() => setCreating(true)}>
-          <Plus size={16} /> Nuevo cliente
-        </Button>
+      <div className="flex items-center gap-3">
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-white">
+          <Building2 size={18} />
+        </span>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Cuentas</h1>
+        <div className="ml-auto flex gap-2">
+          <Button onClick={() => setCreating(true)}>
+            <Plus size={16} /> Nueva cuenta
+          </Button>
+        </div>
       </div>
 
       {isLoading && <p className="mt-4 text-slate-500 dark:text-slate-400">Cargando…</p>}
@@ -34,50 +48,74 @@ export default function ClientesPage() {
       )}
 
       {data && (
-        <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-800/50 text-left text-slate-500 dark:text-slate-400">
-              <tr>
-                <th className="px-4 py-2 font-medium">Razón social</th>
-                <th className="px-4 py-2 font-medium">CUIT</th>
-                <th className="px-4 py-2 font-medium">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((c) => (
-                <tr
-                  key={c.id}
-                  className="cursor-pointer border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
-                  onClick={() => router.push(`/clientes/${c.id}`)}
-                >
-                  <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">
-                    <Link href={`/clientes/${c.id}`} onClick={(e) => e.stopPropagation()}>
-                      {c.razon_social}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{c.cuit ?? "—"}</td>
-                  <td className="px-4 py-2">
-                    {c.activo ? (
-                      <Badge className="bg-green-100 text-green-700">activo</Badge>
-                    ) : (
-                      <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">inactivo</Badge>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {data.length === 0 && (
+        <>
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {cuentas.length} {cuentas.length === 1 ? "elemento" : "elementos"}
+            </p>
+            <div className="relative w-64 max-w-full">
+              <Search
+                size={15}
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Buscar en esta lista…"
+                className="h-9 w-full rounded-md border border-slate-300 bg-white pl-8 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              />
+            </div>
+          </div>
+
+          <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
                 <tr>
-                  <td colSpan={3} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
-                    No hay clientes todavía.
-                  </td>
+                  <th className="w-10 px-3 py-2 font-medium">#</th>
+                  <th className="px-3 py-2 font-medium">Nombre de la cuenta</th>
+                  <th className="px-3 py-2 font-medium">CUIT</th>
+                  <th className="px-3 py-2 font-medium">Estado</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {cuentas.map((c, i) => (
+                  <tr
+                    key={c.id}
+                    className="cursor-pointer border-t border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
+                    onClick={() => router.push(`/clientes/${c.id}`)}
+                  >
+                    <td className="px-3 py-2 text-slate-400 dark:text-slate-500">{i + 1}</td>
+                    <td className="px-3 py-2 font-medium text-brand">
+                      <Link href={`/clientes/${c.id}`} onClick={(e) => e.stopPropagation()}>
+                        {c.razon_social}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{c.cuit ?? "—"}</td>
+                    <td className="px-3 py-2">
+                      {c.activo ? (
+                        <Badge className="bg-green-100 text-green-700">activo</Badge>
+                      ) : (
+                        <Badge className="bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                          inactivo
+                        </Badge>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {cuentas.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                      {termino ? "Sin coincidencias." : "No hay cuentas todavía."}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
-      <Modal open={creating} onClose={() => setCreating(false)} title="Nuevo cliente">
+      <Modal open={creating} onClose={() => setCreating(false)} title="Nueva cuenta">
         <ClienteForm
           submitLabel="Crear"
           isPending={createMut.isPending}
