@@ -184,3 +184,28 @@ def test_delete_cliente_cascada(client: TestClient) -> None:
         # La tarea NO se borra: queda desvinculada del cliente.
         tarea = db.get(Tarea, 1)
         assert tarea is not None and tarea.cliente_id is None
+
+
+def test_cuenta_principal_y_subcuentas(client: TestClient) -> None:
+    padre = client.post("/api/v1/clientes", json={"razon_social": "Grupo Madre"}).json()["id"]
+    hija = client.post(
+        "/api/v1/clientes",
+        json={"razon_social": "Sucursal Norte", "cuenta_principal_id": padre, "tipo": "cliente"},
+    )
+    assert hija.status_code == 201
+    hija_id = hija.json()["id"]
+
+    # La hija muestra su cuenta principal.
+    det_hija = client.get(f"/api/v1/clientes/{hija_id}").json()
+    assert det_hija["cuenta_principal"]["razon_social"] == "Grupo Madre"
+    assert det_hija["tipo"] == "cliente"
+
+    # El padre lista sus subcuentas.
+    det_padre = client.get(f"/api/v1/clientes/{padre}").json()
+    assert any(s["id"] == hija_id for s in det_padre["subcuentas"])
+
+
+def test_cuenta_no_puede_ser_su_propia_principal(client: TestClient) -> None:
+    cid = client.post("/api/v1/clientes", json={"razon_social": "Sola"}).json()["id"]
+    resp = client.patch(f"/api/v1/clientes/{cid}", json={"cuenta_principal_id": cid})
+    assert resp.status_code == 400

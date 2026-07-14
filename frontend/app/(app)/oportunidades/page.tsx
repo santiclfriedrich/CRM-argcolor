@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
-import { Select } from "@/components/ui/select";
+import { SelectMenu } from "@/components/ui/select-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useClientes } from "@/lib/clientes";
@@ -109,32 +109,28 @@ export default function OportunidadesPage() {
       {/* Filtros */}
       <div className="mt-4 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/40 sm:grid-cols-4">
         <div>
-          <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Estado</label>
-          <Select
+          <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Estado</label>
+          <SelectMenu
             value={filtros.estado ?? ""}
-            onChange={(e) => setFiltro({ estado: e.target.value as EstadoOportunidad | "" })}
-          >
-            <option value="">Todos</option>
-            {ESTADOS.map((e) => (
-              <option key={e.value} value={e.value}>
-                {e.label}
-              </option>
-            ))}
-          </Select>
+            onChange={(v) => setFiltro({ estado: v as EstadoOportunidad | "" })}
+            placeholder="Todos"
+            options={[
+              { value: "", label: "Todos" },
+              ...ESTADOS.map((e) => ({ value: e.value, label: e.label })),
+            ]}
+          />
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Cliente</label>
-          <Select
-            value={filtros.cliente_id ?? ""}
-            onChange={(e) => setFiltro({ cliente_id: e.target.value ? Number(e.target.value) : null })}
-          >
-            <option value="">Todos</option>
-            {clientes?.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.razon_social}
-              </option>
-            ))}
-          </Select>
+          <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Cliente</label>
+          <SelectMenu
+            value={filtros.cliente_id != null ? String(filtros.cliente_id) : ""}
+            onChange={(v) => setFiltro({ cliente_id: v ? Number(v) : null })}
+            placeholder="Todos"
+            options={[
+              { value: "", label: "Todos" },
+              ...(clientes ?? []).map((c) => ({ value: String(c.id), label: c.razon_social })),
+            ]}
+          />
         </div>
         <div>
           <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Desde</label>

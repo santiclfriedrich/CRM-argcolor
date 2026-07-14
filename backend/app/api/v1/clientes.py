@@ -1,6 +1,6 @@
 """CRUD endpoints for clientes."""
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -15,6 +15,24 @@ from app.services.borrado import eliminar_cliente
 router = APIRouter(prefix="/clientes", tags=["clientes"])
 
 
+def _validar_cuenta_principal(
+    db: Session, cuenta_principal_id: int | None, propio_id: int | None
+) -> None:
+    """La cuenta principal debe existir y no puede ser la propia cuenta."""
+    if cuenta_principal_id is None:
+        return
+    if cuenta_principal_id == propio_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Una cuenta no puede ser su propia cuenta principal.",
+        )
+    if db.get(Cliente, cuenta_principal_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La cuenta principal indicada no existe.",
+        )
+
+
 @router.get("", response_model=list[ClienteRead])
 def list_clientes(
     db: Session = Depends(get_db), _: Usuario = Depends(get_current_user)
@@ -26,6 +44,7 @@ def list_clientes(
 def create_cliente(
     body: ClienteCreate, db: Session = Depends(get_db), _: Usuario = Depends(get_current_user)
 ) -> Cliente:
+    _validar_cuenta_principal(db, body.cuenta_principal_id, None)
     cliente = Cliente(**body.model_dump())
     db.add(cliente)
     db.commit()
@@ -53,7 +72,10 @@ def update_cliente(
     cliente = db.get(Cliente, cliente_id)
     if cliente is None:
         raise NotFoundError("Cliente no encontrado")
-    for field, value in body.model_dump(exclude_unset=True).items():
+    data = body.model_dump(exclude_unset=True)
+    if "cuenta_principal_id" in data:
+        _validar_cuenta_principal(db, data["cuenta_principal_id"], cliente_id)
+    for field, value in data.items():
         setattr(cliente, field, value)
     db.commit()
     db.refresh(cliente)

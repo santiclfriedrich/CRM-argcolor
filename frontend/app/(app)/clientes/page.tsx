@@ -115,7 +115,7 @@ export default function CuentasPage() {
         </>
       )}
 
-      <Modal open={creating} onClose={() => setCreating(false)} title="Nueva cuenta">
+      <Modal open={creating} onClose={() => setCreating(false)} title="Nueva cuenta" size="4xl">
         <ClienteForm
           submitLabel="Crear"
           isPending={createMut.isPending}

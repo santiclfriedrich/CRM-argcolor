@@ -9,12 +9,27 @@ export interface Cliente {
   vendedor_asignado_id: number | null;
   notas: string | null;
   activo: boolean;
+  cuenta_principal_id: number | null;
+  tipo: string | null;
+  sector: string | null;
+  sitio_web: string | null;
+  telefono: string | null;
+  empleados: number | null;
+  direccion_facturacion: string | null;
+  direccion_envio: string | null;
   created_at: string;
+}
+
+export interface CuentaMini {
+  id: number;
+  razon_social: string;
 }
 
 export interface ClienteDetail extends Cliente {
   contactos: Contacto[];
   dominios: Dominio[];
+  cuenta_principal: CuentaMini | null;
+  subcuentas: CuentaMini[];
 }
 
 export interface Contacto {
@@ -47,6 +62,14 @@ export type ClienteCreate = {
   vendedor_asignado_id?: number | null;
   notas?: string | null;
   activo?: boolean;
+  cuenta_principal_id?: number | null;
+  tipo?: string | null;
+  sector?: string | null;
+  sitio_web?: string | null;
+  telefono?: string | null;
+  empleados?: number | null;
+  direccion_facturacion?: string | null;
+  direccion_envio?: string | null;
 };
 export type ClienteUpdate = Partial<ClienteCreate>;
 

@@ -72,6 +72,17 @@ export default function ClienteDetailPage() {
               <span>Oportunidades: {opps.length}</span>
               <span>Tareas: {tareas.length}</span>
             </div>
+            {cliente.cuenta_principal && (
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Subcuenta de{" "}
+                <Link
+                  href={`/clientes/${cliente.cuenta_principal.id}`}
+                  className="text-brand hover:underline"
+                >
+                  {cliente.cuenta_principal.razon_social}
+                </Link>
+              </p>
+            )}
           </div>
         </div>
         <Button
@@ -94,6 +105,7 @@ export default function ClienteDetailPage() {
             </h2>
             <ClienteForm
               initial={cliente}
+              clienteId={clienteId}
               submitLabel="Guardar cambios"
               isPending={updateMut.isPending}
               onSubmit={(values) => updateMut.mutate(values)}
@@ -177,6 +189,28 @@ export default function ClienteDetailPage() {
               )}
             </ul>
           </section>
+
+          {cliente.subcuentas.length > 0 && (
+            <section className="rounded-lg border border-slate-200 dark:border-slate-800">
+              <header className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+                <Building2 size={16} className="text-blue-500" />
+                <span className="font-semibold text-slate-800 dark:text-slate-100">Subcuentas</span>
+                <Badge className="ml-auto">{cliente.subcuentas.length}</Badge>
+              </header>
+              <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                {cliente.subcuentas.map((s) => (
+                  <li key={s.id}>
+                    <Link
+                      href={`/clientes/${s.id}`}
+                      className="block truncate px-4 py-2.5 text-sm font-medium text-brand hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    >
+                      {s.razon_social}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
       </div>
 

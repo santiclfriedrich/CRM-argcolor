@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
-import { Select } from "@/components/ui/select";
+import { SelectMenu } from "@/components/ui/select-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { useClientes } from "@/lib/clientes";
 import { useOportunidades } from "@/lib/oportunidades";
@@ -97,7 +97,7 @@ export function TareaModal({ open, onClose, tarea, fechaPorDefecto }: Props) {
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={esEdicion ? "Editar tarea" : "Nueva tarea"}>
+    <Modal open={open} onClose={onClose} title={esEdicion ? "Editar tarea" : "Nueva tarea"} size="xl">
       <form onSubmit={submit} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -113,14 +113,13 @@ export function TareaModal({ open, onClose, tarea, fechaPorDefecto }: Props) {
           </div>
           <div>
             <Label htmlFor="t-subtipo">Subtipo</Label>
-            <Select id="t-subtipo" value={subtipo} onChange={(e) => setSubtipo(e.target.value)}>
-              <option value="">— Ninguno —</option>
-              {SUBTIPO_OPCIONES.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </Select>
+            <SelectMenu
+              id="t-subtipo"
+              value={subtipo}
+              onChange={setSubtipo}
+              placeholder="— Ninguno —"
+              options={[{ value: "", label: "— Ninguno —" }, ...SUBTIPO_OPCIONES]}
+            />
           </div>
         </div>
 
@@ -136,28 +135,24 @@ export function TareaModal({ open, onClose, tarea, fechaPorDefecto }: Props) {
           </div>
           <div>
             <Label htmlFor="t-prioridad">Prioridad</Label>
-            <Select
+            <SelectMenu
               id="t-prioridad"
               value={prioridad}
-              onChange={(e) => setPrioridad(e.target.value as PrioridadTarea)}
-            >
-              {PRIORIDAD_OPCIONES.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </Select>
+              onChange={(v) => setPrioridad(v as PrioridadTarea)}
+              options={PRIORIDAD_OPCIONES.map((p) => ({ value: p.value, label: p.label }))}
+            />
           </div>
           <div>
             <Label htmlFor="t-estado">Estado</Label>
-            <Select
+            <SelectMenu
               id="t-estado"
               value={completada ? "completado" : "abierto"}
-              onChange={(e) => setCompletada(e.target.value === "completado")}
-            >
-              <option value="abierto">Abierto</option>
-              <option value="completado">Completado</option>
-            </Select>
+              onChange={(v) => setCompletada(v === "completado")}
+              options={[
+                { value: "abierto", label: "Abierto" },
+                { value: "completado", label: "Completado" },
+              ]}
+            />
           </div>
         </div>
 
@@ -176,33 +171,32 @@ export function TareaModal({ open, onClose, tarea, fechaPorDefecto }: Props) {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label htmlFor="t-cliente">Cuenta relacionada</Label>
-            <Select
+            <SelectMenu
               id="t-cliente"
-              value={clienteId ?? ""}
-              onChange={(e) => setClienteId(e.target.value ? Number(e.target.value) : null)}
-            >
-              <option value="">— Ninguna —</option>
-              {clientes?.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.razon_social}
-                </option>
-              ))}
-            </Select>
+              value={clienteId != null ? String(clienteId) : ""}
+              onChange={(v) => setClienteId(v ? Number(v) : null)}
+              placeholder="— Ninguna —"
+              options={[
+                { value: "", label: "— Ninguna —" },
+                ...(clientes ?? []).map((c) => ({ value: String(c.id), label: c.razon_social })),
+              ]}
+            />
           </div>
           <div>
             <Label htmlFor="t-oportunidad">Oportunidad relacionada</Label>
-            <Select
+            <SelectMenu
               id="t-oportunidad"
-              value={oportunidadId ?? ""}
-              onChange={(e) => setOportunidadId(e.target.value ? Number(e.target.value) : null)}
-            >
-              <option value="">— Ninguna —</option>
-              {oportunidades?.map((o) => (
-                <option key={o.id} value={o.id}>
-                  #{o.id} · {o.cliente?.razon_social ?? o.asunto ?? "s/asunto"}
-                </option>
-              ))}
-            </Select>
+              value={oportunidadId != null ? String(oportunidadId) : ""}
+              onChange={(v) => setOportunidadId(v ? Number(v) : null)}
+              placeholder="— Ninguna —"
+              options={[
+                { value: "", label: "— Ninguna —" },
+                ...(oportunidades ?? []).map((o) => ({
+                  value: String(o.id),
+                  label: `#${o.id} · ${o.cliente?.razon_social ?? o.asunto ?? "s/asunto"}`,
+                })),
+              ]}
+            />
           </div>
         </div>
 

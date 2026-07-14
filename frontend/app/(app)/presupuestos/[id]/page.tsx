@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { SelectMenu } from "@/components/ui/select-menu";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   abrirPdf,
@@ -163,11 +163,15 @@ export default function ArmadorPresupuestoPage() {
       <div className="mt-5 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40 sm:grid-cols-4">
         <div>
           <Label>Moneda</Label>
-          <Select value={moneda} onChange={(e) => setMoneda(e.target.value)}>
-            <option value="USD">USD</option>
-            <option value="ARS">ARS</option>
-            <option value="EUR">EUR</option>
-          </Select>
+          <SelectMenu
+            value={moneda}
+            onChange={setMoneda}
+            options={[
+              { value: "USD", label: "USD" },
+              { value: "ARS", label: "ARS" },
+              { value: "EUR", label: "EUR" },
+            ]}
+          />
         </div>
         <div>
           <Label>Condición de pago</Label>
@@ -242,19 +246,16 @@ export default function ArmadorPresupuestoPage() {
 
       {/* Acciones */}
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
-        <div>
+        <div className="w-44">
           <Label>Estado</Label>
-          <Select
+          <SelectMenu
             value={estado}
-            onChange={(e) => setEstado(e.target.value as EstadoPresupuesto)}
-            className="w-44"
-          >
-            {Object.entries(ESTADO_PRESUPUESTO).map(([value, meta]) => (
-              <option key={value} value={value}>
-                {meta.label}
-              </option>
-            ))}
-          </Select>
+            onChange={(v) => setEstado(v as EstadoPresupuesto)}
+            options={Object.entries(ESTADO_PRESUPUESTO).map(([value, meta]) => ({
+              value,
+              label: meta.label,
+            }))}
+          />
         </div>
         <div className="flex items-center gap-2">
           {updateMut.isSuccess && <span className="text-xs text-green-600">Guardado ✓</span>}

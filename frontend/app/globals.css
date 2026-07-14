@@ -3,17 +3,25 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8fafc;
+  --background: #eef2f7;
   --foreground: #0f172a;
+  --tint: rgba(37, 99, 235, 0.06);
 }
 
 .dark {
   /* Fondo casi negro (slate-950) para que las tarjetas slate-900 resalten. */
   --background: #020617;
   --foreground: #e2e8f0;
+  --tint: rgba(37, 99, 235, 0.1);
 }
 
 body {
-  background: var(--background);
+  /* Degradé muy sutil con un tinte de marca arriba, para que no se sienta plano. */
+  background:
+    radial-gradient(1100px 480px at 100% -8%, var(--tint), transparent 70%),
+    var(--background);
+  background-attachment: fixed;
   color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

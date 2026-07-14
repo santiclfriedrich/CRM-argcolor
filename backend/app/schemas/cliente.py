@@ -14,6 +14,14 @@ class ClienteBase(BaseModel):
     vendedor_asignado_id: int | None = None
     notas: str | None = None
     activo: bool = True
+    cuenta_principal_id: int | None = None
+    tipo: str | None = None
+    sector: str | None = None
+    sitio_web: str | None = None
+    telefono: str | None = None
+    empleados: int | None = None
+    direccion_facturacion: str | None = None
+    direccion_envio: str | None = None
 
 
 class ClienteCreate(ClienteBase):
@@ -26,6 +34,21 @@ class ClienteUpdate(BaseModel):
     vendedor_asignado_id: int | None = None
     notas: str | None = None
     activo: bool | None = None
+    cuenta_principal_id: int | None = None
+    tipo: str | None = None
+    sector: str | None = None
+    sitio_web: str | None = None
+    telefono: str | None = None
+    empleados: int | None = None
+    direccion_facturacion: str | None = None
+    direccion_envio: str | None = None
+
+
+class CuentaMini(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    razon_social: str
 
 
 class ClienteRead(ClienteBase):
@@ -36,7 +59,9 @@ class ClienteRead(ClienteBase):
 
 
 class ClienteDetail(ClienteRead):
-    """Cliente con sus contactos y dominios anidados (vista de ficha)."""
+    """Cliente con sus contactos, dominios y jerarquía (vista de ficha)."""
 
     contactos: list[ContactoRead] = []
     dominios: list[DominioRead] = []
+    cuenta_principal: CuentaMini | None = None
+    subcuentas: list[CuentaMini] = []

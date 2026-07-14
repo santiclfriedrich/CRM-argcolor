@@ -10,7 +10,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
-import { Select } from "@/components/ui/select";
+import { SelectMenu } from "@/components/ui/select-menu";
 import { Switch } from "@/components/ui/switch";
 import {
   useCreateUsuario,
@@ -197,13 +197,12 @@ function CreateModal({ onClose }: { onClose: () => void }) {
         </div>
         <div>
           <Label htmlFor="u-rol">Rol</Label>
-          <Select id="u-rol" value={rol} onChange={(e) => setRol(e.target.value as RolUsuario)}>
-            {ROLES.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-          </Select>
+          <SelectMenu
+            id="u-rol"
+            value={rol}
+            onChange={(v) => setRol(v as RolUsuario)}
+            options={ROLES}
+          />
         </div>
         {createMut.isError && (
           <p className="text-sm text-red-600">
@@ -243,13 +242,12 @@ function EditModal({ usuario, onClose }: { usuario: Usuario; onClose: () => void
         </div>
         <div>
           <Label htmlFor="e-rol">Rol</Label>
-          <Select id="e-rol" value={rol} onChange={(e) => setRol(e.target.value as RolUsuario)}>
-            {ROLES.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-          </Select>
+          <SelectMenu
+            id="e-rol"
+            value={rol}
+            onChange={(v) => setRol(v as RolUsuario)}
+            options={ROLES}
+          />
         </div>
         <div className="flex items-center gap-3 pt-1">
           <Switch checked={activo} onCheckedChange={setActivo} id="e-activo" />

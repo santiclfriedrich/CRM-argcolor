@@ -5,7 +5,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { SelectMenu } from "@/components/ui/select-menu";
 import { useCliente, useClientes } from "@/lib/clientes";
 import { ESTADOS } from "@/lib/oportunidades";
 import type { EstadoOportunidad, Oportunidad, OportunidadCreate } from "@/lib/types";
@@ -19,7 +19,7 @@ interface Props {
   onCancel: () => void;
 }
 
-// Convierte el value de un <select> ("" = sin seleccionar) a number | null.
+// Convierte el value ("" = sin seleccionar) a number | null.
 const toId = (value: string): number | null => (value ? Number(value) : null);
 
 export function OportunidadForm({
@@ -74,39 +74,37 @@ export function OportunidadForm({
     <form onSubmit={submit} className="space-y-4">
       <div>
         <Label htmlFor="o-cliente">Cliente</Label>
-        <Select
+        <SelectMenu
           id="o-cliente"
-          value={clienteId ?? ""}
-          onChange={(e) => {
-            setClienteId(toId(e.target.value));
+          value={clienteId != null ? String(clienteId) : ""}
+          onChange={(v) => {
+            setClienteId(toId(v));
             setContactoId(null); // el contacto depende del cliente
           }}
-        >
-          <option value="">— Sin asignar —</option>
-          {clientes?.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.razon_social}
-            </option>
-          ))}
-        </Select>
+          placeholder="— Sin asignar —"
+          options={[
+            { value: "", label: "— Sin asignar —" },
+            ...(clientes ?? []).map((c) => ({ value: String(c.id), label: c.razon_social })),
+          ]}
+        />
       </div>
 
       <div>
         <Label htmlFor="o-contacto">Contacto</Label>
-        <Select
+        <SelectMenu
           id="o-contacto"
-          value={contactoId ?? ""}
-          onChange={(e) => setContactoId(toId(e.target.value))}
+          value={contactoId != null ? String(contactoId) : ""}
+          onChange={(v) => setContactoId(toId(v))}
           disabled={!clienteId}
-        >
-          <option value="">{clienteId ? "— Sin contacto —" : "Elegí un cliente primero"}</option>
-          {contactos.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nombre}
-              {c.cargo ? ` (${c.cargo})` : ""}
-            </option>
-          ))}
-        </Select>
+          placeholder={clienteId ? "— Sin contacto —" : "Elegí un cliente primero"}
+          options={[
+            { value: "", label: "— Sin contacto —" },
+            ...contactos.map((c) => ({
+              value: String(c.id),
+              label: `${c.nombre}${c.cargo ? ` (${c.cargo})` : ""}`,
+            })),
+          ]}
+        />
       </div>
 
       <div>
@@ -175,32 +173,25 @@ export function OportunidadForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor="o-vendedor">Vendedor</Label>
-          <Select
+          <SelectMenu
             id="o-vendedor"
-            value={vendedorId ?? ""}
-            onChange={(e) => setVendedorId(toId(e.target.value))}
-          >
-            <option value="">— Sin asignar —</option>
-            {usuarios?.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nombre}
-              </option>
-            ))}
-          </Select>
+            value={vendedorId != null ? String(vendedorId) : ""}
+            onChange={(v) => setVendedorId(toId(v))}
+            placeholder="— Sin asignar —"
+            options={[
+              { value: "", label: "— Sin asignar —" },
+              ...(usuarios ?? []).map((u) => ({ value: String(u.id), label: u.nombre })),
+            ]}
+          />
         </div>
         <div>
           <Label htmlFor="o-estado">Estado</Label>
-          <Select
+          <SelectMenu
             id="o-estado"
             value={estado}
-            onChange={(e) => setEstado(e.target.value as EstadoOportunidad)}
-          >
-            {ESTADOS.map((e) => (
-              <option key={e.value} value={e.value}>
-                {e.label}
-              </option>
-            ))}
-          </Select>
+            onChange={(v) => setEstado(v as EstadoOportunidad)}
+            options={ESTADOS.map((e) => ({ value: e.value, label: e.label }))}
+          />
         </div>
       </div>
 

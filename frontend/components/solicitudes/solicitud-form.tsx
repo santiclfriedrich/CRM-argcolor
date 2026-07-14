@@ -5,7 +5,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { SelectMenu } from "@/components/ui/select-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { useOportunidades } from "@/lib/oportunidades";
 import { CONDICIONES_PAGO } from "@/lib/solicitudes";
@@ -65,20 +65,20 @@ export function SolicitudForm({
     <form onSubmit={submit} className="space-y-4">
       <div>
         <Label htmlFor="s-op">Oportunidad *</Label>
-        <Select
+        <SelectMenu
           id="s-op"
-          value={oportunidadId ?? ""}
-          onChange={(e) => setOportunidadId(e.target.value ? Number(e.target.value) : null)}
-          required
+          value={oportunidadId != null ? String(oportunidadId) : ""}
+          onChange={(v) => setOportunidadId(v ? Number(v) : null)}
           disabled={lockOportunidad}
-        >
-          <option value="">— Elegí una oportunidad —</option>
-          {oportunidades?.map((o) => (
-            <option key={o.id} value={o.id}>
-              #{o.id} — {o.cliente?.razon_social ?? "Sin cliente"}
-            </option>
-          ))}
-        </Select>
+          placeholder="— Elegí una oportunidad —"
+          options={[
+            { value: "", label: "— Elegí una oportunidad —" },
+            ...(oportunidades ?? []).map((o) => ({
+              value: String(o.id),
+              label: `#${o.id} — ${o.cliente?.razon_social ?? "Sin cliente"}`,
+            })),
+          ]}
+        />
       </div>
 
       <div>
@@ -96,18 +96,19 @@ export function SolicitudForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor="s-cond">Condición de pago</Label>
-          <Select
+          <SelectMenu
             id="s-cond"
             value={condicionPago}
-            onChange={(e) => setCondicionPago(e.target.value as CondicionPago | "")}
-          >
-            <option value="">— Sin especificar —</option>
-            {CONDICIONES_PAGO.map((c) => (
-              <option key={c} value={c}>
-                {c === "Transferencia" ? c : `${c} días`}
-              </option>
-            ))}
-          </Select>
+            onChange={(v) => setCondicionPago(v as CondicionPago | "")}
+            placeholder="— Sin especificar —"
+            options={[
+              { value: "", label: "— Sin especificar —" },
+              ...CONDICIONES_PAGO.map((c) => ({
+                value: c,
+                label: c === "Transferencia" ? c : `${c} días`,
+              })),
+            ]}
+          />
         </div>
         <div>
           <Label htmlFor="s-importe">Importe aproximado (USD)</Label>

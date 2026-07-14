@@ -9,7 +9,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
-import { Select } from "@/components/ui/select";
+import { SelectMenu } from "@/components/ui/select-menu";
 import {
   useCreateContacto,
   useDeleteContacto,
@@ -185,13 +185,12 @@ function ContactoForm({ initial, isPending, onSubmit, onCancel }: ContactoFormPr
         </div>
         <div>
           <Label htmlFor="c-rol">Rol de compra</Label>
-          <Select id="c-rol" value={rol} onChange={(e) => setRol(e.target.value as RolCompra)}>
-            {ROLES.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </Select>
+          <SelectMenu
+            id="c-rol"
+            value={rol}
+            onChange={(v) => setRol(v as RolCompra)}
+            options={ROLES.map((r) => ({ value: r, label: r }))}
+          />
         </div>
       </div>
       <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
