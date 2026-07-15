@@ -296,11 +296,19 @@ function EnviarModal({
   const enviar = useEnviarPresupuesto(id);
   const [to, setTo] = useState("");
   const [mensaje, setMensaje] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    const email = to.trim();
+    // Validamos acá para no depender del 422 del backend y mostrar un mensaje claro.
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailError("El email del cliente no es válido. Revisá que esté bien escrito.");
+      return;
+    }
+    setEmailError(null);
     enviar.mutate(
-      { to: to.trim() || undefined, mensaje: mensaje.trim() || undefined },
+      { to: email || undefined, mensaje: mensaje.trim() || undefined },
       { onSuccess: onClose }
     );
   };
@@ -314,12 +322,19 @@ function EnviarModal({
             id="env-to"
             type="email"
             value={to}
-            onChange={(e) => setTo(e.target.value)}
+            onChange={(e) => {
+              setTo(e.target.value);
+              if (emailError) setEmailError(null);
+            }}
             placeholder="cliente@empresa.com"
           />
-          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-            Si lo dejás vacío, se usa el email del contacto de la oportunidad.
-          </p>
+          {emailError ? (
+            <p className="mt-1 text-xs text-red-600">{emailError}</p>
+          ) : (
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+              Si lo dejás vacío, se usa el email del contacto de la oportunidad.
+            </p>
+          )}
         </div>
         <div>
           <Label htmlFor="env-msg">Mensaje (opcional)</Label>
