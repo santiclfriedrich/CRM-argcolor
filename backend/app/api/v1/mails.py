@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import get_ai, get_current_user, get_gmail, get_user_gmail
+from app.api.deps import es_admin, get_ai, get_current_user, get_gmail, get_user_gmail
 from app.core.exceptions import NotFoundError
 from app.db.models.adjuntos import Adjunto
 from app.db.models.mails import DireccionMail, Mail
@@ -39,12 +39,14 @@ _RELATIONS = (
 def get_adjunto(
     adjunto_id: int,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> FileResponse:
     """Sirve el archivo de un adjunto (imagen) para mostrarlo en la bandeja."""
     adjunto = db.get(Adjunto, adjunto_id)
     if adjunto is None or not adjunto.path_storage or not Path(adjunto.path_storage).exists():
         raise NotFoundError("Adjunto no encontrado")
+    if adjunto.mail is not None:
+        _assert_owner(adjunto.mail, current_user)
     return FileResponse(
         adjunto.path_storage,
         media_type=adjunto.mime_type or "application/octet-stream",
@@ -57,6 +59,19 @@ def _get_loaded(db: Session, mail_id: int) -> Mail:
     if mail is None:
         raise NotFoundError("Mail no encontrado")
     return mail
+
+
+def _assert_owner(mail: Mail, user: Usuario) -> None:
+    """Un vendedor solo accede a los mails de sus propias oportunidades.
+    Los admin acceden a todos. Evita el acceso ajeno por id/URL directa."""
+    if es_admin(user):
+        return
+    op = mail.oportunidad
+    if op is None or op.vendedor_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tenés acceso a este mail.",
+        )
 
 
 @router.post("/ingest", response_model=IngestResult, status_code=201)
@@ -131,14 +146,20 @@ def sync_gmail(
 @router.get("", response_model=list[MailRead])
 def list_mails(
     db: Session = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> list[Mail]:
+    """Bandeja personal: cada vendedor ve solo los mails de sus oportunidades.
+    Los admin ven la bandeja de todo el equipo."""
     query = (
         select(Mail)
         .where(Mail.direccion == DireccionMail.entrante)
         .options(*_RELATIONS)
         .order_by(Mail.created_at.desc())
     )
+    if not es_admin(current_user):
+        query = query.join(Oportunidad, Mail.oportunidad_id == Oportunidad.id).where(
+            Oportunidad.vendedor_id == current_user.id
+        )
     return list(db.scalars(query))
 
 
@@ -177,11 +198,12 @@ def reprocesar_descartado(
 def get_hilo(
     mail_id: int,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> list[Mail]:
     """Toda la conversación del mail: entrantes y salientes del mismo hilo /
     oportunidad, en orden cronológico. Alimenta el chat de la bandeja."""
     mail = _get_loaded(db, mail_id)
+    _assert_owner(mail, current_user)
     condiciones = []
     if mail.oportunidad_id is not None:
         condiciones.append(Mail.oportunidad_id == mail.oportunidad_id)
@@ -211,6 +233,7 @@ def responder_mail(
     if not body.cuerpo or not body.cuerpo.strip():
         raise HTTPException(status_code=400, detail="La respuesta no puede estar vacía.")
     mail = _get_loaded(db, mail_id)
+    _assert_owner(mail, current_user)
     try:
         salida = send_respuesta(
             db, gmail, mail, body.cuerpo, remitente=current_user.email, asunto=body.asunto
@@ -227,9 +250,11 @@ def responder_mail(
 def get_mail(
     mail_id: int,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> Mail:
-    return _get_loaded(db, mail_id)
+    mail = _get_loaded(db, mail_id)
+    _assert_owner(mail, current_user)
+    return mail
 
 
 @router.post("/{mail_id}/acuse", response_model=MailRead, status_code=201)
@@ -237,10 +262,11 @@ def enviar_acuse(
     mail_id: int,
     db: Session = Depends(get_db),
     gmail=Depends(get_gmail),  # noqa: ANN001 - GmailClient
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> Mail:
     """Envía el acuse de recibo al cliente para un mail entrante."""
     mail = _get_loaded(db, mail_id)
+    _assert_owner(mail, current_user)
     try:
         salida = send_acuse(db, gmail, mail)
     except Exception as exc:  # noqa: BLE001 - frontera con Gmail
@@ -256,10 +282,11 @@ def enviar_aclaracion(
     mail_id: int,
     db: Session = Depends(get_db),
     gmail=Depends(get_gmail),  # noqa: ANN001 - GmailClient
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> Mail:
     """Envía al cliente el borrador de aclaración redactado por la IA."""
     mail = _get_loaded(db, mail_id)
+    _assert_owner(mail, current_user)
     try:
         salida = send_aclaracion(db, gmail, mail)
     except Exception as exc:  # noqa: BLE001 - frontera con Gmail

@@ -41,6 +41,7 @@ import type {
   OportunidadCreate,
   OportunidadFiltros,
 } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 // "2026-08-01" -> "01/08/2026" (sin líos de zona horaria).
 function fmtDate(d: string | null): string {
@@ -64,7 +65,11 @@ export default function OportunidadesPage() {
   const [editing, setEditing] = useState<Oportunidad | null>(null);
   const [pidiendo, setPidiendo] = useState<Oportunidad | null>(null);
   const [detalleId, setDetalleId] = useState<number | null>(null);
-  const [filtros, setFiltros] = useState<OportunidadFiltros>({ estado: "", cliente_id: null });
+  const [filtros, setFiltros] = useState<OportunidadFiltros>({
+    estado: "",
+    cliente_id: null,
+    solo_mias: true,
+  });
 
   const router = useRouter();
   const { data, isLoading, isError } = useOportunidades(filtros);
@@ -104,6 +109,28 @@ export default function OportunidadesPage() {
         <Button onClick={() => setCreating(true)}>
           <Plus size={16} /> Nueva oportunidad
         </Button>
+      </div>
+
+      {/* Alcance: mías / todas */}
+      <div className="mt-4 inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 dark:border-slate-800 dark:bg-slate-800/60">
+        {[
+          { value: true, label: "Mías" },
+          { value: false, label: "Todas" },
+        ].map((opt) => (
+          <button
+            key={String(opt.value)}
+            type="button"
+            onClick={() => setFiltro({ solo_mias: opt.value })}
+            className={cn(
+              "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+              Boolean(filtros.solo_mias) === opt.value
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100"
+                : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+            )}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
 
       {/* Filtros */}

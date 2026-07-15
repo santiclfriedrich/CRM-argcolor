@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import get_current_user, get_user_gmail
+from app.api.deps import es_admin, get_current_user, get_user_gmail
 from app.core.exceptions import NotFoundError
 from app.db.models.oportunidades import Oportunidad
 from app.db.models.presupuestos import Presupuesto
@@ -44,15 +44,34 @@ def _get_loaded(db: Session, presupuesto_id: int) -> Presupuesto:
     return presupuesto
 
 
+def _assert_owner(presupuesto: Presupuesto, user: Usuario) -> None:
+    """Un vendedor solo puede tocar presupuestos de sus propias oportunidades.
+    Los admin acceden a todos. Evita el acceso ajeno por id/URL directa."""
+    if es_admin(user):
+        return
+    op = presupuesto.oportunidad
+    if op is None or op.vendedor_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tenés acceso a este presupuesto.",
+        )
+
+
 @router.get("", response_model=list[PresupuestoRead])
 def list_presupuestos(
     oportunidad_id: int | None = None,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> list[Presupuesto]:
+    """Presupuestos personales: cada vendedor ve solo los de sus oportunidades.
+    Los admin ven los de todo el equipo."""
     query = select(Presupuesto).options(*_RELATIONS).order_by(Presupuesto.id.desc())
     if oportunidad_id is not None:
         query = query.where(Presupuesto.oportunidad_id == oportunidad_id)
+    if not es_admin(current_user):
+        query = query.join(Oportunidad, Presupuesto.oportunidad_id == Oportunidad.id).where(
+            Oportunidad.vendedor_id == current_user.id
+        )
     return list(db.scalars(query))
 
 
@@ -73,7 +92,7 @@ def create_presupuesto(
 def create_desde_solicitud(
     solicitud_id: int,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> Presupuesto:
     """Crea un presupuesto pre-llenado con la respuesta de Compras ya parseada."""
     solicitud = db.get(
@@ -83,6 +102,11 @@ def create_desde_solicitud(
     )
     if solicitud is None:
         raise HTTPException(status_code=404, detail="La solicitud no existe")
+    if not es_admin(current_user) and solicitud.solicitante_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tenés acceso a esta solicitud.",
+        )
     try:
         presupuesto = crear_desde_solicitud(db, solicitud)
     except ValueError as exc:
@@ -94,9 +118,11 @@ def create_desde_solicitud(
 def get_presupuesto(
     presupuesto_id: int,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> Presupuesto:
-    return _get_loaded(db, presupuesto_id)
+    presupuesto = _get_loaded(db, presupuesto_id)
+    _assert_owner(presupuesto, current_user)
+    return presupuesto
 
 
 @router.patch("/{presupuesto_id}", response_model=PresupuestoRead)
@@ -104,9 +130,10 @@ def update_presupuesto(
     presupuesto_id: int,
     body: PresupuestoUpdate,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> Presupuesto:
     presupuesto = _get_loaded(db, presupuesto_id)
+    _assert_owner(presupuesto, current_user)
     actualizar_presupuesto(db, presupuesto, body)
     return _get_loaded(db, presupuesto_id)
 
@@ -115,9 +142,10 @@ def update_presupuesto(
 def delete_presupuesto(
     presupuesto_id: int,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> Response:
     presupuesto = _get_loaded(db, presupuesto_id)
+    _assert_owner(presupuesto, current_user)
     for item in list(presupuesto.items):
         db.delete(item)
     db.delete(presupuesto)
@@ -136,6 +164,7 @@ def enviar_presupuesto(
     """Envía el presupuesto (PDF) al cliente por Gmail. Si no se indica `to`,
     usa el email del contacto de la oportunidad."""
     presupuesto = _get_loaded(db, presupuesto_id)
+    _assert_owner(presupuesto, current_user)
     contacto = presupuesto.oportunidad.contacto if presupuesto.oportunidad else None
     destino = (body.to and str(body.to)) or (contacto.email if contacto else None)
     if not destino:
@@ -163,10 +192,11 @@ def enviar_presupuesto(
 def descargar_pdf(
     presupuesto_id: int,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> FileResponse:
     """Genera el PDF con los datos actuales y lo devuelve para descargar/ver."""
     presupuesto = _get_loaded(db, presupuesto_id)
+    _assert_owner(presupuesto, current_user)
     try:
         ruta: Path = render_pdf(db, presupuesto)
     except RuntimeError as exc:

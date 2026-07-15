@@ -56,6 +56,11 @@ def get_current_admin(current: Usuario = Depends(get_current_user)) -> Usuario:
     return current
 
 
+def es_admin(user: Usuario) -> bool:
+    """True si el usuario tiene rol admin (ve la gestión de todo el equipo)."""
+    return user.rol == RolUsuario.admin
+
+
 def get_user_gmail(current: Usuario = Depends(get_current_user)):  # noqa: ANN201
     """Cliente de Gmail del usuario logueado (Camino C: su propio refresh token).
 

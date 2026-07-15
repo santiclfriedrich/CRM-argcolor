@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import get_ai, get_current_user, get_user_gmail
+from app.api.deps import es_admin, get_ai, get_current_user, get_user_gmail
 from app.core.exceptions import NotFoundError
 from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
 from app.db.models.respuestas_compras import RespuestaCompras
@@ -41,6 +41,18 @@ def _get_loaded(db: Session, solicitud_id: int) -> SolicitudCompras:
     return solicitud
 
 
+def _assert_owner(solicitud: SolicitudCompras, user: Usuario) -> None:
+    """Un usuario solo puede tocar las solicitudes que él pidió a Compras.
+    Los admin acceden a todas. Evita el acceso ajeno por id/URL directa."""
+    if es_admin(user):
+        return
+    if solicitud.solicitante_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tenés acceso a esta solicitud.",
+        )
+
+
 def _normalize_ccs(data: dict) -> None:
     """ccs_extra llega como list[EmailStr]; la columna ARRAY espera str planos."""
     if data.get("ccs_extra"):
@@ -52,13 +64,17 @@ def list_solicitudes(
     estado: EstadoSolicitud | None = None,
     oportunidad_id: int | None = None,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> list[SolicitudCompras]:
+    """Solicitudes personales: cada usuario ve solo las que él pidió a Compras.
+    Los admin ven las de todo el equipo."""
     query = select(SolicitudCompras).options(*_RELATIONS)
     if estado is not None:
         query = query.where(SolicitudCompras.estado == estado)
     if oportunidad_id is not None:
         query = query.where(SolicitudCompras.oportunidad_id == oportunidad_id)
+    if not es_admin(current_user):
+        query = query.where(SolicitudCompras.solicitante_id == current_user.id)
     return list(db.scalars(query.order_by(SolicitudCompras.created_at.desc())))
 
 
@@ -95,9 +111,10 @@ def create_solicitud(
 def get_solicitud(
     solicitud_id: int,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> SolicitudDetail:
     solicitud = _get_loaded(db, solicitud_id)
+    _assert_owner(solicitud, current_user)
     read = SolicitudRead.model_validate(solicitud)
     preview = build_email_preview(solicitud, db)
     respuestas = [RespuestaComprasRead.model_validate(r) for r in solicitud.respuestas]
@@ -109,10 +126,11 @@ def enviar_solicitud(
     solicitud_id: int,
     db: Session = Depends(get_db),
     gmail=Depends(get_user_gmail),  # noqa: ANN001 - GmailClient del usuario logueado
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> SolicitudCompras:
     """Envía la solicitud a Compras por Gmail (desde la casilla del vendedor)."""
     solicitud = _get_loaded(db, solicitud_id)
+    _assert_owner(solicitud, current_user)
     try:
         enviar_a_compras(db, gmail, solicitud)
     except ValueError as exc:
@@ -133,13 +151,14 @@ def cargar_respuesta(
     body: ParseRespuestaRequest,
     db: Session = Depends(get_db),
     ai: AIProvider = Depends(get_ai),
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> RespuestaCompras:
     """Parsea con IA la respuesta de Compras (tabla de precios) y la registra.
 
     Marca la solicitud como respondida. Los ítems quedan listos para armar el
     presupuesto (POST /presupuestos/desde-solicitud/{id})."""
     solicitud = _get_loaded(db, solicitud_id)
+    _assert_owner(solicitud, current_user)
     try:
         draft = ai.draft_quote(body.contenido)
     except Exception as exc:  # noqa: BLE001 - frontera con IA
@@ -168,11 +187,12 @@ def update_solicitud(
     solicitud_id: int,
     body: SolicitudUpdate,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> SolicitudCompras:
     solicitud = db.get(SolicitudCompras, solicitud_id)
     if solicitud is None:
         raise NotFoundError("Solicitud no encontrada")
+    _assert_owner(solicitud, current_user)
 
     data = body.model_dump(exclude_unset=True)
     _normalize_ccs(data)

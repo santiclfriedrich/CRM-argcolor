@@ -185,6 +185,7 @@ export type OportunidadFiltros = {
   cliente_id?: number | null;
   desde?: string;
   hasta?: string;
+  solo_mias?: boolean;
 };
 
 // --- Búsqueda global ---

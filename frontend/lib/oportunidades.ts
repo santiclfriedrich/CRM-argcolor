@@ -36,11 +36,12 @@ export const ESTADO_META: Record<EstadoOportunidad, { label: string; color: stri
 
 export function useOportunidades(filtros?: OportunidadFiltros) {
   // Solo mandamos params con valor (los vacíos se omiten).
-  const params: Record<string, string | number> = {};
+  const params: Record<string, string | number | boolean> = {};
   if (filtros?.estado) params.estado = filtros.estado;
   if (filtros?.cliente_id) params.cliente_id = filtros.cliente_id;
   if (filtros?.desde) params.desde = filtros.desde;
   if (filtros?.hasta) params.hasta = filtros.hasta;
+  if (filtros?.solo_mias) params.solo_mias = true;
 
   return useQuery({
     queryKey: [...oportunidadKeys.all, params],
