@@ -22,6 +22,7 @@ import {
   useUpdatePresupuesto,
 } from "@/lib/presupuestos";
 import type { EstadoPresupuesto, ItemInput, Presupuesto } from "@/lib/types";
+import { errorMessage } from "@/lib/utils";
 
 type Row = {
   key: string;
@@ -332,8 +333,7 @@ function EnviarModal({
         </div>
         {enviar.isError && (
           <p className="text-sm text-red-600">
-            {(enviar.error as { response?: { data?: { detail?: string } } })?.response?.data
-              ?.detail ?? "No se pudo enviar el presupuesto."}
+            {errorMessage(enviar.error, "No se pudo enviar el presupuesto.")}
           </p>
         )}
         <div className="flex justify-end gap-2 pt-1">

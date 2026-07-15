@@ -20,12 +20,7 @@ import {
   useUpdateSolicitud,
 } from "@/lib/solicitudes";
 import type { EstadoSolicitud, SolicitudDetail } from "@/lib/types";
-
-function errorMsg(err: unknown, fallback: string): string {
-  return (
-    (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? fallback
-  );
-}
+import { errorMessage as errorMsg } from "@/lib/utils";
 
 export default function SolicitudesPage() {
   const [creating, setCreating] = useState(false);

@@ -32,6 +32,7 @@ import {
 } from "@/lib/mails";
 import { ESTADO_META, useDeleteOportunidad } from "@/lib/oportunidades";
 import type { Adjunto, CategoriaMail, EmailData, Mail } from "@/lib/types";
+import { errorMessage } from "@/lib/utils";
 
 // Etiquetas legibles de las categorías de descarte.
 const CATEGORIA_LABEL: Record<CategoriaMail, string> = {
@@ -106,8 +107,7 @@ export default function BandejaPage() {
       )}
       {syncMut.isError && (
         <p className="mt-2 text-sm text-red-600">
-          {(syncMut.error as { response?: { data?: { detail?: string } } })?.response?.data
-            ?.detail ?? "No se pudo sincronizar Gmail."}
+          {errorMessage(syncMut.error, "No se pudo sincronizar Gmail.")}
         </p>
       )}
 
@@ -144,11 +144,7 @@ export default function BandejaPage() {
         </div>
         {ingestMut.isError && (
           <p className="text-sm text-red-600">
-            {(() => {
-              const detail = (ingestMut.error as { response?: { data?: { detail?: string } } })
-                ?.response?.data?.detail;
-              return detail ?? "No se pudo procesar el mail. Revisá el backend.";
-            })()}
+            {errorMessage(ingestMut.error, "No se pudo procesar el mail. Revisá el backend.")}
           </p>
         )}
         {ingestMut.isSuccess && ingestMut.data.descartado && (
@@ -383,8 +379,7 @@ function ConversacionPanel({ mail }: { mail: Mail }) {
           <div className="flex items-center gap-2">
             {responder.isError && (
               <span className="text-xs text-red-600">
-                {(responder.error as { response?: { data?: { detail?: string } } })?.response?.data
-                  ?.detail ?? "No se pudo enviar."}
+                {errorMessage(responder.error, "No se pudo enviar.")}
               </span>
             )}
             {responder.isSuccess && <span className="text-xs text-green-600">Enviado ✓</span>}
@@ -480,8 +475,7 @@ function ResponderButton({
       {mut.isSuccess && <span className="text-xs text-green-600">Enviado ✓</span>}
       {mut.isError && (
         <span className="text-xs text-red-600">
-          {(mut.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-            "No se pudo enviar"}
+          {errorMessage(mut.error, "No se pudo enviar")}
         </span>
       )}
       <Button

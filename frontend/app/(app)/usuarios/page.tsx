@@ -19,6 +19,7 @@ import {
   useUsuarios,
 } from "@/lib/usuarios";
 import type { RolUsuario, Usuario } from "@/lib/types";
+import { errorMessage as errorDetail } from "@/lib/utils";
 
 const ROLES: { value: RolUsuario; label: string }[] = [
   { value: "vendedor", label: "Vendedor" },
@@ -30,12 +31,6 @@ const ROL_LABEL: Record<RolUsuario, string> = {
   admin: "Admin",
   compras: "Compras",
 };
-
-function errorDetail(err: unknown, fallback: string): string {
-  return (
-    (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? fallback
-  );
-}
 
 export default function UsuariosPage() {
   const { data: session } = useSession();
