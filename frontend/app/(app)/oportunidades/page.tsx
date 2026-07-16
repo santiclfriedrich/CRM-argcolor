@@ -34,14 +34,14 @@ import {
   useUpdateOportunidad,
 } from "@/lib/oportunidades";
 import { fmtMonto, useCreatePresupuesto } from "@/lib/presupuestos";
-import { useCreateSolicitud } from "@/lib/solicitudes";
+import { useCrearYEnviarSolicitud } from "@/lib/solicitudes";
 import type {
   EstadoOportunidad,
   Oportunidad,
   OportunidadCreate,
   OportunidadFiltros,
 } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, errorMessage } from "@/lib/utils";
 
 // "2026-08-01" -> "01/08/2026" (sin líos de zona horaria).
 function fmtDate(d: string | null): string {
@@ -189,6 +189,7 @@ export default function OportunidadesPage() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
               <tr>
+                <th className="px-3 py-2 font-medium">ID</th>
                 <th className="px-3 py-2 font-medium">Cliente</th>
                 <th className="px-3 py-2 font-medium">Asunto</th>
                 <th className="px-3 py-2 font-medium">Valor</th>
@@ -201,6 +202,12 @@ export default function OportunidadesPage() {
             <tbody>
               {data.map((o) => (
                 <tr key={o.id} className="border-t border-slate-100 dark:border-slate-800">
+                  <td
+                    className="cursor-pointer px-3 py-2 font-medium text-slate-500 hover:text-brand dark:text-slate-400"
+                    onClick={() => setDetalleId(o.id)}
+                  >
+                    #{o.id}
+                  </td>
                   <td
                     className="cursor-pointer px-3 py-2 font-medium text-slate-800 hover:text-brand dark:text-slate-100"
                     onClick={() => setDetalleId(o.id)}
@@ -261,7 +268,7 @@ export default function OportunidadesPage() {
               ))}
               {data.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={8} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
                     No hay oportunidades con estos filtros.
                   </td>
                 </tr>
@@ -389,7 +396,7 @@ function Fecha({ label, value, alerta }: { label: string; value: string | null; 
 function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad; onClose: () => void }) {
   const router = useRouter();
   const { data: sugerencia, isLoading } = useSugerenciaCompras(oportunidad.id);
-  const createSolicitud = useCreateSolicitud();
+  const crearYEnviar = useCrearYEnviarSolicitud();
   const cliente = oportunidad.cliente?.razon_social ?? `#${oportunidad.id}`;
 
   return (
@@ -397,21 +404,33 @@ function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad;
       {isLoading ? (
         <p className="text-slate-500 dark:text-slate-400">Cargando sugerencia…</p>
       ) : (
-        <SolicitudForm
-          isPending={createSolicitud.isPending}
-          defaultOportunidadId={oportunidad.id}
-          defaultRequerimiento={sugerencia?.requerimiento ?? ""}
-          lockOportunidad
-          onCancel={onClose}
-          onSubmit={(values) =>
-            createSolicitud.mutate(values, {
-              onSuccess: () => {
-                onClose();
-                router.push("/solicitudes");
-              },
-            })
-          }
-        />
+        <div className="space-y-3">
+          <SolicitudForm
+            isPending={crearYEnviar.isPending}
+            submitLabel="Enviar a Compras"
+            pendingLabel="Enviando a Compras…"
+            defaultOportunidadId={oportunidad.id}
+            defaultRequerimiento={sugerencia?.requerimiento ?? ""}
+            lockOportunidad
+            onCancel={onClose}
+            onSubmit={(values) =>
+              crearYEnviar.mutate(values, {
+                onSuccess: () => {
+                  onClose();
+                  router.push("/solicitudes");
+                },
+              })
+            }
+          />
+          {crearYEnviar.isError && (
+            <p className="text-sm text-red-600">
+              {errorMessage(
+                crearYEnviar.error,
+                "La solicitud se creó pero no se pudo enviar a Compras. Reintentá el envío desde Solicitudes.",
+              )}
+            </p>
+          )}
+        </div>
       )}
     </Modal>
   );

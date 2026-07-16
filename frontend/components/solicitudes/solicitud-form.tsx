@@ -20,6 +20,9 @@ interface Props {
   defaultRequerimiento?: string;
   // Si la oportunidad viene fijada, no se puede cambiar en el form.
   lockOportunidad?: boolean;
+  // Textos del botón de submit (ej. "Enviar a Compras" cuando además se envía).
+  submitLabel?: string;
+  pendingLabel?: string;
 }
 
 // "a@x.com, b@y.com" -> ["a@x.com", "b@y.com"]
@@ -36,6 +39,8 @@ export function SolicitudForm({
   defaultOportunidadId = null,
   defaultRequerimiento = "",
   lockOportunidad = false,
+  submitLabel = "Crear solicitud",
+  pendingLabel = "Creando…",
 }: Props) {
   const { data: oportunidades } = useOportunidades();
 
@@ -154,7 +159,7 @@ export function SolicitudForm({
           Cancelar
         </Button>
         <Button type="submit" disabled={isPending || !oportunidadId || !requerimiento.trim()}>
-          {isPending ? "Creando…" : "Crear solicitud"}
+          {isPending ? pendingLabel : submitLabel}
         </Button>
       </div>
     </form>

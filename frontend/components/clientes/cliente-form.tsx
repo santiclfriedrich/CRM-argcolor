@@ -47,6 +47,9 @@ interface ClienteFormProps {
   isPending: boolean;
   onSubmit: (values: ClienteCreate) => void;
   onCancel?: () => void;
+  // Permiten disparar el submit desde un botón externo (ej. al final del detalle).
+  formId?: string;
+  hideSubmit?: boolean;
 }
 
 const TIPOS = [
@@ -83,6 +86,8 @@ export function ClienteForm({
   isPending,
   onSubmit,
   onCancel,
+  formId,
+  hideSubmit = false,
 }: ClienteFormProps) {
   const { data: clientes } = useClientes();
   const { data: usuarios } = useUsuarios();
@@ -145,7 +150,7 @@ export function ClienteForm({
   );
 
   return (
-    <form onSubmit={enviar} className="space-y-6" noValidate>
+    <form id={formId} onSubmit={enviar} className="space-y-6" noValidate>
       <p className="text-right text-xs text-slate-500 dark:text-slate-400">
         <Req /> = Información obligatoria
       </p>
@@ -274,16 +279,18 @@ export function ClienteForm({
         Cuenta activa
       </label>
 
-      <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
-        {onCancel && (
-          <Button variant="outline" onClick={onCancel} disabled={isPending}>
-            Cancelar
+      {!hideSubmit && (
+        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
+          {onCancel && (
+            <Button variant="outline" onClick={onCancel} disabled={isPending}>
+              Cancelar
+            </Button>
+          )}
+          <Button type="submit" disabled={isPending}>
+            {isPending ? "Guardando…" : submitLabel}
           </Button>
-        )}
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "Guardando…" : submitLabel}
-        </Button>
-      </div>
+        </div>
+      )}
     </form>
   );
 }

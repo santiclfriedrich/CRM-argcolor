@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import {
@@ -258,8 +259,7 @@ function Descartados() {
 function MailCard({ mail }: { mail: Mail }) {
   const d = mail.datos_extraidos_ia;
   const estado = mail.oportunidad?.estado;
-  const [showOriginal, setShowOriginal] = useState(false);
-  const [showChat, setShowChat] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   return (
     <article className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-sm dark:shadow-none">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -290,29 +290,28 @@ function MailCard({ mail }: { mail: Mail }) {
       {d && <Extraccion data={d} />}
 
       <div className="mt-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {mail.oportunidad_id && (
-            <Link href="/oportunidades" className="text-xs text-brand hover:underline">
-              Ver oportunidad #{mail.oportunidad_id} →
+            <Link
+              href={`/oportunidades?op=${mail.oportunidad_id}`}
+              className="inline-flex items-center rounded-md border border-brand/30 bg-brand/10 px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand/20"
+            >
+              Oportunidad #{mail.oportunidad_id}
             </Link>
           )}
           {mail.cuerpo && (
             <button
               type="button"
-              onClick={() => setShowOriginal((v) => !v)}
+              onClick={() => setChatOpen(true)}
               className="text-xs text-slate-500 dark:text-slate-400 hover:underline"
             >
-              {showOriginal ? "Ocultar original" : "Ver mail original"}
+              Ver mail original
             </button>
           )}
         </div>
         <div className="flex items-center gap-2">
           {mail.de && (
-            <Button
-              size="sm"
-              variant={showChat ? "secondary" : "outline"}
-              onClick={() => setShowChat((v) => !v)}
-            >
+            <Button size="sm" variant="outline" onClick={() => setChatOpen(true)}>
               <MessageSquare size={14} /> Responder
             </Button>
           )}
@@ -325,13 +324,14 @@ function MailCard({ mail }: { mail: Mail }) {
         </div>
       </div>
 
-      {showOriginal && (
-        <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-3 text-xs text-slate-700 dark:text-slate-200">
-          {mail.cuerpo}
-        </pre>
-      )}
-
-      {showChat && mail.de && <ConversacionPanel mail={mail} />}
+      <Modal
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        title={mail.asunto || mail.de || "Conversación"}
+        size="lg"
+      >
+        <ConversacionPanel mail={mail} />
+      </Modal>
     </article>
   );
 }
@@ -354,18 +354,18 @@ function ConversacionPanel({ mail }: { mail: Mail }) {
   const mensajes = hilo && hilo.length > 0 ? hilo : [mail];
 
   return (
-    <div className="mt-4 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-3">
+    <div className="space-y-3">
       {isLoading ? (
         <p className="text-xs text-slate-400 dark:text-slate-500">Cargando conversación…</p>
       ) : (
-        <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
+        <div className="max-h-[50vh] space-y-2 overflow-y-auto rounded-md border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/40">
           {mensajes.map((m) => (
             <Burbuja key={m.id} mail={m} />
           ))}
         </div>
       )}
 
-      <form onSubmit={enviar} className="mt-3 space-y-2">
+      <form onSubmit={enviar} className="space-y-2">
         <Textarea
           rows={3}
           value={texto}

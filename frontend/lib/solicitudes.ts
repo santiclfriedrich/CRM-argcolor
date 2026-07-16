@@ -58,6 +58,24 @@ export function useCreateSolicitud() {
   });
 }
 
+// Crea la solicitud y la envía a Compras por Gmail en un solo paso (usado desde
+// "Pedir a Compras" en Oportunidades). Si el envío falla, la solicitud ya quedó
+// creada y se puede reintentar el envío desde /solicitudes.
+export function useCrearYEnviarSolicitud() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: SolicitudCreate) => {
+      const solicitud = (await api.post<Solicitud>(BASE, body)).data;
+      await api.post(`${BASE}/${solicitud.id}/enviar`);
+      return solicitud;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: solicitudKeys.all });
+      qc.invalidateQueries({ queryKey: oportunidadKeys.all });
+    },
+  });
+}
+
 export function useUpdateSolicitud(id: number) {
   const qc = useQueryClient();
   return useMutation({

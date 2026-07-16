@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Building2, ListChecks, Target, Trash2 } from "lucide-react";
+import { ArrowLeft, Building2, ListChecks, Save, Target, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -109,12 +109,24 @@ export default function ClienteDetailPage() {
               submitLabel="Guardar cambios"
               isPending={updateMut.isPending}
               onSubmit={(values) => updateMut.mutate(values)}
+              formId="cuenta-datos-form"
+              hideSubmit
             />
-            {updateMut.isSuccess && <p className="mt-2 text-sm text-green-600">Cambios guardados.</p>}
           </section>
 
           <ContactosSection clienteId={clienteId} contactos={cliente.contactos} />
           <DominiosSection clienteId={clienteId} dominios={cliente.dominios} />
+
+          {/* Guardado final, bien visible. Los contactos y dominios ya se
+              guardan al agregarlos; este botón guarda los datos de la cuenta. */}
+          <div className="flex items-center gap-2">
+            <Button type="submit" form="cuenta-datos-form" disabled={updateMut.isPending}>
+              <Save size={16} /> {updateMut.isPending ? "Guardando…" : "Guardar cambios"}
+            </Button>
+            {updateMut.isSuccess && (
+              <span className="text-sm font-medium text-green-600">Cambios guardados.</span>
+            )}
+          </div>
         </div>
 
         {/* Columna lateral: relacionados */}
