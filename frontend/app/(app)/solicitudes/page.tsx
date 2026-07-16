@@ -1,6 +1,7 @@
 "use client";
 
 import { Copy, FileText, Mail, Paperclip, Plus, Send, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -51,6 +52,7 @@ export default function SolicitudesPage() {
             <thead className="bg-slate-50 dark:bg-slate-800/50 text-left text-slate-500 dark:text-slate-400">
               <tr>
                 <th className="px-4 py-2 font-medium">ID</th>
+                <th className="px-4 py-2 font-medium">Oportunidad</th>
                 <th className="px-4 py-2 font-medium">Cliente</th>
                 <th className="px-4 py-2 font-medium">Requerimiento</th>
                 <th className="px-4 py-2 font-medium">Solicitante</th>
@@ -68,6 +70,22 @@ export default function SolicitudesPage() {
                     onClick={() => setDetailId(s.id)}
                   >
                     <td className="px-4 py-2 font-mono text-slate-500 dark:text-slate-400">{s.id}</td>
+                    <td className="px-4 py-2">
+                      <div className="flex flex-col items-start gap-1">
+                        <Link
+                          href={`/oportunidades?op=${s.oportunidad_id}`}
+                          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                          className="inline-flex items-center rounded-md border border-brand/30 bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand hover:bg-brand/20"
+                        >
+                          #{s.oportunidad_id}
+                        </Link>
+                        {s.oportunidad?.asunto && (
+                          <span className="max-w-[16rem] truncate text-xs text-slate-500 dark:text-slate-400">
+                            {s.oportunidad.asunto}
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">
                       {s.oportunidad?.cliente?.razon_social ?? "—"}
                     </td>
@@ -86,7 +104,7 @@ export default function SolicitudesPage() {
               })}
               {data.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={7} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
                     No hay solicitudes todavía.
                   </td>
                 </tr>

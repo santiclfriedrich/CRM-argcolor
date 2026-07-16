@@ -216,6 +216,7 @@ export type EstadoSolicitud = "enviada" | "respondida" | "cerrada";
 interface SolicitudOportunidadMini {
   id: number;
   estado: EstadoOportunidad;
+  asunto: string | null;
   cliente: ClienteMini | null;
 }
 
@@ -316,6 +317,7 @@ export interface EmailData {
 interface MailOportunidadMini {
   id: number;
   estado: EstadoOportunidad;
+  asunto: string | null;
   vendedor_id: number | null;
   cliente: ClienteMini | null;
 }

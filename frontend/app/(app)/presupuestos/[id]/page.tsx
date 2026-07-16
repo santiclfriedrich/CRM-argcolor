@@ -156,7 +156,13 @@ export default function ArmadorPresupuestoPage() {
             {presupuesto.codigo}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            {cliente} · Oportunidad #{presupuesto.oportunidad_id}
+            {cliente} ·{" "}
+            <Link
+              href={`/oportunidades?op=${presupuesto.oportunidad_id}`}
+              className="font-medium text-brand hover:underline"
+            >
+              Oportunidad #{presupuesto.oportunidad_id}
+            </Link>
           </p>
         </div>
         <Badge className={ESTADO_PRESUPUESTO[estado].color}>

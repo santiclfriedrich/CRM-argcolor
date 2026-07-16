@@ -47,6 +47,7 @@ class OportunidadMini(BaseModel):
 
     id: int
     estado: str
+    asunto: str | None = None
     cliente: ClienteMini | None = None
 
 
