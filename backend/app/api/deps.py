@@ -61,6 +61,23 @@ def es_admin(user: Usuario) -> bool:
     return user.rol == RolUsuario.admin
 
 
+def resolver_duenio(user: Usuario, usuario_id: int | None) -> int | None:
+    """Resuelve por qué usuario hay que filtrar un listado personal.
+
+    - Devuelve `None` cuando NO hay que filtrar (un admin sin `usuario_id` ve todo).
+    - Con `usuario_id`: solo un admin puede pedir el de otra persona (si no, 403).
+    - Sin `usuario_id`: un no-admin queda acotado a lo suyo.
+    """
+    if usuario_id is not None:
+        if not es_admin(user) and usuario_id != user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo un admin puede ver la gestión de otro usuario.",
+            )
+        return usuario_id
+    return None if es_admin(user) else user.id
+
+
 def get_user_gmail(current: Usuario = Depends(get_current_user)):  # noqa: ANN201
     """Cliente de Gmail del usuario logueado (Camino C: su propio refresh token).
 

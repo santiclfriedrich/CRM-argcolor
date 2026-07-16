@@ -28,10 +28,13 @@ export const ESTADO_SOLICITUD_META: Record<EstadoSolicitud, { label: string; col
   cerrada: { label: "Cerrada", color: "bg-slate-100 text-slate-600" },
 };
 
-export function useSolicitudes() {
+export function useSolicitudes(usuarioId?: number) {
   return useQuery({
-    queryKey: solicitudKeys.all,
-    queryFn: async () => (await api.get<Solicitud[]>(BASE)).data,
+    queryKey: usuarioId ? [...solicitudKeys.all, { usuarioId }] : solicitudKeys.all,
+    queryFn: async () => {
+      const params = usuarioId ? { usuario_id: usuarioId } : undefined;
+      return (await api.get<Solicitud[]>(BASE, { params })).data;
+    },
   });
 }
 

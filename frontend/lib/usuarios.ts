@@ -14,6 +14,14 @@ export function useUsuarios() {
   });
 }
 
+export function useUsuario(id: number) {
+  return useQuery({
+    queryKey: [...KEY, id],
+    queryFn: async () => (await api.get<Usuario>(`${BASE}/${id}`)).data,
+    enabled: id > 0,
+  });
+}
+
 export function useCreateUsuario() {
   const qc = useQueryClient();
   return useMutation({

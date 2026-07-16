@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import es_admin, get_current_user, get_user_gmail
+from app.api.deps import es_admin, get_current_user, get_user_gmail, resolver_duenio
 from app.core.exceptions import NotFoundError
 from app.db.models.oportunidades import Oportunidad
 from app.db.models.presupuestos import Presupuesto
@@ -60,17 +60,19 @@ def _assert_owner(presupuesto: Presupuesto, user: Usuario) -> None:
 @router.get("", response_model=list[PresupuestoRead])
 def list_presupuestos(
     oportunidad_id: int | None = None,
+    usuario_id: int | None = None,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> list[Presupuesto]:
     """Presupuestos personales: cada vendedor ve solo los de sus oportunidades.
-    Los admin ven los de todo el equipo."""
+    Los admin ven los de todo el equipo, o filtran por `usuario_id` (perfil)."""
     query = select(Presupuesto).options(*_RELATIONS).order_by(Presupuesto.id.desc())
     if oportunidad_id is not None:
         query = query.where(Presupuesto.oportunidad_id == oportunidad_id)
-    if not es_admin(current_user):
+    duenio_id = resolver_duenio(current_user, usuario_id)
+    if duenio_id is not None:
         query = query.join(Oportunidad, Presupuesto.oportunidad_id == Oportunidad.id).where(
-            Oportunidad.vendedor_id == current_user.id
+            Oportunidad.vendedor_id == duenio_id
         )
     return list(db.scalars(query))
 

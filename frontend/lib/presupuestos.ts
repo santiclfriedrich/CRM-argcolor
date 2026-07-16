@@ -33,13 +33,13 @@ export const presupuestoKeys = {
   detail: (id: number) => ["presupuestos", id] as const,
 };
 
-export function usePresupuestos(oportunidadId?: number) {
+export function usePresupuestos(oportunidadId?: number, usuarioId?: number) {
   return useQuery({
-    queryKey: oportunidadId
-      ? [...presupuestoKeys.all, { oportunidadId }]
-      : presupuestoKeys.all,
+    queryKey: [...presupuestoKeys.all, { oportunidadId, usuarioId }],
     queryFn: async () => {
-      const params = oportunidadId ? { oportunidad_id: oportunidadId } : undefined;
+      const params: Record<string, number> = {};
+      if (oportunidadId) params.oportunidad_id = oportunidadId;
+      if (usuarioId) params.usuario_id = usuarioId;
       return (await api.get<Presupuesto[]>(BASE, { params })).data;
     },
   });

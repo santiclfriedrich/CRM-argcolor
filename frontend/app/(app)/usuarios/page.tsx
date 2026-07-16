@@ -1,6 +1,7 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useState, type FormEvent } from "react";
 
@@ -119,6 +120,15 @@ export default function UsuariosPage() {
                     </div>
                   </td>
                   <td className="px-4 py-2 text-right">
+                    <Tooltip label="Ver perfil">
+                      <Link
+                        href={`/usuarios/${u.id}`}
+                        aria-label="Ver perfil"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-all hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                      >
+                        <Eye size={15} />
+                      </Link>
+                    </Tooltip>
                     <Tooltip label="Editar">
                       <Button variant="ghost" size="icon" onClick={() => setEditing(u)} aria-label="Editar">
                         <Pencil size={15} />

@@ -38,14 +38,18 @@ def list_oportunidades(
     desde: date | None = None,
     hasta: date | None = None,
     solo_mias: bool = False,
+    usuario_id: int | None = None,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> list[Oportunidad]:
     """Lista oportunidades con filtros opcionales. `desde`/`hasta` filtran por
     fecha de último movimiento (inclusive). Con `solo_mias=true` se limita a las
-    del usuario logueado (toggle Mías/Todas de la UI)."""
+    del usuario logueado (toggle Mías/Todas). Con `usuario_id` se limita a las de
+    ese vendedor (perfil de un usuario; el pipeline es compartido)."""
     query = select(Oportunidad).options(*_RELATIONS)
-    if solo_mias:
+    if usuario_id is not None:
+        query = query.where(Oportunidad.vendedor_id == usuario_id)
+    elif solo_mias:
         query = query.where(Oportunidad.vendedor_id == current_user.id)
     if estado is not None:
         query = query.where(Oportunidad.estado == estado)

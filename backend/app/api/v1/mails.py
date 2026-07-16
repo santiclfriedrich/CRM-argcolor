@@ -7,7 +7,14 @@ from fastapi.responses import FileResponse
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import es_admin, get_ai, get_current_user, get_gmail, get_user_gmail
+from app.api.deps import (
+    es_admin,
+    get_ai,
+    get_current_user,
+    get_gmail,
+    get_user_gmail,
+    resolver_duenio,
+)
 from app.core.exceptions import NotFoundError
 from app.db.models.adjuntos import Adjunto
 from app.db.models.mails import DireccionMail, Mail
@@ -145,20 +152,22 @@ def sync_gmail(
 
 @router.get("", response_model=list[MailRead])
 def list_mails(
+    usuario_id: int | None = None,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> list[Mail]:
     """Bandeja personal: cada vendedor ve solo los mails de sus oportunidades.
-    Los admin ven la bandeja de todo el equipo."""
+    Los admin ven la bandeja de todo el equipo, o filtran por `usuario_id` (perfil)."""
     query = (
         select(Mail)
         .where(Mail.direccion == DireccionMail.entrante)
         .options(*_RELATIONS)
         .order_by(Mail.created_at.desc())
     )
-    if not es_admin(current_user):
+    duenio_id = resolver_duenio(current_user, usuario_id)
+    if duenio_id is not None:
         query = query.join(Oportunidad, Mail.oportunidad_id == Oportunidad.id).where(
-            Oportunidad.vendedor_id == current_user.id
+            Oportunidad.vendedor_id == duenio_id
         )
     return list(db.scalars(query))
 

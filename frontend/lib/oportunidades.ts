@@ -42,6 +42,7 @@ export function useOportunidades(filtros?: OportunidadFiltros) {
   if (filtros?.desde) params.desde = filtros.desde;
   if (filtros?.hasta) params.hasta = filtros.hasta;
   if (filtros?.solo_mias) params.solo_mias = true;
+  if (filtros?.usuario_id) params.usuario_id = filtros.usuario_id;
 
   return useQuery({
     queryKey: [...oportunidadKeys.all, params],

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import es_admin, get_ai, get_current_user, get_user_gmail
+from app.api.deps import es_admin, get_ai, get_current_user, get_user_gmail, resolver_duenio
 from app.core.exceptions import NotFoundError
 from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
 from app.db.models.respuestas_compras import RespuestaCompras
@@ -63,18 +63,20 @@ def _normalize_ccs(data: dict) -> None:
 def list_solicitudes(
     estado: EstadoSolicitud | None = None,
     oportunidad_id: int | None = None,
+    usuario_id: int | None = None,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> list[SolicitudCompras]:
     """Solicitudes personales: cada usuario ve solo las que él pidió a Compras.
-    Los admin ven las de todo el equipo."""
+    Los admin ven las de todo el equipo, o filtran por `usuario_id` (perfil)."""
     query = select(SolicitudCompras).options(*_RELATIONS)
     if estado is not None:
         query = query.where(SolicitudCompras.estado == estado)
     if oportunidad_id is not None:
         query = query.where(SolicitudCompras.oportunidad_id == oportunidad_id)
-    if not es_admin(current_user):
-        query = query.where(SolicitudCompras.solicitante_id == current_user.id)
+    duenio_id = resolver_duenio(current_user, usuario_id)
+    if duenio_id is not None:
+        query = query.where(SolicitudCompras.solicitante_id == duenio_id)
     return list(db.scalars(query.order_by(SolicitudCompras.created_at.desc())))
 
 
