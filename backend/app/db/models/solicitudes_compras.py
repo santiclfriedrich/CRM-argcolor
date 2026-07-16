@@ -33,8 +33,10 @@ class SolicitudCompras(Base, TimestampMixin):
     oportunidad_id: Mapped[int] = mapped_column(ForeignKey("oportunidades.id"), nullable=False)
     solicitante_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"), nullable=False)
     requerimiento: Mapped[str] = mapped_column(Text, nullable=False)
+    numero_cliente: Mapped[str | None] = mapped_column(String(80))
+    # Lista de adjuntos enviados a Compras: [{filename, mime_type, path}].
     # with_variant: JSONB/ARRAY en Postgres; JSON en SQLite (solo para tests).
-    archivos_adjuntos: Mapped[dict | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
+    archivos_adjuntos: Mapped[list | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
     condicion_pago: Mapped[CondicionPago | None] = mapped_column(
         Enum(CondicionPago, name="condicion_pago")
     )

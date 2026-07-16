@@ -52,8 +52,14 @@ class FakeGmail:
     def __init__(self) -> None:
         self.enviado: dict | None = None
 
-    def send_message(self, to, subject, body, thread_id=None, in_reply_to=None, cc=None):  # noqa: ANN001, E501
-        self.enviado = {"to": to, "subject": subject, "cc": cc, "thread_id": thread_id}
+    def send_message(self, to, subject, body, thread_id=None, in_reply_to=None, cc=None, attachments=None):  # noqa: ANN001, E501
+        self.enviado = {
+            "to": to,
+            "subject": subject,
+            "cc": cc,
+            "thread_id": thread_id,
+            "attachments": attachments,
+        }
         return {"message_id": "m-1", "thread_id": "hilo-compras"}
 
 
@@ -120,6 +126,24 @@ def test_enviar_solicitud_manda_por_gmail_y_guarda_hilo(client: TestClient) -> N
     # Fue al destinatario configurado, con CC.
     assert _fake_gmail.enviado["to"] == "compras@argentinacolor.com"
     assert _fake_gmail.enviado["cc"] == ["jefe@argentinacolor.com"]
+
+
+def test_adjuntos_se_envian_a_compras(client: TestClient, tmp_path, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.setattr("app.config.settings.MEDIA_DIR", str(tmp_path))
+    # El cliente mandó un PDF con los productos: lo adjuntamos a la solicitud.
+    resp = client.post(
+        "/api/v1/solicitudes/1/adjuntos",
+        files=[("files", ("productos.pdf", b"%PDF-fake", "application/pdf"))],
+    )
+    assert resp.status_code == 200
+    assert len(resp.json()["archivos_adjuntos"]) == 1
+
+    # Al enviar a Compras, el adjunto viaja en el mail.
+    client.post("/api/v1/solicitudes/1/enviar")
+    att = _fake_gmail.enviado["attachments"]
+    assert att and att[0]["filename"] == "productos.pdf"
+    assert att[0]["mime"] == "application/pdf"
+    assert att[0]["content"] == b"%PDF-fake"
 
 
 def test_cargar_respuesta_parsea_con_ia(client: TestClient) -> None:

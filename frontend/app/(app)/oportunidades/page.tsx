@@ -413,13 +413,16 @@ function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad;
             defaultRequerimiento={sugerencia?.requerimiento ?? ""}
             lockOportunidad
             onCancel={onClose}
-            onSubmit={(values) =>
-              crearYEnviar.mutate(values, {
-                onSuccess: () => {
-                  onClose();
-                  router.push("/solicitudes");
-                },
-              })
+            onSubmit={(values, files) =>
+              crearYEnviar.mutate(
+                { body: values, files },
+                {
+                  onSuccess: () => {
+                    onClose();
+                    router.push("/solicitudes");
+                  },
+                }
+              )
             }
           />
           {crearYEnviar.isError && (

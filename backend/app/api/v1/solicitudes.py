@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -22,7 +22,11 @@ from app.schemas.solicitud import (
     SolicitudRead,
     SolicitudUpdate,
 )
-from app.services.solicitudes import build_email_preview, enviar_a_compras
+from app.services.solicitudes import (
+    build_email_preview,
+    enviar_a_compras,
+    guardar_adjuntos_solicitud,
+)
 
 router = APIRouter(prefix="/solicitudes", tags=["solicitudes"])
 
@@ -107,6 +111,25 @@ def create_solicitud(
 
     db.commit()
     return _get_loaded(db, solicitud.id)
+
+
+@router.post("/{solicitud_id}/adjuntos", response_model=SolicitudRead)
+def subir_adjuntos(
+    solicitud_id: int,
+    files: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> SolicitudCompras:
+    """Adjunta archivos (PDF/imágenes que mandó el cliente) a la solicitud. Se
+    envían junto al mail a Compras."""
+    solicitud = _get_loaded(db, solicitud_id)
+    _assert_owner(solicitud, current_user)
+    archivos = [
+        {"filename": f.filename, "mime_type": f.content_type, "data": f.file.read()}
+        for f in files
+    ]
+    guardar_adjuntos_solicitud(db, solicitud, archivos)
+    return _get_loaded(db, solicitud_id)
 
 
 @router.get("/{solicitud_id}", response_model=SolicitudDetail)

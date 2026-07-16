@@ -206,15 +206,23 @@ interface SolicitudOportunidadMini {
   cliente: ClienteMini | null;
 }
 
+export interface AdjuntoSolicitud {
+  filename: string;
+  mime_type: string | null;
+  path?: string;
+}
+
 export interface Solicitud {
   id: number;
   oportunidad_id: number;
   requerimiento: string;
+  numero_cliente: string | null;
   condicion_pago: CondicionPago | null;
   importe_aproximado: number | null;
   fecha_limite: string | null;
   presupuesto_gbp_referencia: string | null;
   ccs_extra: string[] | null;
+  archivos_adjuntos: AdjuntoSolicitud[] | null;
   estado: EstadoSolicitud;
   gmail_thread_id: string | null;
   fecha_envio: string | null;
@@ -263,6 +271,7 @@ export interface SolicitudDetail extends Solicitud {
 export type SolicitudCreate = {
   oportunidad_id: number;
   requerimiento: string;
+  numero_cliente?: string | null;
   condicion_pago?: CondicionPago | null;
   importe_aproximado?: number | null;
   fecha_limite?: string | null;

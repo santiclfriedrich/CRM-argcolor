@@ -13,7 +13,7 @@ import type { CondicionPago, SolicitudCreate } from "@/lib/types";
 
 interface Props {
   isPending: boolean;
-  onSubmit: (values: SolicitudCreate) => void;
+  onSubmit: (values: SolicitudCreate, files: File[]) => void;
   onCancel: () => void;
   // Pre-carga (ej. desde una oportunidad, con el requerimiento ya extraído por IA).
   defaultOportunidadId?: number | null;
@@ -46,24 +46,30 @@ export function SolicitudForm({
 
   const [oportunidadId, setOportunidadId] = useState<number | null>(defaultOportunidadId);
   const [requerimiento, setRequerimiento] = useState(defaultRequerimiento);
+  const [numeroCliente, setNumeroCliente] = useState("");
   const [condicionPago, setCondicionPago] = useState<CondicionPago | "">("");
   const [importe, setImporte] = useState("");
   const [fechaLimite, setFechaLimite] = useState("");
   const [refGbp, setRefGbp] = useState("");
   const [ccs, setCcs] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!oportunidadId || !requerimiento.trim()) return;
-    onSubmit({
-      oportunidad_id: oportunidadId,
-      requerimiento: requerimiento.trim(),
-      condicion_pago: condicionPago || null,
-      importe_aproximado: importe ? Number(importe) : null,
-      fecha_limite: fechaLimite || null,
-      presupuesto_gbp_referencia: refGbp.trim() || null,
-      ccs_extra: parseEmails(ccs),
-    });
+    onSubmit(
+      {
+        oportunidad_id: oportunidadId,
+        requerimiento: requerimiento.trim(),
+        numero_cliente: numeroCliente.trim() || null,
+        condicion_pago: condicionPago || null,
+        importe_aproximado: importe ? Number(importe) : null,
+        fecha_limite: fechaLimite || null,
+        presupuesto_gbp_referencia: refGbp.trim() || null,
+        ccs_extra: parseEmails(ccs),
+      },
+      files
+    );
   };
 
   return (
@@ -83,6 +89,16 @@ export function SolicitudForm({
               label: `#${o.id} — ${o.cliente?.razon_social ?? "Sin cliente"}`,
             })),
           ]}
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="s-numcli">Número de cliente</Label>
+        <Input
+          id="s-numcli"
+          value={numeroCliente}
+          onChange={(e) => setNumeroCliente(e.target.value)}
+          placeholder="Ej: 10432"
         />
       </div>
 
@@ -152,6 +168,47 @@ export function SolicitudForm({
           onChange={(e) => setCcs(e.target.value)}
           placeholder="persona@cliente.com, otra@cliente.com"
         />
+      </div>
+
+      <div>
+        <Label htmlFor="s-files">Adjuntos (PDF o imágenes que mandó el cliente)</Label>
+        <input
+          id="s-files"
+          type="file"
+          multiple
+          accept=".pdf,image/*"
+          onChange={(e) => {
+            const nuevos = Array.from(e.target.files ?? []);
+            // Acumular: sumamos los nuevos a los ya elegidos, sin duplicar (nombre+tamaño).
+            setFiles((prev) => {
+              const clave = (f: File) => `${f.name}:${f.size}`;
+              const vistos = new Set(prev.map(clave));
+              return [...prev, ...nuevos.filter((f) => !vistos.has(clave(f)))];
+            });
+            // Limpiamos el input para poder volver a elegir el mismo archivo.
+            e.target.value = "";
+          }}
+          className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-300 dark:file:bg-slate-800 dark:file:text-slate-200"
+        />
+        {files.length > 0 && (
+          <ul className="mt-2 space-y-1">
+            {files.map((f, i) => (
+              <li
+                key={i}
+                className="flex items-center justify-between rounded-md bg-slate-50 px-2.5 py-1 text-xs text-slate-600 dark:bg-slate-800/50 dark:text-slate-300"
+              >
+                <span className="truncate">{f.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
+                  className="ml-2 shrink-0 text-slate-400 hover:text-red-600"
+                >
+                  Quitar
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="flex justify-end gap-2 pt-2">

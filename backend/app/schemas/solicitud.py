@@ -11,6 +11,7 @@ from app.integrations.ai.base import QuoteDraft
 class SolicitudBase(BaseModel):
     oportunidad_id: int
     requerimiento: str
+    numero_cliente: str | None = None
     condicion_pago: CondicionPago | None = None
     importe_aproximado: float | None = None
     fecha_limite: date | None = None
@@ -24,6 +25,7 @@ class SolicitudCreate(SolicitudBase):
 
 class SolicitudUpdate(BaseModel):
     requerimiento: str | None = None
+    numero_cliente: str | None = None
     condicion_pago: CondicionPago | None = None
     importe_aproximado: float | None = None
     fecha_limite: date | None = None
@@ -76,6 +78,7 @@ class SolicitudRead(SolicitudBase):
     fecha_envio: datetime | None = None
     fecha_respuesta: datetime | None = None
     created_at: datetime
+    archivos_adjuntos: list[dict] | None = None
     oportunidad: OportunidadMini | None = None
     solicitante: SolicitanteMini | None = None
 

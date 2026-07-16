@@ -46,10 +46,24 @@ export function useSolicitud(id: number | null) {
   });
 }
 
+// Sube los archivos adjuntos (PDF/imágenes del cliente) a una solicitud.
+async function subirAdjuntos(id: number, files: File[]): Promise<void> {
+  if (!files || files.length === 0) return;
+  const fd = new FormData();
+  files.forEach((f) => fd.append("files", f));
+  await api.post(`${BASE}/${id}/adjuntos`, fd);
+}
+
+type CrearSolicitud = { body: SolicitudCreate; files?: File[] };
+
 export function useCreateSolicitud() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: SolicitudCreate) => (await api.post<Solicitud>(BASE, body)).data,
+    mutationFn: async ({ body, files }: CrearSolicitud) => {
+      const solicitud = (await api.post<Solicitud>(BASE, body)).data;
+      await subirAdjuntos(solicitud.id, files ?? []);
+      return solicitud;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: solicitudKeys.all });
       // El alta mueve la oportunidad a "en_compras": refrescar tablero/listado.
@@ -64,8 +78,9 @@ export function useCreateSolicitud() {
 export function useCrearYEnviarSolicitud() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: SolicitudCreate) => {
+    mutationFn: async ({ body, files }: CrearSolicitud) => {
       const solicitud = (await api.post<Solicitud>(BASE, body)).data;
+      await subirAdjuntos(solicitud.id, files ?? []);
       await api.post(`${BASE}/${solicitud.id}/enviar`);
       return solicitud;
     },

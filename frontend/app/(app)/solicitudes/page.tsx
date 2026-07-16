@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, FileText, Mail, Plus, Send, Sparkles } from "lucide-react";
+import { Copy, FileText, Mail, Paperclip, Plus, Send, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -100,8 +100,8 @@ export default function SolicitudesPage() {
         <SolicitudForm
           isPending={createMut.isPending}
           onCancel={() => setCreating(false)}
-          onSubmit={(values) =>
-            createMut.mutate(values, { onSuccess: (s) => {
+          onSubmit={(values, files) =>
+            createMut.mutate({ body: values, files }, { onSuccess: (s) => {
               setCreating(false);
               setDetailId(s.id);
             } })
@@ -193,6 +193,19 @@ function EnvioCompras({ solicitud }: { solicitud: SolicitudDetail }) {
       <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-slate-200 bg-white p-2 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
         {solicitud.email_preview.body}
       </pre>
+      {solicitud.archivos_adjuntos && solicitud.archivos_adjuntos.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-slate-500 dark:text-slate-400">Adjuntos:</span>
+          {solicitud.archivos_adjuntos.map((a, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1 rounded bg-white px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-300"
+            >
+              <Paperclip size={12} /> {a.filename}
+            </span>
+          ))}
+        </div>
+      )}
       <div className="mt-2 flex items-center gap-2">
         <Button size="sm" onClick={() => enviarMut.mutate()} disabled={enviarMut.isPending}>
           <Send size={14} />

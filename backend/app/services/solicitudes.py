@@ -4,15 +4,47 @@
 `enviar_a_compras` lo manda por Gmail desde la casilla del vendedor.
 """
 
+import re
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Protocol
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.db.models.configuracion import Configuracion
 from app.db.models.mails import DireccionMail, Mail
 from app.db.models.solicitudes_compras import EstadoSolicitud, SolicitudCompras
+
+_SAFE = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def guardar_adjuntos_solicitud(
+    db: Session, solicitud: SolicitudCompras, archivos: list[dict]
+) -> list[dict]:
+    """Guarda los archivos en MEDIA_DIR/solicitudes/<id>/ y los agrega a
+    `archivos_adjuntos`. `archivos`: [{filename, mime_type, data}]. Devuelve la
+    lista completa de adjuntos de la solicitud."""
+    dest = Path(settings.MEDIA_DIR) / "solicitudes" / str(solicitud.id)
+    dest.mkdir(parents=True, exist_ok=True)
+    metas = list(solicitud.archivos_adjuntos or [])
+    base = len(metas)
+    for idx, f in enumerate(archivos, start=base):
+        nombre = _SAFE.sub("_", f.get("filename") or "archivo").strip("_") or "archivo"
+        ruta = dest / f"{idx}_{nombre}"
+        ruta.write_bytes(f["data"])
+        metas.append(
+            {
+                "filename": f.get("filename") or nombre,
+                "mime_type": f.get("mime_type") or "application/octet-stream",
+                "path": str(ruta),
+            }
+        )
+    solicitud.archivos_adjuntos = metas  # reasignar dispara el UPDATE del JSONB
+    db.commit()
+    db.refresh(solicitud)
+    return metas
 
 
 class GmailSender(Protocol):
@@ -24,6 +56,7 @@ class GmailSender(Protocol):
         thread_id: str | None = None,
         in_reply_to: str | None = None,
         cc: list[str] | None = None,
+        attachments: list[dict] | None = None,
     ) -> dict[str, str | None]: ...
 
 # Clave en la tabla `configuracion` con destinatarios por defecto:
@@ -122,6 +155,8 @@ def build_email_preview(solicitud: SolicitudCompras, db: Session) -> dict:
             f"Solicitante: {vendedor}",
             f"Cliente: {cliente}",
             "",
+            f"Número de cliente: {_fmt(solicitud.numero_cliente)}",
+            "",
             "Requerimiento:",
             solicitud.requerimiento,
             "",
@@ -137,8 +172,26 @@ def build_email_preview(solicitud: SolicitudCompras, db: Session) -> dict:
     return {"to": to, "cc": cc, "subject": subject, "body": body}
 
 
+def _cargar_adjuntos(solicitud: SolicitudCompras) -> list[dict]:
+    """Lee del disco los adjuntos de la solicitud y los deja listos para Gmail
+    ([{filename, content, mime}]). Ignora los que ya no existan."""
+    adjuntos: list[dict] = []
+    for meta in solicitud.archivos_adjuntos or []:
+        ruta = Path(meta.get("path", ""))
+        if not ruta.is_file():
+            continue
+        adjuntos.append(
+            {
+                "filename": meta.get("filename") or ruta.name,
+                "content": ruta.read_bytes(),
+                "mime": meta.get("mime_type") or "application/octet-stream",
+            }
+        )
+    return adjuntos
+
+
 def enviar_a_compras(db: Session, gmail: GmailSender, solicitud: SolicitudCompras) -> str | None:
-    """Envía el mail de solicitud a Compras y guarda el hilo de Gmail.
+    """Envía el mail de solicitud a Compras (con adjuntos, si hay) y guarda el hilo.
 
     Devuelve el thread_id del envío. Lanza ValueError si no hay destinatario
     configurado (clave `solicitudes_compras` en `configuracion`)."""
@@ -153,6 +206,7 @@ def enviar_a_compras(db: Session, gmail: GmailSender, solicitud: SolicitudCompra
         subject=preview["subject"],
         body=preview["body"],
         cc=preview["cc"] or None,
+        attachments=_cargar_adjuntos(solicitud) or None,
     )
     ahora = datetime.now(timezone.utc)
     solicitud.gmail_thread_id = sent.get("thread_id")
