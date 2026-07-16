@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { Textarea } from "@/components/ui/textarea";
 import { useCliente, useClientes } from "@/lib/clientes";
 import { ESTADOS } from "@/lib/oportunidades";
 import type { EstadoOportunidad, Oportunidad, OportunidadCreate } from "@/lib/types";
@@ -39,11 +40,15 @@ export function OportunidadForm({
   const [estado, setEstado] = useState<EstadoOportunidad>(initial?.estado ?? "nueva");
   const [fuente, setFuente] = useState(initial?.fuente ?? "manual");
   const [asunto, setAsunto] = useState(initial?.asunto ?? "");
+  const [producto, setProducto] = useState(initial?.producto ?? "");
+  const [numeroPedido, setNumeroPedido] = useState(initial?.numero_pedido ?? "");
+  const [observacion, setObservacion] = useState(initial?.observacion ?? "");
   const [valor, setValor] = useState(
     initial?.valor_estimado != null ? String(initial.valor_estimado) : ""
   );
   const [fechaPedido, setFechaPedido] = useState(initial?.fecha_pedido_cliente ?? "");
   const [fechaCompras, setFechaCompras] = useState(initial?.fecha_enviado_compras ?? "");
+  const [fechaRespCompras, setFechaRespCompras] = useState(initial?.fecha_respuesta_compras ?? "");
   const [fechaCliente, setFechaCliente] = useState(initial?.fecha_enviado_cliente ?? "");
   const [fechaLimite, setFechaLimite] = useState(initial?.fecha_limite ?? "");
 
@@ -62,9 +67,13 @@ export function OportunidadForm({
       estado,
       fuente: fuente.trim() || null,
       asunto: asunto.trim() || null,
+      producto: producto.trim() || null,
+      numero_pedido: numeroPedido.trim() || null,
+      observacion: observacion.trim() || null,
       valor_estimado: valor ? Number(valor) : null,
       fecha_pedido_cliente: fechaPedido || null,
       fecha_enviado_compras: fechaCompras || null,
+      fecha_respuesta_compras: fechaRespCompras || null,
       fecha_enviado_cliente: fechaCliente || null,
       fecha_limite: fechaLimite || null,
     });
@@ -119,6 +128,27 @@ export function OportunidadForm({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
+          <Label htmlFor="o-producto">Producto</Label>
+          <Input
+            id="o-producto"
+            value={producto}
+            onChange={(e) => setProducto(e.target.value)}
+            placeholder="Ej: Insumos, Tablets…"
+          />
+        </div>
+        <div>
+          <Label htmlFor="o-pedido">N° de pedido</Label>
+          <Input
+            id="o-pedido"
+            value={numeroPedido}
+            onChange={(e) => setNumeroPedido(e.target.value)}
+            placeholder="Ej: 1-594059"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
           <Label htmlFor="o-valor">Valor estimado (USD)</Label>
           <Input
             id="o-valor"
@@ -140,7 +170,7 @@ export function OportunidadForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div>
           <Label htmlFor="o-fpedido">Pedido cliente</Label>
           <Input
@@ -157,6 +187,15 @@ export function OportunidadForm({
             type="date"
             value={fechaCompras}
             onChange={(e) => setFechaCompras(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="o-frcompras">Respuesta Compras</Label>
+          <Input
+            id="o-frcompras"
+            type="date"
+            value={fechaRespCompras}
+            onChange={(e) => setFechaRespCompras(e.target.value)}
           />
         </div>
         <div>
@@ -193,6 +232,17 @@ export function OportunidadForm({
             options={ESTADOS.map((e) => ({ value: e.value, label: e.label }))}
           />
         </div>
+      </div>
+
+      <div>
+        <Label htmlFor="o-observacion">Observación</Label>
+        <Textarea
+          id="o-observacion"
+          rows={2}
+          value={observacion}
+          onChange={(e) => setObservacion(e.target.value)}
+          placeholder="Ej: En espera del cliente, no respondió…"
+        />
       </div>
 
       <div>

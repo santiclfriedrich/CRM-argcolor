@@ -16,9 +16,13 @@ class OportunidadBase(BaseModel):
     fuente: str | None = None
     # Seguimiento
     asunto: str | None = None
+    producto: str | None = None
+    numero_pedido: str | None = None
+    observacion: str | None = None
     valor_estimado: Decimal | None = None
     fecha_pedido_cliente: date | None = None
     fecha_enviado_compras: date | None = None
+    fecha_respuesta_compras: date | None = None
     fecha_enviado_cliente: date | None = None
     fecha_limite: date | None = None
 
@@ -34,9 +38,13 @@ class OportunidadUpdate(BaseModel):
     estado: EstadoOportunidad | None = None
     fuente: str | None = None
     asunto: str | None = None
+    producto: str | None = None
+    numero_pedido: str | None = None
+    observacion: str | None = None
     valor_estimado: Decimal | None = None
     fecha_pedido_cliente: date | None = None
     fecha_enviado_compras: date | None = None
+    fecha_respuesta_compras: date | None = None
     fecha_enviado_cliente: date | None = None
     fecha_limite: date | None = None
 
@@ -57,6 +65,7 @@ class ClienteMini(BaseModel):
 
     id: int
     razon_social: str
+    numero_cliente: str | None = None
 
 
 class ContactoMini(BaseModel):
@@ -79,6 +88,7 @@ class OportunidadRead(OportunidadBase):
     id: int
     fecha_creacion: datetime
     fecha_ultimo_movimiento: datetime
+    fecha_cierre: datetime | None = None
     comentarios: list[ComentarioRead] = []
     cliente: ClienteMini | None = None
     contacto: ContactoMini | None = None

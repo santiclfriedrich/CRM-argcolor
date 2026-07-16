@@ -26,6 +26,7 @@ export const ESTADOS: { value: EstadoOportunidad; label: string; color: string }
   { value: "cargada_en_gbp", label: "Cargada en GBP", color: "bg-teal-100 text-teal-700" },
   { value: "facturada", label: "Facturada", color: "bg-emerald-100 text-emerald-700" },
   { value: "perdida", label: "Perdida", color: "bg-red-100 text-red-700" },
+  { value: "cerrada", label: "Cerrada", color: "bg-slate-200 text-slate-700" },
 ];
 
 export const ESTADO_META: Record<EstadoOportunidad, { label: string; color: string }> =

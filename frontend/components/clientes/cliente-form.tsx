@@ -19,6 +19,7 @@ import { useUsuarios } from "@/lib/usuarios";
 const clienteSchema = z.object({
   razon_social: z.string().trim().min(1, "Ingresá el nombre de la cuenta"),
   cuit: z.string(),
+  numero_cliente: z.string(),
   cuenta_principal_id: z.string(),
   vendedor_asignado_id: z.string(),
   telefono: z.string(),
@@ -102,6 +103,7 @@ export function ClienteForm({
     defaultValues: {
       razon_social: initial?.razon_social ?? "",
       cuit: initial?.cuit ?? "",
+      numero_cliente: initial?.numero_cliente ?? "",
       cuenta_principal_id: initial?.cuenta_principal_id != null ? String(initial.cuenta_principal_id) : "",
       vendedor_asignado_id:
         initial?.vendedor_asignado_id != null ? String(initial.vendedor_asignado_id) : "",
@@ -135,6 +137,7 @@ export function ClienteForm({
     onSubmit({
       razon_social: v.razon_social.trim(),
       cuit: nn(v.cuit),
+      numero_cliente: nn(v.numero_cliente),
       cuenta_principal_id: v.cuenta_principal_id ? Number(v.cuenta_principal_id) : null,
       vendedor_asignado_id: v.vendedor_asignado_id ? Number(v.vendedor_asignado_id) : null,
       telefono: nn(v.telefono),
@@ -172,6 +175,10 @@ export function ClienteForm({
         <div>
           <Label htmlFor="cuit">CUIT</Label>
           <Input id="cuit" placeholder="30-12345678-9" {...register("cuit")} />
+        </div>
+        <div>
+          <Label htmlFor="numero_cliente">N° de cliente (CL N°)</Label>
+          <Input id="numero_cliente" placeholder="Ej: 10432" {...register("numero_cliente")} />
         </div>
         <div>
           <Label htmlFor="cuenta_principal">Cuenta principal</Label>

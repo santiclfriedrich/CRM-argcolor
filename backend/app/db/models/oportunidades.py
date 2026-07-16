@@ -4,7 +4,7 @@ import enum
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import JSON, Date, DateTime, Enum, ForeignKey, Numeric, String, func
+from sqlalchemy import JSON, Date, DateTime, Enum, ForeignKey, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,6 +20,19 @@ class EstadoOportunidad(str, enum.Enum):
     cargada_en_gbp = "cargada_en_gbp"
     facturada = "facturada"
     perdida = "perdida"
+    cerrada = "cerrada"
+
+
+# Estados terminales: la gestión terminó y deja de "arrastrarse" a meses nuevos.
+ESTADOS_CERRADOS: frozenset["EstadoOportunidad"] = frozenset(
+    {
+        EstadoOportunidad.ganada,
+        EstadoOportunidad.cargada_en_gbp,
+        EstadoOportunidad.facturada,
+        EstadoOportunidad.perdida,
+        EstadoOportunidad.cerrada,
+    }
+)
 
 
 class Oportunidad(Base, TimestampMixin):
@@ -41,14 +54,20 @@ class Oportunidad(Base, TimestampMixin):
     fecha_ultimo_movimiento: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    # Cuándo pasó a un estado cerrado (para "fijarla" en ese mes). Null = abierta.
+    fecha_cierre: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     fuente: Mapped[str | None] = mapped_column(String(80))  # mail / manual / etc.
 
     # --- Seguimiento (uso comercial diario) ---
     asunto: Mapped[str | None] = mapped_column(String(255))  # título/descripción breve
+    producto: Mapped[str | None] = mapped_column(String(120))  # rubro/producto (Insumos, Tablets…)
+    numero_pedido: Mapped[str | None] = mapped_column(String(60))  # "PEDIDO" (ej. 1-594059)
+    observacion: Mapped[str | None] = mapped_column(Text)  # nota corta de seguimiento
     valor_estimado: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     # Fechas clave del ciclo (se autocompletan en los eventos, editables a mano):
     fecha_pedido_cliente: Mapped[date | None] = mapped_column(Date)  # cuándo pidió el cliente
     fecha_enviado_compras: Mapped[date | None] = mapped_column(Date)  # cuándo fue a Compras
+    fecha_respuesta_compras: Mapped[date | None] = mapped_column(Date)  # cuándo respondió Compras
     fecha_enviado_cliente: Mapped[date | None] = mapped_column(Date)  # cuándo se cotizó al cliente
     fecha_limite: Mapped[date | None] = mapped_column(Date)  # validez / hasta cuándo seguir
     # Bitácora de seguimiento: lista de {fecha, texto, autor}.

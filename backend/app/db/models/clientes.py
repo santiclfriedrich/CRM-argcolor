@@ -12,6 +12,7 @@ class Cliente(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     razon_social: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     cuit: Mapped[str | None] = mapped_column(String(20), index=True)
+    numero_cliente: Mapped[str | None] = mapped_column(String(40), index=True)  # "CL N°" en el ERP
     vendedor_asignado_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
     notas: Mapped[str | None] = mapped_column(Text)  # "Descripción" en la UI
     activo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

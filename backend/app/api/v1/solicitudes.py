@@ -199,9 +199,13 @@ def cargar_respuesta(
         notas_compras=draft.notas,
     )
     db.add(respuesta)
+    ahora = datetime.now(timezone.utc)
     solicitud.estado = EstadoSolicitud.respondida
     if solicitud.fecha_respuesta is None:
-        solicitud.fecha_respuesta = datetime.now(timezone.utc)
+        solicitud.fecha_respuesta = ahora
+    # Seguimiento: registrar en la oportunidad cuándo respondió Compras.
+    if solicitud.oportunidad is not None and solicitud.oportunidad.fecha_respuesta_compras is None:
+        solicitud.oportunidad.fecha_respuesta_compras = ahora.date()
     db.commit()
     db.refresh(respuesta)
     return respuesta

@@ -150,6 +150,17 @@ def test_negociando_registra_respuesta_sin_cerrar(client: TestClient) -> None:
     assert client.get("/api/v1/oportunidades/1").json()["estado"] == "presupuestada"
 
 
+def test_estado_cerrada_maneja_fecha_cierre(client: TestClient) -> None:
+    # Al cerrar, se fija la fecha de cierre (para "quedar" en ese mes).
+    resp = client.patch("/api/v1/oportunidades/1", json={"estado": "cerrada"})
+    assert resp.status_code == 200
+    assert resp.json()["estado"] == "cerrada"
+    assert client.get("/api/v1/oportunidades/1").json()["fecha_cierre"] is not None
+    # Al reabrir, vuelve a quedar sin fecha de cierre (se arrastra de nuevo).
+    client.patch("/api/v1/oportunidades/1", json={"estado": "nueva"})
+    assert client.get("/api/v1/oportunidades/1").json()["fecha_cierre"] is None
+
+
 def test_generar_pdf_devuelve_un_pdf(client: TestClient) -> None:
     pid = client.post("/api/v1/presupuestos", json=_payload()).json()["id"]
     resp = client.get(f"/api/v1/presupuestos/{pid}/pdf")

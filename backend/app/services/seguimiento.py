@@ -14,17 +14,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.models.notificaciones import Notificacion
-from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
+from app.db.models.oportunidades import ESTADOS_CERRADOS, Oportunidad
 from app.db.models.tareas import Tarea
 from app.services.notificaciones import crear_notificacion
 
 # Estados cerrados: no se siguen.
-_TERMINALES = {
-    EstadoOportunidad.ganada,
-    EstadoOportunidad.cargada_en_gbp,
-    EstadoOportunidad.facturada,
-    EstadoOportunidad.perdida,
-}
+_TERMINALES = set(ESTADOS_CERRADOS)
 
 # Días sin movimiento a partir de los cuales se avisa (pedido: 3-4 días).
 DIAS_SIN_AVANCE = 3

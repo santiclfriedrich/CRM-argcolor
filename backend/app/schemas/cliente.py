@@ -11,6 +11,7 @@ from app.schemas.dominio import DominioRead
 class ClienteBase(BaseModel):
     razon_social: str
     cuit: str | None = None
+    numero_cliente: str | None = None
     vendedor_asignado_id: int | None = None
     notas: str | None = None
     activo: bool = True
@@ -31,6 +32,7 @@ class ClienteCreate(ClienteBase):
 class ClienteUpdate(BaseModel):
     razon_social: str | None = None
     cuit: str | None = None
+    numero_cliente: str | None = None
     vendedor_asignado_id: int | None = None
     notas: str | None = None
     activo: bool | None = None

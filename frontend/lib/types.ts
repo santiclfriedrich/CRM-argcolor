@@ -6,6 +6,7 @@ export interface Cliente {
   id: number;
   razon_social: string;
   cuit: string | null;
+  numero_cliente: string | null;
   vendedor_asignado_id: number | null;
   notas: string | null;
   activo: boolean;
@@ -59,6 +60,7 @@ export interface Dominio {
 export type ClienteCreate = {
   razon_social: string;
   cuit?: string | null;
+  numero_cliente?: string | null;
   vendedor_asignado_id?: number | null;
   notas?: string | null;
   activo?: boolean;
@@ -126,11 +128,13 @@ export type EstadoOportunidad =
   | "ganada"
   | "cargada_en_gbp"
   | "facturada"
-  | "perdida";
+  | "perdida"
+  | "cerrada";
 
 interface ClienteMini {
   id: number;
   razon_social: string;
+  numero_cliente: string | null;
 }
 interface PersonaMini {
   id: number;
@@ -151,14 +155,19 @@ export interface Oportunidad {
   estado: EstadoOportunidad;
   fuente: string | null;
   asunto: string | null;
+  producto: string | null;
+  numero_pedido: string | null;
+  observacion: string | null;
   valor_estimado: number | null;
   fecha_pedido_cliente: string | null;
   fecha_enviado_compras: string | null;
+  fecha_respuesta_compras: string | null;
   fecha_enviado_cliente: string | null;
   fecha_limite: string | null;
   comentarios: Comentario[];
   fecha_creacion: string;
   fecha_ultimo_movimiento: string;
+  fecha_cierre: string | null;
   cliente: ClienteMini | null;
   contacto: PersonaMini | null;
   vendedor: PersonaMini | null;
@@ -171,9 +180,13 @@ export type OportunidadCreate = {
   estado?: EstadoOportunidad;
   fuente?: string | null;
   asunto?: string | null;
+  producto?: string | null;
+  numero_pedido?: string | null;
+  observacion?: string | null;
   valor_estimado?: number | null;
   fecha_pedido_cliente?: string | null;
   fecha_enviado_compras?: string | null;
+  fecha_respuesta_compras?: string | null;
   fecha_enviado_cliente?: string | null;
   fecha_limite?: string | null;
 };

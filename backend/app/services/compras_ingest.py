@@ -96,6 +96,8 @@ def ingerir_respuestas_compras(db: Session, ai: AIProvider) -> int:
                 sol.estado = EstadoSolicitud.respondida
             if sol.fecha_respuesta is None:
                 sol.fecha_respuesta = datetime.now(timezone.utc)
+            if sol.oportunidad is not None and sol.oportunidad.fecha_respuesta_compras is None:
+                sol.oportunidad.fecha_respuesta_compras = datetime.now(timezone.utc).date()
 
             cliente = (
                 sol.oportunidad.cliente.razon_social
