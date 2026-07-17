@@ -4,10 +4,10 @@ import {
   ArrowDown,
   ArrowUp,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
-  Eye,
   FileText,
   Filter,
   Pencil,
@@ -18,7 +18,14 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+} from "react";
 
 import { OportunidadForm } from "@/components/oportunidades/oportunidad-form";
 import { SolicitudForm } from "@/components/solicitudes/solicitud-form";
@@ -26,12 +33,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
-import { Tooltip } from "@/components/ui/tooltip";
 import {
   ESTADO_META,
   useCreateOportunidad,
   useDeleteOportunidad,
   useOportunidades,
+  useSetIng,
   useSugerenciaCompras,
   useToggleCargadaGbp,
   useUpdateOportunidad,
@@ -46,23 +53,38 @@ import type {
 } from "@/lib/types";
 import { cn, errorMessage } from "@/lib/utils";
 
-// "2026-08-01" -> "01/08/2026" (sin líos de zona horaria).
+// "2026-08-01" -> "01/08/26" (compacto para la tabla; sin líos de zona horaria).
 function fmtDate(d: string | null): string {
   if (!d) return "—";
   const [y, m, day] = d.split("-");
-  return `${day}/${m}/${y}`;
+  return `${day}/${m}/${y.slice(2)}`;
 }
 
-// "Carlos Arteaga" -> "C.A" (iniciales del vendedor, columna "Ing.").
-function iniciales(nombre: string | null | undefined): string {
-  if (!nombre) return "—";
+// Columna "Ing.": iniciales del ingeniero/vendedor asignado, editable inline
+// (texto libre corto por ahora). Guarda al salir del campo, con update optimista.
+function IngInput({ o }: { o: Oportunidad }) {
+  const set = useSetIng();
+  const [val, setVal] = useState(o.ing ?? "");
+  useEffect(() => setVal(o.ing ?? ""), [o.ing]);
+
+  const guardar = () => {
+    const v = val.trim();
+    if (v !== (o.ing ?? "")) set.mutate({ id: o.id, ing: v || null });
+  };
+
   return (
-    nombre
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((p) => p[0]?.toUpperCase() ?? "")
-      .join(".") || "—"
+    <input
+      value={val}
+      onChange={(e) => setVal(e.target.value.toUpperCase().slice(0, 5))}
+      onBlur={guardar}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+      }}
+      onClick={(e) => e.stopPropagation()}
+      placeholder="—"
+      aria-label="Ing. asignado"
+      className="w-12 rounded bg-slate-100 px-1 py-0.5 text-center text-xs font-semibold text-slate-700 placeholder:font-normal placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-brand dark:bg-slate-800 dark:text-slate-200"
+    />
   );
 }
 
@@ -255,6 +277,96 @@ function estaVencida(o: Oportunidad): boolean {
   return o.fecha_limite < new Date().toISOString().slice(0, 10);
 }
 
+// Menú de acciones de la fila (reemplaza los íconos sueltos). Se posiciona con
+// `fixed` para no quedar recortado por el scroll horizontal de la tabla.
+function MenuAcciones({
+  onModificar,
+  onPedir,
+  onPresupuesto,
+  onEliminar,
+  presupuestoPending,
+}: {
+  onModificar: () => void;
+  onPedir: () => void;
+  onPresupuesto: () => void;
+  onEliminar: () => void;
+  presupuestoPending: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const cerrar = (e: MouseEvent) => {
+      if (panelRef.current?.contains(e.target as Node) || btnRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    document.addEventListener("mousedown", cerrar);
+    return () => document.removeEventListener("mousedown", cerrar);
+  }, [open]);
+
+  const abrir = (e: ReactMouseEvent) => {
+    e.stopPropagation();
+    const r = btnRef.current?.getBoundingClientRect();
+    if (r) setPos({ top: r.bottom + 4, left: Math.max(8, r.right - 180) });
+    setOpen((v) => !v);
+  };
+
+  const item = (
+    label: string,
+    fn: () => void,
+    icon: ReactNode,
+    opts?: { danger?: boolean; disabled?: boolean },
+  ) => (
+    <button
+      type="button"
+      disabled={opts?.disabled}
+      onClick={(e) => {
+        e.stopPropagation();
+        setOpen(false);
+        fn();
+      }}
+      className={cn(
+        "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-slate-800",
+        opts?.danger ? "text-red-600" : "text-slate-700 dark:text-slate-200",
+      )}
+    >
+      {icon} {label}
+    </button>
+  );
+
+  return (
+    <div className="flex justify-end">
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={abrir}
+        aria-label="Acciones"
+        className="rounded-md p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+      >
+        <ChevronDown size={16} />
+      </button>
+      {open && (
+        <div
+          ref={panelRef}
+          style={{ position: "fixed", top: pos.top, left: pos.left }}
+          className="z-50 w-44 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-pop dark:border-slate-700 dark:bg-slate-900"
+        >
+          {item("Modificar", onModificar, <Pencil size={14} />)}
+          {item("Pedir a Compras", onPedir, <ClipboardList size={14} />)}
+          {item("Crear presupuesto", onPresupuesto, <FileText size={14} />, {
+            disabled: presupuestoPending,
+          })}
+          <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+          {item("Eliminar", onEliminar, <Trash2 size={14} />, { danger: true })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function OportunidadesPage() {
   const { data: session } = useSession();
   const currentUserId = Number(session?.usuario?.id) || null;
@@ -368,7 +480,7 @@ export default function OportunidadesPage() {
 
   // Encabezado con orden/filtro para una columna.
   const th = (colKey: ColKey, label: string, extra = "") => (
-    <th className={cn("px-3 py-2 font-medium", extra)}>
+    <th className={cn("px-2 py-1.5 font-medium", extra)}>
       <FiltroColumna
         label={label}
         colKey={colKey}
@@ -531,7 +643,7 @@ export default function OportunidadesPage() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-left text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
               <tr className="whitespace-nowrap">
-                <th className="px-3 py-2 font-medium">ID</th>
+                <th className="px-2 py-1.5 font-medium">ID</th>
                 {th("cliente", "Cliente")}
                 {th("cl", "CL N°")}
                 {th("asunto", "Asunto")}
@@ -544,18 +656,19 @@ export default function OportunidadesPage() {
                 {th("validez", "Validez")}
                 {th("ing", "Ing.")}
                 {th("estado", "Estado")}
-                <th className="px-3 py-2 text-center font-medium">GBP</th>
+                <th className="px-2 py-1.5 text-center font-medium">GBP</th>
                 {th("observacion", "Observación")}
-                <th className="px-3 py-2" />
+                <th className="px-2 py-1.5" />
               </tr>
             </thead>
             <tbody>
               {filas.map((o) => (
-                <tr key={o.id} className="border-t border-slate-100 dark:border-slate-800">
-                  <td
-                    className="cursor-pointer whitespace-nowrap px-3 py-2 font-medium text-slate-500 hover:text-brand dark:text-slate-400"
-                    onClick={() => router.push(`/oportunidades/${o.id}`)}
-                  >
+                <tr
+                  key={o.id}
+                  onClick={() => router.push(`/oportunidades/${o.id}`)}
+                  className="cursor-pointer border-t border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/40"
+                >
+                  <td className="whitespace-nowrap px-2 py-1.5 font-medium text-slate-500 dark:text-slate-400">
                     <span className="inline-flex items-center gap-1.5 leading-none">
                       {/* Slot fijo para el punto: así los números arrancan siempre alineados. */}
                       <span className="flex h-1.5 w-1.5 shrink-0 items-center justify-center">
@@ -570,67 +683,58 @@ export default function OportunidadesPage() {
                       <span className="leading-none">#{o.id}</span>
                     </span>
                   </td>
-                  <td
-                    className="cursor-pointer px-3 py-2 font-medium text-slate-800 hover:text-brand dark:text-slate-100"
-                    onClick={() => router.push(`/oportunidades/${o.id}`)}
-                  >
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span>{o.cliente?.razon_social ?? "—"}</span>
+                  <td className="max-w-[12rem] px-2 py-1.5 font-medium text-slate-800 dark:text-slate-100">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate" title={o.cliente?.razon_social ?? ""}>
+                        {o.cliente?.razon_social ?? "—"}
+                      </span>
                       {esArrastrada(o) && (
-                        <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium capitalize text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                        <span className="inline-flex shrink-0 items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium capitalize text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
                           Desde {mesOrigen(o)}
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-slate-500 dark:text-slate-400">
+                  <td className="px-2 py-1.5 text-slate-500 dark:text-slate-400">
                     {o.cliente?.numero_cliente ?? "—"}
                   </td>
-                  <td
-                    className="max-w-[16rem] cursor-pointer truncate px-3 py-2 text-slate-600 dark:text-slate-300"
-                    onClick={() => router.push(`/oportunidades/${o.id}`)}
-                  >
+                  <td className="max-w-[11rem] truncate px-2 py-1.5 text-slate-600 dark:text-slate-300" title={o.asunto ?? ""}>
                     {o.asunto ?? "—"}
                   </td>
-                  <td className="px-3 py-2 text-slate-600 dark:text-slate-300">
+                  <td className="max-w-[8rem] truncate px-2 py-1.5 text-slate-600 dark:text-slate-300" title={o.producto ?? ""}>
                     {o.producto ?? "—"}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
+                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-600 dark:text-slate-300">
                     {o.numero_pedido ?? "—"}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
+                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-600 dark:text-slate-300">
                     {fmtDate(o.fecha_enviado_compras)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
+                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-600 dark:text-slate-300">
                     {fmtDate(o.fecha_respuesta_compras)}
                   </td>
-                  <td className="px-3 py-2 text-center">
+                  <td className="px-2 py-1.5 text-center">
                     {estaCotizada(o) ? (
                       <Check size={16} className="mx-auto text-green-600" aria-label="Cotizado" />
                     ) : (
                       <span className="text-slate-300 dark:text-slate-600">—</span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-slate-600 dark:text-slate-300">
+                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-600 dark:text-slate-300">
                     {fmtDate(o.fecha_enviado_cliente)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2">
+                  <td className="whitespace-nowrap px-2 py-1.5">
                     <span className={estaVencida(o) ? "font-semibold text-red-600" : "text-slate-500 dark:text-slate-400"}>
                       {fmtDate(o.fecha_limite)}
                     </span>
                   </td>
-                  <td className="px-3 py-2">
-                    <span
-                      className="inline-flex h-6 w-9 items-center justify-center rounded bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                      title={o.vendedor?.nombre ?? "Sin asignar"}
-                    >
-                      {iniciales(o.vendedor?.nombre)}
-                    </span>
+                  <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
+                    <IngInput o={o} />
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1.5">
                     <Badge className={ESTADO_META[o.estado].color}>{ESTADO_META[o.estado].label}</Badge>
                   </td>
-                  <td className="px-3 py-2 text-center">
+                  <td className="px-2 py-1.5 text-center" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={o.cargada_en_gbp}
@@ -640,37 +744,17 @@ export default function OportunidadesPage() {
                       className="h-4 w-4 rounded border-slate-300 accent-brand dark:border-slate-700"
                     />
                   </td>
-                  <td className="max-w-[14rem] truncate px-3 py-2 text-slate-500 dark:text-slate-400" title={o.observacion ?? ""}>
+                  <td className="max-w-[10rem] truncate px-2 py-1.5 text-slate-500 dark:text-slate-400" title={o.observacion ?? ""}>
                     {o.observacion ?? "—"}
                   </td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center justify-end">
-                      <Tooltip label="Ver detalle">
-                        <Button variant="ghost" size="icon" onClick={() => router.push(`/oportunidades/${o.id}`)} aria-label="Ver detalle" className="text-slate-400 hover:text-brand dark:text-slate-500">
-                          <Eye size={15} />
-                        </Button>
-                      </Tooltip>
-                      <Tooltip label="Pedir a Compras">
-                        <Button variant="ghost" size="icon" onClick={() => setPidiendo(o)} aria-label="Pedir a Compras" className="text-slate-400 hover:text-brand dark:text-slate-500">
-                          <ClipboardList size={15} />
-                        </Button>
-                      </Tooltip>
-                      <Tooltip label="Armar presupuesto">
-                        <Button variant="ghost" size="icon" onClick={() => armarPresupuesto(o)} disabled={crearPresupuesto.isPending} aria-label="Armar presupuesto" className="text-slate-400 hover:text-brand dark:text-slate-500">
-                          <FileText size={15} />
-                        </Button>
-                      </Tooltip>
-                      <Tooltip label="Editar">
-                        <Button variant="ghost" size="icon" onClick={() => setEditing(o)} aria-label="Editar">
-                          <Pencil size={15} />
-                        </Button>
-                      </Tooltip>
-                      <Tooltip label="Eliminar">
-                        <Button variant="ghost" size="icon" onClick={() => eliminar(o)} disabled={deleteMut.isPending} aria-label="Eliminar" className="text-slate-400 hover:text-red-600 dark:text-slate-500">
-                          <Trash2 size={15} />
-                        </Button>
-                      </Tooltip>
-                    </div>
+                  <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
+                    <MenuAcciones
+                      onModificar={() => setEditing(o)}
+                      onPedir={() => setPidiendo(o)}
+                      onPresupuesto={() => armarPresupuesto(o)}
+                      onEliminar={() => eliminar(o)}
+                      presupuestoPending={crearPresupuesto.isPending}
+                    />
                   </td>
                 </tr>
               ))}

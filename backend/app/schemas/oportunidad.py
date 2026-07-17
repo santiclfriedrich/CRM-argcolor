@@ -18,6 +18,7 @@ class OportunidadBase(BaseModel):
     asunto: str | None = None
     producto: str | None = None
     numero_pedido: str | None = None
+    ing: str | None = None
     observacion: str | None = None
     cargada_en_gbp: bool = False
     valor_estimado: Decimal | None = None
@@ -41,6 +42,7 @@ class OportunidadUpdate(BaseModel):
     asunto: str | None = None
     producto: str | None = None
     numero_pedido: str | None = None
+    ing: str | None = None
     observacion: str | None = None
     cargada_en_gbp: bool | None = None
     valor_estimado: Decimal | None = None

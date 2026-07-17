@@ -61,6 +61,17 @@ export function useAgregarComentario(id: number) {
   });
 }
 
+// Borra un comentario de la bitácora por su índice en la lista.
+export function useEliminarComentario(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (indice: number) => {
+      await api.delete(`${BASE}/${id}/comentarios/${indice}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: oportunidadKeys.all }),
+  });
+}
+
 // Requerimiento pre-armado (por la IA) para la solicitud a Compras de esa oportunidad.
 export function useSugerenciaCompras(id: number | null) {
   return useQuery({
@@ -165,6 +176,22 @@ export function useToggleCargadaGbp() {
       );
     },
     // Si falla, revertimos volviendo a pedir la lista.
+    onError: () => qc.invalidateQueries({ queryKey: oportunidadKeys.all }),
+  });
+}
+
+// Asigna el "Ing." (iniciales) inline desde la tabla, con update optimista.
+export function useSetIng() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ing }: { id: number; ing: string | null }) =>
+      (await api.patch<Oportunidad>(`${BASE}/${id}`, { ing })).data,
+    onMutate: async ({ id, ing }: { id: number; ing: string | null }) => {
+      await qc.cancelQueries({ queryKey: oportunidadKeys.all });
+      qc.setQueriesData<Oportunidad[]>({ queryKey: oportunidadKeys.all }, (old) =>
+        Array.isArray(old) ? old.map((o) => (o.id === id ? { ...o, ing } : o)) : old
+      );
+    },
     onError: () => qc.invalidateQueries({ queryKey: oportunidadKeys.all }),
   });
 }

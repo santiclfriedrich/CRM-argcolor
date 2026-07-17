@@ -42,6 +42,7 @@ export function OportunidadForm({
   const [asunto, setAsunto] = useState(initial?.asunto ?? "");
   const [producto, setProducto] = useState(initial?.producto ?? "");
   const [numeroPedido, setNumeroPedido] = useState(initial?.numero_pedido ?? "");
+  const [ing, setIng] = useState(initial?.ing ?? "");
   const [observacion, setObservacion] = useState(initial?.observacion ?? "");
   const [cargadaGbp, setCargadaGbp] = useState(initial?.cargada_en_gbp ?? false);
   const [valor, setValor] = useState(
@@ -70,6 +71,7 @@ export function OportunidadForm({
       asunto: asunto.trim() || null,
       producto: producto.trim() || null,
       numero_pedido: numeroPedido.trim() || null,
+      ing: ing.trim() || null,
       observacion: observacion.trim() || null,
       cargada_en_gbp: cargadaGbp,
       valor_estimado: valor ? Number(valor) : null,
@@ -234,6 +236,17 @@ export function OportunidadForm({
             options={ESTADOS.map((e) => ({ value: e.value, label: e.label }))}
           />
         </div>
+      </div>
+
+      <div>
+        <Label htmlFor="o-ing">Ing. (iniciales)</Label>
+        <Input
+          id="o-ing"
+          value={ing}
+          onChange={(e) => setIng(e.target.value.toUpperCase().slice(0, 5))}
+          placeholder="Ej: C.S"
+          className="w-32"
+        />
       </div>
 
       <div>

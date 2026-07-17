@@ -162,6 +162,7 @@ export interface Oportunidad {
   asunto: string | null;
   producto: string | null;
   numero_pedido: string | null;
+  ing: string | null;
   observacion: string | null;
   cargada_en_gbp: boolean;
   valor_estimado: number | null;
@@ -189,6 +190,7 @@ export type OportunidadCreate = {
   asunto?: string | null;
   producto?: string | null;
   numero_pedido?: string | null;
+  ing?: string | null;
   observacion?: string | null;
   cargada_en_gbp?: boolean;
   valor_estimado?: number | null;

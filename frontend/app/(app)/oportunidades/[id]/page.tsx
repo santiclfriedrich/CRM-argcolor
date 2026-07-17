@@ -26,6 +26,7 @@ import {
   ESTADO_META,
   useAgregarComentario,
   useEliminarAdjuntoOportunidad,
+  useEliminarComentario,
   useDeleteOportunidad,
   useOportunidad,
   useSubirAdjuntosOportunidad,
@@ -137,8 +138,10 @@ function Bitacora({
   comentarios: { fecha: string; texto: string; autor: string | null }[];
 }) {
   const comentarioMut = useAgregarComentario(id);
+  const eliminarMut = useEliminarComentario(id);
   const [texto, setTexto] = useState("");
-  const ordenados = [...comentarios].reverse();
+  // Guardamos el índice real en la lista para poder borrarlo (la vista está invertida).
+  const ordenados = comentarios.map((c, i) => ({ ...c, indice: i })).reverse();
 
   const agregar = (e: FormEvent) => {
     e.preventDefault();
@@ -168,14 +171,29 @@ function Bitacora({
             Sin anotaciones todavía.
           </p>
         ) : (
-          ordenados.map((c, i) => (
+          ordenados.map((c) => (
             <div
-              key={i}
-              className="rounded-md border border-slate-200 bg-white p-2 text-sm dark:border-slate-800 dark:bg-slate-900"
+              key={c.indice}
+              className="group rounded-md border border-slate-200 bg-white p-2 text-sm dark:border-slate-800 dark:bg-slate-900"
             >
               <div className="mb-0.5 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
                 <span>{c.autor ?? "—"}</span>
-                <span>{new Date(c.fecha).toLocaleString("es-AR")}</span>
+                <div className="flex items-center gap-2">
+                  <span>{new Date(c.fecha).toLocaleString("es-AR")}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm("¿Eliminar este comentario?")) {
+                        eliminarMut.mutate(c.indice);
+                      }
+                    }}
+                    disabled={eliminarMut.isPending}
+                    aria-label="Eliminar comentario"
+                    className="text-slate-300 hover:text-red-600 dark:text-slate-600"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
               </div>
               <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-200">{c.texto}</p>
             </div>

@@ -72,6 +72,7 @@ class Oportunidad(Base, TimestampMixin):
     asunto: Mapped[str | None] = mapped_column(String(255))  # título/descripción breve
     producto: Mapped[str | None] = mapped_column(String(120))  # rubro/producto (Insumos, Tablets…)
     numero_pedido: Mapped[str | None] = mapped_column(String(60))  # "PEDIDO" (ej. 1-594059)
+    ing: Mapped[str | None] = mapped_column(String(10))  # iniciales del "Ing." asignado (ej. C.S)
     observacion: Mapped[str | None] = mapped_column(Text)  # nota corta de seguimiento
     # Se cargó el pedido en GBP (ex-estado, ahora un flag marcable a mano).
     cargada_en_gbp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())

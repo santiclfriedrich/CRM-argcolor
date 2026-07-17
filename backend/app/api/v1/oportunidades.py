@@ -131,6 +131,27 @@ def agregar_comentario(
     return op
 
 
+@router.delete("/{oportunidad_id}/comentarios/{indice}", response_model=OportunidadRead)
+def eliminar_comentario(
+    oportunidad_id: int,
+    indice: int,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> Oportunidad:
+    """Borra un comentario de la bitácora por su posición en la lista."""
+    op = db.get(Oportunidad, oportunidad_id, options=list(_RELATIONS))
+    if op is None:
+        raise NotFoundError("Oportunidad no encontrada")
+    comentarios = list(op.comentarios or [])
+    if indice < 0 or indice >= len(comentarios):
+        raise NotFoundError("Comentario no encontrado")
+    del comentarios[indice]
+    op.comentarios = comentarios  # reasignar para que SQLAlchemy detecte el cambio
+    db.commit()
+    db.refresh(op)
+    return op
+
+
 @router.patch("/{oportunidad_id}", response_model=OportunidadRead)
 def update_oportunidad(
     oportunidad_id: int,
@@ -144,9 +165,9 @@ def update_oportunidad(
     data = body.model_dump(exclude_unset=True)
     for field, value in data.items():
         setattr(oportunidad, field, value)
-    # Marcar solo el flag "cargada en GBP" no cuenta como movimiento: así la fila
-    # no salta de posición en la lista (que se ordena por fecha_ultimo_movimiento).
-    if set(data) - {"cargada_en_gbp"}:
+    # Editar inline (flag GBP o Ing.) no cuenta como movimiento: así la fila no
+    # salta de posición en la lista (que se ordena por fecha_ultimo_movimiento).
+    if set(data) - {"cargada_en_gbp", "ing"}:
         oportunidad.fecha_ultimo_movimiento = datetime.now(timezone.utc)
     db.commit()
     db.refresh(oportunidad)

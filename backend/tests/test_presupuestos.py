@@ -184,6 +184,18 @@ def test_adjuntos_oportunidad_subir_descargar_eliminar(
     assert borrar.json()["archivos_adjuntos"] == []
 
 
+def test_eliminar_comentario_de_bitacora(client: TestClient) -> None:
+    client.post("/api/v1/oportunidades/1/comentarios", json={"texto": "primero"})
+    resp = client.post("/api/v1/oportunidades/1/comentarios", json={"texto": "segundo"})
+    assert len(resp.json()["comentarios"]) == 2
+
+    borrado = client.delete("/api/v1/oportunidades/1/comentarios/0")
+    assert borrado.status_code == 200
+    comentarios = borrado.json()["comentarios"]
+    assert len(comentarios) == 1
+    assert comentarios[0]["texto"] == "segundo"
+
+
 def test_generar_pdf_devuelve_un_pdf(client: TestClient) -> None:
     pid = client.post("/api/v1/presupuestos", json=_payload()).json()["id"]
     resp = client.get(f"/api/v1/presupuestos/{pid}/pdf")
