@@ -36,6 +36,7 @@ import {
   useDeleteOportunidad,
   useOportunidades,
   useSugerenciaCompras,
+  useToggleCargadaGbp,
   useUpdateOportunidad,
 } from "@/lib/oportunidades";
 import { fmtMonto, useCreatePresupuesto } from "@/lib/presupuestos";
@@ -72,7 +73,6 @@ function iniciales(nombre: string | null | undefined): string {
 const ESTADOS_COTIZADOS: EstadoOportunidad[] = [
   "presupuestada",
   "ganada",
-  "cargada_en_gbp",
   "facturada",
 ];
 function estaCotizada(o: Oportunidad): boolean {
@@ -248,13 +248,7 @@ function FiltroColumna({
   );
 }
 
-const CERRADOS: EstadoOportunidad[] = [
-  "ganada",
-  "facturada",
-  "perdida",
-  "cargada_en_gbp",
-  "cerrada",
-];
+const CERRADOS: EstadoOportunidad[] = ["ganada", "facturada", "perdida", "cerrada"];
 
 // Índice de mes absoluto (año*12+mes) para comparar meses fácilmente.
 const idxMes = (d: Date): number => d.getFullYear() * 12 + d.getMonth();
@@ -296,6 +290,7 @@ export default function OportunidadesPage() {
   const createMut = useCreateOportunidad();
   const deleteMut = useDeleteOportunidad();
   const crearPresupuesto = useCreatePresupuesto();
+  const toggleGbp = useToggleCargadaGbp();
 
   // Abrir el seguimiento si llega ?op=ID (desde la búsqueda global).
   useEffect(() => {
@@ -502,6 +497,7 @@ export default function OportunidadesPage() {
                 {th("validez", "Validez")}
                 {th("ing", "Ing.")}
                 {th("estado", "Estado")}
+                <th className="px-3 py-2 text-center font-medium">GBP</th>
                 {th("observacion", "Observación")}
                 <th className="px-3 py-2" />
               </tr>
@@ -588,6 +584,16 @@ export default function OportunidadesPage() {
                   <td className="px-3 py-2">
                     <Badge className={ESTADO_META[o.estado].color}>{ESTADO_META[o.estado].label}</Badge>
                   </td>
+                  <td className="px-3 py-2 text-center">
+                    <input
+                      type="checkbox"
+                      checked={o.cargada_en_gbp}
+                      onChange={(e) => toggleGbp.mutate({ id: o.id, valor: e.target.checked })}
+                      aria-label="Cargada en GBP"
+                      title="Cargada en GBP"
+                      className="h-4 w-4 rounded border-slate-300 accent-brand dark:border-slate-700"
+                    />
+                  </td>
                   <td className="max-w-[14rem] truncate px-3 py-2 text-slate-500 dark:text-slate-400" title={o.observacion ?? ""}>
                     {o.observacion ?? "—"}
                   </td>
@@ -624,7 +630,7 @@ export default function OportunidadesPage() {
               ))}
               {filas.length === 0 && (
                 <tr>
-                  <td colSpan={15} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={16} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
                     {oportunidadesDelMes.length === 0 ? (
                       <>No hay oportunidades en <span className="capitalize">{labelMes}</span>.</>
                     ) : (

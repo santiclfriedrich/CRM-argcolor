@@ -43,6 +43,7 @@ export function OportunidadForm({
   const [producto, setProducto] = useState(initial?.producto ?? "");
   const [numeroPedido, setNumeroPedido] = useState(initial?.numero_pedido ?? "");
   const [observacion, setObservacion] = useState(initial?.observacion ?? "");
+  const [cargadaGbp, setCargadaGbp] = useState(initial?.cargada_en_gbp ?? false);
   const [valor, setValor] = useState(
     initial?.valor_estimado != null ? String(initial.valor_estimado) : ""
   );
@@ -70,6 +71,7 @@ export function OportunidadForm({
       producto: producto.trim() || null,
       numero_pedido: numeroPedido.trim() || null,
       observacion: observacion.trim() || null,
+      cargada_en_gbp: cargadaGbp,
       valor_estimado: valor ? Number(valor) : null,
       fecha_pedido_cliente: fechaPedido || null,
       fecha_enviado_compras: fechaCompras || null,
@@ -244,6 +246,16 @@ export function OportunidadForm({
           placeholder="Ej: En espera del cliente, no respondió…"
         />
       </div>
+
+      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+        <input
+          type="checkbox"
+          checked={cargadaGbp}
+          onChange={(e) => setCargadaGbp(e.target.checked)}
+          className="h-4 w-4 rounded border-slate-300 accent-brand dark:border-slate-700"
+        />
+        Cargada en GBP
+      </label>
 
       <div>
         <Label htmlFor="o-fuente">Fuente</Label>

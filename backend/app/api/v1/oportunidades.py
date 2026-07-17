@@ -134,9 +134,13 @@ def update_oportunidad(
     oportunidad = db.get(Oportunidad, oportunidad_id)
     if oportunidad is None:
         raise NotFoundError("Oportunidad no encontrada")
-    for field, value in body.model_dump(exclude_unset=True).items():
+    data = body.model_dump(exclude_unset=True)
+    for field, value in data.items():
         setattr(oportunidad, field, value)
-    oportunidad.fecha_ultimo_movimiento = datetime.now(timezone.utc)
+    # Marcar solo el flag "cargada en GBP" no cuenta como movimiento: así la fila
+    # no salta de posición en la lista (que se ordena por fecha_ultimo_movimiento).
+    if set(data) - {"cargada_en_gbp"}:
+        oportunidad.fecha_ultimo_movimiento = datetime.now(timezone.utc)
     db.commit()
     db.refresh(oportunidad)
     return oportunidad

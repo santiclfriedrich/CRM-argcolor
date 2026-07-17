@@ -23,7 +23,6 @@ export const ESTADOS: { value: EstadoOportunidad; label: string; color: string }
   { value: "en_compras", label: "En Compras", color: "bg-purple-100 text-purple-700" },
   { value: "presupuestada", label: "Presupuestada", color: "bg-cyan-100 text-cyan-700" },
   { value: "ganada", label: "Ganada", color: "bg-green-100 text-green-700" },
-  { value: "cargada_en_gbp", label: "Cargada en GBP", color: "bg-teal-100 text-teal-700" },
   { value: "facturada", label: "Facturada", color: "bg-emerald-100 text-emerald-700" },
   { value: "perdida", label: "Perdida", color: "bg-red-100 text-red-700" },
   { value: "cerrada", label: "Cerrada", color: "bg-slate-200 text-slate-700" },
@@ -86,6 +85,27 @@ export function useUpdateOportunidad(id: number) {
     mutationFn: async (body: OportunidadUpdate) =>
       (await api.patch<Oportunidad>(`${BASE}/${id}`, body)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: oportunidadKeys.all }),
+  });
+}
+
+// Marca/desmarca "cargada en GBP" (toggle rápido desde la tabla). Actualización
+// optimista: cambia solo esa fila en la cache al instante, sin refetch (evita el
+// "pestañeo" de toda la columna de checkboxes).
+export function useToggleCargadaGbp() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, valor }: { id: number; valor: boolean }) =>
+      (await api.patch<Oportunidad>(`${BASE}/${id}`, { cargada_en_gbp: valor })).data,
+    onMutate: async ({ id, valor }: { id: number; valor: boolean }) => {
+      await qc.cancelQueries({ queryKey: oportunidadKeys.all });
+      qc.setQueriesData<Oportunidad[]>({ queryKey: oportunidadKeys.all }, (old) =>
+        Array.isArray(old)
+          ? old.map((o) => (o.id === id ? { ...o, cargada_en_gbp: valor } : o))
+          : old
+      );
+    },
+    // Si falla, revertimos volviendo a pedir la lista.
+    onError: () => qc.invalidateQueries({ queryKey: oportunidadKeys.all }),
   });
 }
 

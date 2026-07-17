@@ -126,7 +126,6 @@ export type EstadoOportunidad =
   | "en_compras"
   | "presupuestada"
   | "ganada"
-  | "cargada_en_gbp"
   | "facturada"
   | "perdida"
   | "cerrada";
@@ -158,6 +157,7 @@ export interface Oportunidad {
   producto: string | null;
   numero_pedido: string | null;
   observacion: string | null;
+  cargada_en_gbp: boolean;
   valor_estimado: number | null;
   fecha_pedido_cliente: string | null;
   fecha_enviado_compras: string | null;
@@ -183,6 +183,7 @@ export type OportunidadCreate = {
   producto?: string | null;
   numero_pedido?: string | null;
   observacion?: string | null;
+  cargada_en_gbp?: boolean;
   valor_estimado?: number | null;
   fecha_pedido_cliente?: string | null;
   fecha_enviado_compras?: string | null;

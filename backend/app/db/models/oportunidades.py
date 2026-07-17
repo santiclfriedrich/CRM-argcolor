@@ -4,7 +4,19 @@ import enum
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import JSON, Date, DateTime, Enum, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Numeric,
+    String,
+    Text,
+    false,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,7 +29,6 @@ class EstadoOportunidad(str, enum.Enum):
     en_compras = "en_compras"
     presupuestada = "presupuestada"
     ganada = "ganada"
-    cargada_en_gbp = "cargada_en_gbp"
     facturada = "facturada"
     perdida = "perdida"
     cerrada = "cerrada"
@@ -27,7 +38,6 @@ class EstadoOportunidad(str, enum.Enum):
 ESTADOS_CERRADOS: frozenset["EstadoOportunidad"] = frozenset(
     {
         EstadoOportunidad.ganada,
-        EstadoOportunidad.cargada_en_gbp,
         EstadoOportunidad.facturada,
         EstadoOportunidad.perdida,
         EstadoOportunidad.cerrada,
@@ -63,6 +73,8 @@ class Oportunidad(Base, TimestampMixin):
     producto: Mapped[str | None] = mapped_column(String(120))  # rubro/producto (Insumos, Tablets…)
     numero_pedido: Mapped[str | None] = mapped_column(String(60))  # "PEDIDO" (ej. 1-594059)
     observacion: Mapped[str | None] = mapped_column(Text)  # nota corta de seguimiento
+    # Se cargó el pedido en GBP (ex-estado, ahora un flag marcable a mano).
+    cargada_en_gbp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
     valor_estimado: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     # Fechas clave del ciclo (se autocompletan en los eventos, editables a mano):
     fecha_pedido_cliente: Mapped[date | None] = mapped_column(Date)  # cuándo pidió el cliente

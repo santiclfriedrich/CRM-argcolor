@@ -11,9 +11,9 @@ export const DIAS_ALERTA = 7;
 // Estados cerrados: no entran al tablero de seguimiento activo.
 const TERMINALES: readonly EstadoOportunidad[] = [
   "ganada",
-  "cargada_en_gbp",
   "facturada",
   "perdida",
+  "cerrada",
 ];
 
 export function isTerminal(estado: EstadoOportunidad): boolean {

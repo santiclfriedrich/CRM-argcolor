@@ -41,7 +41,7 @@ import type { EstadoOportunidad, Oportunidad } from "@/lib/types";
 
 type Filtro = "todas" | "mias";
 
-const GANADAS: EstadoOportunidad[] = ["ganada", "cargada_en_gbp", "facturada"];
+const GANADAS: EstadoOportunidad[] = ["ganada", "facturada"];
 
 const RECIENTE_ICONO: Record<
   TipoRegistro,

@@ -167,7 +167,7 @@ def actualizar_presupuesto(
         if estado == EstadoPresupuesto.enviado and op.fecha_enviado_cliente is None:
             op.fecha_enviado_cliente = now_utc().date()
         # Respuesta del cliente (se marca a mano): registrar fecha y mover la
-        # oportunidad. No pisamos estados de post-venta (cargada_en_gbp/facturada).
+        # oportunidad. No pisamos el estado de post-venta (facturada).
         respuestas = (
             EstadoPresupuesto.aceptado,
             EstadoPresupuesto.rechazado,
@@ -176,7 +176,7 @@ def actualizar_presupuesto(
         if estado in respuestas:
             if presupuesto.fecha_respuesta_cliente is None:
                 presupuesto.fecha_respuesta_cliente = now_utc()
-            post_venta = (EstadoOportunidad.cargada_en_gbp, EstadoOportunidad.facturada)
+            post_venta = (EstadoOportunidad.facturada,)
             if op.estado not in post_venta:
                 if estado == EstadoPresupuesto.aceptado:
                     op.estado = EstadoOportunidad.ganada

@@ -19,6 +19,7 @@ class OportunidadBase(BaseModel):
     producto: str | None = None
     numero_pedido: str | None = None
     observacion: str | None = None
+    cargada_en_gbp: bool = False
     valor_estimado: Decimal | None = None
     fecha_pedido_cliente: date | None = None
     fecha_enviado_compras: date | None = None
@@ -41,6 +42,7 @@ class OportunidadUpdate(BaseModel):
     producto: str | None = None
     numero_pedido: str | None = None
     observacion: str | None = None
+    cargada_en_gbp: bool | None = None
     valor_estimado: Decimal | None = None
     fecha_pedido_cliente: date | None = None
     fecha_enviado_compras: date | None = None
