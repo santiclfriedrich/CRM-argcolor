@@ -1,8 +1,10 @@
 """CRUD endpoints for oportunidades."""
 
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -19,6 +21,11 @@ from app.schemas.oportunidad import (
 )
 from app.schemas.solicitud import SugerenciaCompras
 from app.services.borrado import eliminar_oportunidades
+from app.services.oportunidades import (
+    buscar_adjunto,
+    eliminar_adjunto_oportunidad,
+    guardar_adjuntos_oportunidad,
+)
 from app.services.solicitudes import sugerir_requerimiento
 
 router = APIRouter(prefix="/oportunidades", tags=["oportunidades"])
@@ -143,6 +150,60 @@ def update_oportunidad(
         oportunidad.fecha_ultimo_movimiento = datetime.now(timezone.utc)
     db.commit()
     db.refresh(oportunidad)
+    return oportunidad
+
+
+@router.post("/{oportunidad_id}/adjuntos", response_model=OportunidadRead)
+def subir_adjuntos_oportunidad(
+    oportunidad_id: int,
+    files: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> Oportunidad:
+    """Adjunta archivos (presupuestos, planos, mails del cliente, etc.) a la oportunidad."""
+    oportunidad = db.get(Oportunidad, oportunidad_id)
+    if oportunidad is None:
+        raise NotFoundError("Oportunidad no encontrada")
+    archivos = [
+        {"filename": f.filename, "mime_type": f.content_type, "data": f.file.read()}
+        for f in files
+    ]
+    guardar_adjuntos_oportunidad(db, oportunidad, archivos)
+    return oportunidad
+
+
+@router.get("/{oportunidad_id}/adjuntos/{adjunto_id}")
+def descargar_adjunto_oportunidad(
+    oportunidad_id: int,
+    adjunto_id: int,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> FileResponse:
+    oportunidad = db.get(Oportunidad, oportunidad_id)
+    if oportunidad is None:
+        raise NotFoundError("Oportunidad no encontrada")
+    meta = buscar_adjunto(oportunidad, adjunto_id)
+    if meta is None or not Path(meta.get("path", "")).is_file():
+        raise NotFoundError("Adjunto no encontrado")
+    return FileResponse(
+        meta["path"],
+        media_type=meta.get("mime_type") or "application/octet-stream",
+        filename=meta.get("filename"),
+    )
+
+
+@router.delete("/{oportunidad_id}/adjuntos/{adjunto_id}", response_model=OportunidadRead)
+def eliminar_adjunto(
+    oportunidad_id: int,
+    adjunto_id: int,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> Oportunidad:
+    oportunidad = db.get(Oportunidad, oportunidad_id)
+    if oportunidad is None:
+        raise NotFoundError("Oportunidad no encontrada")
+    if not eliminar_adjunto_oportunidad(db, oportunidad, adjunto_id):
+        raise NotFoundError("Adjunto no encontrado")
     return oportunidad
 
 

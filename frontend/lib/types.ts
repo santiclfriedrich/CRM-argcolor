@@ -146,6 +146,12 @@ export interface Comentario {
   autor: string | null;
 }
 
+export interface AdjuntoOportunidad {
+  id: number;
+  filename: string;
+  mime_type: string | null;
+}
+
 export interface Oportunidad {
   id: number;
   cliente_id: number | null;
@@ -165,6 +171,7 @@ export interface Oportunidad {
   fecha_enviado_cliente: string | null;
   fecha_limite: string | null;
   comentarios: Comentario[];
+  archivos_adjuntos: AdjuntoOportunidad[] | null;
   fecha_creacion: string;
   fecha_ultimo_movimiento: string;
   fecha_cierre: string | null;

@@ -153,17 +153,21 @@ def sync_gmail(
 @router.get("", response_model=list[MailRead])
 def list_mails(
     usuario_id: int | None = None,
+    oportunidad_id: int | None = None,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> list[Mail]:
     """Bandeja personal: cada vendedor ve solo los mails de sus oportunidades.
-    Los admin ven la bandeja de todo el equipo, o filtran por `usuario_id` (perfil)."""
+    Los admin ven la bandeja de todo el equipo, o filtran por `usuario_id` (perfil).
+    Con `oportunidad_id` se limita a los mails de esa oportunidad (detalle)."""
     query = (
         select(Mail)
         .where(Mail.direccion == DireccionMail.entrante)
         .options(*_RELATIONS)
         .order_by(Mail.created_at.desc())
     )
+    if oportunidad_id is not None:
+        query = query.where(Mail.oportunidad_id == oportunidad_id)
     duenio_id = resolver_duenio(current_user, usuario_id)
     if duenio_id is not None:
         query = query.join(Oportunidad, Mail.oportunidad_id == Oportunidad.id).where(

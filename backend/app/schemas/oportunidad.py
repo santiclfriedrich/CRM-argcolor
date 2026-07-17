@@ -91,6 +91,7 @@ class OportunidadRead(OportunidadBase):
     fecha_creacion: datetime
     fecha_ultimo_movimiento: datetime
     fecha_cierre: datetime | None = None
+    archivos_adjuntos: list[dict] | None = None
     comentarios: list[ComentarioRead] = []
     cliente: ClienteMini | None = None
     contacto: ContactoMini | None = None

@@ -14,6 +14,7 @@ const BASE = "/api/v1/oportunidades";
 
 export const oportunidadKeys = {
   all: ["oportunidades"] as const,
+  detail: (id: number) => ["oportunidades", "detail", id] as const,
 };
 
 // Etiqueta legible + color por estado (Tailwind). Orden = flujo del ciclo comercial.
@@ -79,13 +80,72 @@ export function useCreateOportunidad() {
   });
 }
 
+export function useOportunidad(id: number) {
+  return useQuery({
+    queryKey: oportunidadKeys.detail(id),
+    queryFn: async () => (await api.get<Oportunidad>(`${BASE}/${id}`)).data,
+    enabled: id > 0,
+  });
+}
+
 export function useUpdateOportunidad(id: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: OportunidadUpdate) =>
       (await api.patch<Oportunidad>(`${BASE}/${id}`, body)).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: oportunidadKeys.all }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: oportunidadKeys.all });
+      qc.invalidateQueries({ queryKey: oportunidadKeys.detail(id) });
+    },
   });
+}
+
+// --- Adjuntos de la oportunidad ---
+export function useSubirAdjuntosOportunidad(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (files: File[]) => {
+      const fd = new FormData();
+      files.forEach((f) => fd.append("files", f));
+      return (await api.post<Oportunidad>(`${BASE}/${id}/adjuntos`, fd)).data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: oportunidadKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: oportunidadKeys.all });
+    },
+  });
+}
+
+export function useEliminarAdjuntoOportunidad(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (adjuntoId: number) => {
+      await api.delete(`${BASE}/${id}/adjuntos/${adjuntoId}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: oportunidadKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: oportunidadKeys.all });
+    },
+  });
+}
+
+// Descarga un adjunto respetando el auth (fetch blob -> link temporal).
+export async function descargarAdjuntoOportunidad(
+  oportunidadId: number,
+  adjuntoId: number,
+  filename: string,
+): Promise<void> {
+  const res = await api.get(`${BASE}/${oportunidadId}/adjuntos/${adjuntoId}`, {
+    responseType: "blob",
+  });
+  const url = URL.createObjectURL(res.data as Blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 // Marca/desmarca "cargada en GBP" (toggle rápido desde la tabla). Actualización

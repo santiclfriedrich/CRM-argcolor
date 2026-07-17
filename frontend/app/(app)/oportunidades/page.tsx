@@ -7,19 +7,18 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Eye,
   FileText,
   Filter,
-  MessageSquare,
   Pencil,
   Plus,
   Search,
-  Send,
   Trash2,
   X,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { OportunidadForm } from "@/components/oportunidades/oportunidad-form";
 import { SolicitudForm } from "@/components/solicitudes/solicitud-form";
@@ -27,11 +26,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
-import { Textarea } from "@/components/ui/textarea";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   ESTADO_META,
-  useAgregarComentario,
   useCreateOportunidad,
   useDeleteOportunidad,
   useOportunidades,
@@ -39,7 +36,7 @@ import {
   useToggleCargadaGbp,
   useUpdateOportunidad,
 } from "@/lib/oportunidades";
-import { fmtMonto, useCreatePresupuesto } from "@/lib/presupuestos";
+import { useCreatePresupuesto } from "@/lib/presupuestos";
 import { useCrearYEnviarSolicitud } from "@/lib/solicitudes";
 import type {
   EstadoOportunidad,
@@ -265,7 +262,6 @@ export default function OportunidadesPage() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Oportunidad | null>(null);
   const [pidiendo, setPidiendo] = useState<Oportunidad | null>(null);
-  const [detalleId, setDetalleId] = useState<number | null>(null);
   const [filtros, setFiltros] = useState<OportunidadFiltros>({
     estado: "",
     cliente_id: null,
@@ -292,18 +288,17 @@ export default function OportunidadesPage() {
   const crearPresupuesto = useCreatePresupuesto();
   const toggleGbp = useToggleCargadaGbp();
 
-  // Abrir el seguimiento si llega ?op=ID (desde la búsqueda global).
+  // Links viejos con ?op=ID redirigen a la página de detalle.
   useEffect(() => {
     const op = new URLSearchParams(window.location.search).get("op");
-    if (op) setDetalleId(Number(op));
-  }, []);
+    if (op) router.replace(`/oportunidades/${op}`);
+  }, [router]);
 
-  const detalle = data?.find((o) => o.id === detalleId) ?? null;
-
-  // Mapeo por mes (según fecha de creación). Arranca en el mes actual; las
-  // flechas navegan a meses anteriores. No dejamos avanzar más allá del actual.
+  // Período: por mes (default), por rango de fechas, o acumulado (todos).
   const hoy = new Date();
   const [mes, setMes] = useState({ y: hoy.getFullYear(), m: hoy.getMonth() });
+  const [periodoModo, setPeriodoModo] = useState<"mes" | "rango" | "todos">("mes");
+  const [rango, setRango] = useState({ desde: "", hasta: "" });
   const cambiarMes = (delta: number) =>
     setMes(({ y, m }) => {
       const d = new Date(y, m + delta, 1);
@@ -314,18 +309,31 @@ export default function OportunidadesPage() {
     month: "long",
     year: "numeric",
   });
-  // Una oportunidad "vive" en los meses desde su creación hasta su cierre (o hasta
-  // hoy si sigue abierta): abierta -> se arrastra; cerrada -> queda en su mes de cierre.
   const idxSeleccionado = mes.y * 12 + mes.m;
   const idxHoy = idxMes(hoy);
-  const oportunidadesDelMes = (data ?? []).filter((o) => {
-    const inicio = idxMes(new Date(o.fecha_creacion));
-    const fin = o.fecha_cierre ? idxMes(new Date(o.fecha_cierre)) : idxHoy;
-    return inicio <= idxSeleccionado && idxSeleccionado <= fin;
-  });
-  // Mes de origen de una oportunidad (para el cartel "Desde …").
+
+  // Una oportunidad "vive" desde su creación hasta su cierre (o hasta hoy si sigue
+  // abierta): abierta se arrastra; cerrada queda en su mes de cierre. Según el
+  // período elegido mostramos si "vive" en ese mes / rango / o todo el acumulado.
+  const enPeriodo = (o: Oportunidad): boolean => {
+    if (periodoModo === "todos") return true;
+    const creada = new Date(o.fecha_creacion);
+    const fin = o.fecha_cierre ? new Date(o.fecha_cierre) : hoy;
+    if (periodoModo === "rango") {
+      const desde = rango.desde ? new Date(rango.desde + "T00:00:00") : null;
+      const hasta = rango.hasta ? new Date(rango.hasta + "T23:59:59") : null;
+      if (desde && fin < desde) return false;
+      if (hasta && creada > hasta) return false;
+      return true;
+    }
+    const finIdx = o.fecha_cierre ? idxMes(new Date(o.fecha_cierre)) : idxHoy;
+    return idxMes(creada) <= idxSeleccionado && idxSeleccionado <= finIdx;
+  };
+  const oportunidadesDelMes = (data ?? []).filter(enPeriodo);
+
+  // Cartel "Desde <mes>": solo tiene sentido navegando por mes.
   const esArrastrada = (o: Oportunidad): boolean =>
-    idxMes(new Date(o.fecha_creacion)) < idxSeleccionado;
+    periodoModo === "mes" && idxMes(new Date(o.fecha_creacion)) < idxSeleccionado;
   const mesOrigen = (o: Oportunidad): string =>
     new Date(o.fecha_creacion).toLocaleDateString("es-AR", { month: "long" });
 
@@ -399,56 +407,95 @@ export default function OportunidadesPage() {
         </Button>
       </div>
 
-      {/* Alcance: mías / todas */}
-      <div className="mt-4 inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 dark:border-slate-800 dark:bg-slate-800/60">
-        {[
-          { value: true, label: "Mías" },
-          { value: false, label: "Todas" },
-        ].map((opt) => (
-          <button
-            key={String(opt.value)}
-            type="button"
-            onClick={() => setFiltro({ solo_mias: opt.value })}
-            className={cn(
-              "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
-              Boolean(filtros.solo_mias) === opt.value
-                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100"
-                : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
-            )}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Navegador de mes (por fecha de creación) */}
-      <div className="mt-4 flex items-center justify-center gap-4">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => cambiarMes(-1)}
-          aria-label="Mes anterior"
-        >
-          <ChevronLeft size={18} />
-        </Button>
-        <div className="min-w-[180px] text-center">
-          <div className="text-lg font-semibold capitalize text-slate-900 dark:text-slate-100">
-            {labelMes}
-          </div>
-          <div className="text-xs text-slate-500 dark:text-slate-400">
-            {oportunidadesDelMes.length}{" "}
-            {oportunidadesDelMes.length === 1 ? "oportunidad" : "oportunidades"}
-          </div>
+      {/* Controles: Mías/Todas a la izquierda; período centrado. */}
+      <div className="relative mt-3 flex flex-wrap items-center justify-center gap-3">
+        {/* Mías / Todas (pegado a la izquierda en pantallas grandes) */}
+        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 dark:border-slate-800 dark:bg-slate-800/60 sm:absolute sm:left-0 sm:top-1/2 sm:-translate-y-1/2">
+          {[
+            { value: true, label: "Mías" },
+            { value: false, label: "Todas" },
+          ].map((opt) => (
+            <button
+              key={String(opt.value)}
+              type="button"
+              onClick={() => setFiltro({ solo_mias: opt.value })}
+              className={cn(
+                "rounded-md px-3 py-1 text-sm font-medium transition-colors",
+                Boolean(filtros.solo_mias) === opt.value
+                  ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100"
+                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => cambiarMes(1)}
-          disabled={esMesActual}
-          aria-label="Mes siguiente"
-        >
-          <ChevronRight size={18} />
-        </Button>
+
+        {/* Período: Mes / Rango / Todos */}
+        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 dark:border-slate-800 dark:bg-slate-800/60">
+          {[
+            { value: "mes", label: "Mes" },
+            { value: "rango", label: "Rango" },
+            { value: "todos", label: "Todos" },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setPeriodoModo(opt.value as "mes" | "rango" | "todos")}
+              className={cn(
+                "rounded-md px-3 py-1 text-sm font-medium transition-colors",
+                periodoModo === opt.value
+                  ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100"
+                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Detalle del período según el modo */}
+        {periodoModo === "mes" && (
+          <div className="inline-flex items-center gap-1.5">
+            <Button variant="outline" size="icon" onClick={() => cambiarMes(-1)} aria-label="Mes anterior">
+              <ChevronLeft size={16} />
+            </Button>
+            <span className="min-w-[120px] text-center text-sm font-semibold capitalize text-slate-900 dark:text-slate-100">
+              {labelMes}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => cambiarMes(1)}
+              disabled={esMesActual}
+              aria-label="Mes siguiente"
+            >
+              <ChevronRight size={16} />
+            </Button>
+          </div>
+        )}
+        {periodoModo === "rango" && (
+          <div className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+            <Input
+              type="date"
+              value={rango.desde}
+              onChange={(e) => setRango((r) => ({ ...r, desde: e.target.value }))}
+              className="h-9 w-auto"
+            />
+            <span>a</span>
+            <Input
+              type="date"
+              value={rango.hasta}
+              onChange={(e) => setRango((r) => ({ ...r, hasta: e.target.value }))}
+              className="h-9 w-auto"
+            />
+          </div>
+        )}
+
+        <span className="text-xs text-slate-500 dark:text-slate-400">
+          {oportunidadesDelMes.length}{" "}
+          {oportunidadesDelMes.length === 1 ? "oportunidad" : "oportunidades"}
+        </span>
       </div>
 
       {/* Buscador global */}
@@ -507,7 +554,7 @@ export default function OportunidadesPage() {
                 <tr key={o.id} className="border-t border-slate-100 dark:border-slate-800">
                   <td
                     className="cursor-pointer whitespace-nowrap px-3 py-2 font-medium text-slate-500 hover:text-brand dark:text-slate-400"
-                    onClick={() => setDetalleId(o.id)}
+                    onClick={() => router.push(`/oportunidades/${o.id}`)}
                   >
                     <span className="inline-flex items-center gap-1.5 leading-none">
                       {/* Slot fijo para el punto: así los números arrancan siempre alineados. */}
@@ -525,7 +572,7 @@ export default function OportunidadesPage() {
                   </td>
                   <td
                     className="cursor-pointer px-3 py-2 font-medium text-slate-800 hover:text-brand dark:text-slate-100"
-                    onClick={() => setDetalleId(o.id)}
+                    onClick={() => router.push(`/oportunidades/${o.id}`)}
                   >
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span>{o.cliente?.razon_social ?? "—"}</span>
@@ -541,7 +588,7 @@ export default function OportunidadesPage() {
                   </td>
                   <td
                     className="max-w-[16rem] cursor-pointer truncate px-3 py-2 text-slate-600 dark:text-slate-300"
-                    onClick={() => setDetalleId(o.id)}
+                    onClick={() => router.push(`/oportunidades/${o.id}`)}
                   >
                     {o.asunto ?? "—"}
                   </td>
@@ -570,7 +617,6 @@ export default function OportunidadesPage() {
                   <td className="whitespace-nowrap px-3 py-2">
                     <span className={estaVencida(o) ? "font-semibold text-red-600" : "text-slate-500 dark:text-slate-400"}>
                       {fmtDate(o.fecha_limite)}
-                      {estaVencida(o) ? " (vencida)" : ""}
                     </span>
                   </td>
                   <td className="px-3 py-2">
@@ -599,9 +645,9 @@ export default function OportunidadesPage() {
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center justify-end">
-                      <Tooltip label="Seguimiento">
-                        <Button variant="ghost" size="icon" onClick={() => setDetalleId(o.id)} aria-label="Seguimiento" className="text-slate-400 hover:text-brand dark:text-slate-500">
-                          <MessageSquare size={15} />
+                      <Tooltip label="Ver detalle">
+                        <Button variant="ghost" size="icon" onClick={() => router.push(`/oportunidades/${o.id}`)} aria-label="Ver detalle" className="text-slate-400 hover:text-brand dark:text-slate-500">
+                          <Eye size={15} />
                         </Button>
                       </Tooltip>
                       <Tooltip label="Pedir a Compras">
@@ -631,11 +677,13 @@ export default function OportunidadesPage() {
               {filas.length === 0 && (
                 <tr>
                   <td colSpan={16} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
-                    {oportunidadesDelMes.length === 0 ? (
-                      <>No hay oportunidades en <span className="capitalize">{labelMes}</span>.</>
-                    ) : (
-                      "No hay oportunidades que coincidan con la búsqueda o los filtros."
-                    )}
+                    {oportunidadesDelMes.length > 0
+                      ? "No hay oportunidades que coincidan con la búsqueda o los filtros."
+                      : periodoModo === "mes"
+                        ? <>No hay oportunidades en <span className="capitalize">{labelMes}</span>.</>
+                        : periodoModo === "rango"
+                          ? "No hay oportunidades en el rango elegido."
+                          : "No hay oportunidades."}
                   </td>
                 </tr>
               )}
@@ -655,106 +703,6 @@ export default function OportunidadesPage() {
 
       {editing && <EditOportunidadModal oportunidad={editing} onClose={() => setEditing(null)} />}
       {pidiendo && <PedirComprasModal oportunidad={pidiendo} onClose={() => setPidiendo(null)} />}
-      {detalle && <SeguimientoModal oportunidad={detalle} onClose={() => setDetalleId(null)} />}
-    </div>
-  );
-}
-
-// Centro de seguimiento: fechas clave + bitácora de comentarios.
-function SeguimientoModal({
-  oportunidad,
-  onClose,
-}: {
-  oportunidad: Oportunidad;
-  onClose: () => void;
-}) {
-  const comentarioMut = useAgregarComentario(oportunidad.id);
-  const [texto, setTexto] = useState("");
-
-  const agregar = (e: FormEvent) => {
-    e.preventDefault();
-    if (!texto.trim()) return;
-    comentarioMut.mutate(texto.trim(), { onSuccess: () => setTexto("") });
-  };
-
-  const cliente = oportunidad.cliente?.razon_social ?? `#${oportunidad.id}`;
-  const comentarios = [...oportunidad.comentarios].reverse();
-
-  return (
-    <Modal open onClose={onClose} title={`Seguimiento — ${cliente}`}>
-      <div className="space-y-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Badge className={ESTADO_META[oportunidad.estado].color}>
-              {ESTADO_META[oportunidad.estado].label}
-            </Badge>
-            {oportunidad.valor_estimado != null && (
-              <span className="font-semibold text-slate-800 dark:text-slate-100">
-                {fmtMonto(oportunidad.valor_estimado, "USD")}
-              </span>
-            )}
-          </div>
-          {oportunidad.asunto && (
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{oportunidad.asunto}</p>
-          )}
-        </div>
-
-        {/* Línea de tiempo de fechas clave */}
-        <div className="grid grid-cols-2 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-800/40">
-          <Fecha label="Pedido del cliente" value={oportunidad.fecha_pedido_cliente} />
-          <Fecha label="Enviado a Compras" value={oportunidad.fecha_enviado_compras} />
-          <Fecha label="Enviado al cliente" value={oportunidad.fecha_enviado_cliente} />
-          <Fecha label="Validez / límite" value={oportunidad.fecha_limite} alerta={estaVencida(oportunidad)} />
-        </div>
-
-        {/* Bitácora */}
-        <div>
-          <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">Bitácora de seguimiento</p>
-          <form onSubmit={agregar} className="mb-3 flex items-start gap-2">
-            <Textarea
-              rows={2}
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              placeholder="Anotá una llamada, un avance, una respuesta del cliente…"
-            />
-            <Button type="submit" size="sm" disabled={comentarioMut.isPending || !texto.trim()}>
-              <Send size={14} />
-            </Button>
-          </form>
-          <div className="max-h-64 space-y-2 overflow-y-auto">
-            {comentarios.length === 0 ? (
-              <p className="rounded-md border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400 dark:border-slate-700 dark:text-slate-500">
-                Sin anotaciones todavía.
-              </p>
-            ) : (
-              comentarios.map((c, i) => (
-                <div
-                  key={i}
-                  className="rounded-md border border-slate-200 bg-white p-2 text-sm dark:border-slate-800 dark:bg-slate-900"
-                >
-                  <div className="mb-0.5 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
-                    <span>{c.autor ?? "—"}</span>
-                    <span>{new Date(c.fecha).toLocaleString("es-AR")}</span>
-                  </div>
-                  <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-200">{c.texto}</p>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function Fecha({ label, value, alerta }: { label: string; value: string | null; alerta?: boolean }) {
-  return (
-    <div>
-      <div className="text-xs text-slate-400 dark:text-slate-500">{label}</div>
-      <div className={alerta ? "font-semibold text-red-600" : "text-slate-700 dark:text-slate-200"}>
-        {fmtDate(value)}
-        {alerta ? " (vencida)" : ""}
-      </div>
     </div>
   );
 }

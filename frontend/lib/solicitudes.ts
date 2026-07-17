@@ -28,11 +28,16 @@ export const ESTADO_SOLICITUD_META: Record<EstadoSolicitud, { label: string; col
   cerrada: { label: "Cerrada", color: "bg-slate-100 text-slate-600" },
 };
 
-export function useSolicitudes(usuarioId?: number) {
+export function useSolicitudes(usuarioId?: number, oportunidadId?: number) {
   return useQuery({
-    queryKey: usuarioId ? [...solicitudKeys.all, { usuarioId }] : solicitudKeys.all,
+    queryKey:
+      usuarioId || oportunidadId
+        ? [...solicitudKeys.all, { usuarioId, oportunidadId }]
+        : solicitudKeys.all,
     queryFn: async () => {
-      const params = usuarioId ? { usuario_id: usuarioId } : undefined;
+      const params: Record<string, number> = {};
+      if (usuarioId) params.usuario_id = usuarioId;
+      if (oportunidadId) params.oportunidad_id = oportunidadId;
       return (await api.get<Solicitud[]>(BASE, { params })).data;
     },
   });

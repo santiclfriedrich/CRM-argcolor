@@ -161,6 +161,29 @@ def test_estado_cerrada_maneja_fecha_cierre(client: TestClient) -> None:
     assert client.get("/api/v1/oportunidades/1").json()["fecha_cierre"] is None
 
 
+def test_adjuntos_oportunidad_subir_descargar_eliminar(
+    client: TestClient, tmp_path, monkeypatch  # noqa: ANN001
+) -> None:
+    monkeypatch.setattr("app.config.settings.MEDIA_DIR", str(tmp_path))
+    subir = client.post(
+        "/api/v1/oportunidades/1/adjuntos",
+        files=[("files", ("plano.pdf", b"%PDF-x", "application/pdf"))],
+    )
+    assert subir.status_code == 200
+    adjuntos = subir.json()["archivos_adjuntos"]
+    assert len(adjuntos) == 1
+    assert adjuntos[0]["filename"] == "plano.pdf"
+    adj_id = adjuntos[0]["id"]
+
+    bajar = client.get(f"/api/v1/oportunidades/1/adjuntos/{adj_id}")
+    assert bajar.status_code == 200
+    assert bajar.content == b"%PDF-x"
+
+    borrar = client.delete(f"/api/v1/oportunidades/1/adjuntos/{adj_id}")
+    assert borrar.status_code == 200
+    assert borrar.json()["archivos_adjuntos"] == []
+
+
 def test_generar_pdf_devuelve_un_pdf(client: TestClient) -> None:
     pid = client.post("/api/v1/presupuestos", json=_payload()).json()["id"]
     resp = client.get(f"/api/v1/presupuestos/{pid}/pdf")

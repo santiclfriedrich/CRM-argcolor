@@ -18,10 +18,13 @@ export const mailKeys = {
   hilo: (mailId: number) => ["mails", "hilo", mailId] as const,
 };
 
-export function useMails() {
+export function useMails(oportunidadId?: number) {
   return useQuery({
-    queryKey: mailKeys.all,
-    queryFn: async () => (await api.get<Mail[]>(BASE)).data,
+    queryKey: oportunidadId ? [...mailKeys.all, { oportunidadId }] : mailKeys.all,
+    queryFn: async () => {
+      const params = oportunidadId ? { oportunidad_id: oportunidadId } : undefined;
+      return (await api.get<Mail[]>(BASE, { params })).data;
+    },
   });
 }
 

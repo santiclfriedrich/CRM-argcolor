@@ -84,6 +84,8 @@ class Oportunidad(Base, TimestampMixin):
     fecha_limite: Mapped[date | None] = mapped_column(Date)  # validez / hasta cuándo seguir
     # Bitácora de seguimiento: lista de {fecha, texto, autor}.
     comentarios: Mapped[list | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
+    # Adjuntos de la oportunidad: lista de {id, filename, mime_type, path}.
+    archivos_adjuntos: Mapped[list | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
 
     cliente = relationship("Cliente", back_populates="oportunidades")
     contacto = relationship("ContactoCliente")
