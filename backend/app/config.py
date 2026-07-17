@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,6 +25,17 @@ class Settings(BaseSettings):
     DATABASE_URL: str = (
         "postgresql+psycopg://postgres:postgres@localhost:5432/argcolor"
     )
+
+    @field_validator("DATABASE_URL")
+    @classmethod
+    def _forzar_driver_psycopg(cls, v: str) -> str:
+        """Acepta la URL que dé cualquier proveedor (postgres:// o postgresql://)
+        y la normaliza al driver psycopg que usa la app."""
+        if v.startswith("postgres://"):
+            v = "postgresql://" + v[len("postgres://") :]
+        if v.startswith("postgresql://"):
+            v = "postgresql+psycopg://" + v[len("postgresql://") :]
+        return v
 
     # --- Security / Auth ---
     SECRET_KEY: str = "change-me"
