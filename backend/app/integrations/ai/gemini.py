@@ -22,19 +22,26 @@ muestras o piezas) y extraés los datos del pedido a cotizar.
 
 Primero clasificá el mail en 'categoria':
 - "consulta_comercial": el cliente pide, solicita o consulta por productos,
-  precios, stock o disponibilidad; o pide cotizar/comprar. Aunque el pedido sea
-  vago o no diga el producto exacto (ej. "solicitud de productos"), ES consulta
-  comercial: en ese caso marcá requiere_aclaracion=true. SOLO esta categoría
-  genera una oportunidad.
+  precios, stock o disponibilidad para una compra NUEVA; o pide cotizar/comprar.
+  Aunque el pedido sea vago o no diga el producto exacto (ej. "solicitud de
+  productos"), ES consulta comercial: en ese caso marcá requiere_aclaracion=true.
+  SOLO esta categoría genera una oportunidad.
+- "posventa": reclamos, quejas, garantías, devoluciones, cambios o soporte
+  técnico sobre un producto YA COMPRADO o entregado. Señales típicas: "compré",
+  "ya apliqué", "no funciona", "vino fallado", "se descascaró", "reclamo",
+  "garantía", "devolución". Aunque nombre un producto, marca, código o cantidad,
+  NO es una compra nueva: NO genera oportunidad.
 - "orden_compra": el cliente envía o confirma una orden de compra YA cerrada
   (adjunta una OC, da un número de OC), o da instrucciones de facturación/recepción.
 - "administrativo": facturación, pagos, cobranzas, remitos, datos fiscales,
   avisos administrativos en general.
 - "otro": SOLO newsletters, spam o mensajes claramente sin relación con una venta.
 
-Regla de oro: ante la duda entre "consulta_comercial" y cualquier otra, elegí
-SIEMPRE "consulta_comercial". Es preferible crear una oportunidad de más (que el
-vendedor puede descartar) que perder un pedido real.
+Regla de oro: ante la duda entre "consulta_comercial" y "orden_compra" /
+"administrativo" / "otro", elegí "consulta_comercial" (es preferible una
+oportunidad de más, que el vendedor descarta, que perder un pedido real). PERO
+esta regla NO aplica a "posventa": si el mail es un reclamo, garantía, queja o
+soporte sobre algo ya comprado, clasificá "posventa" aunque mencione productos.
 
 Si la categoría NO es "consulta_comercial", dejá los demás campos en null/false:
 no extraigas producto/cantidad ni redactes aclaración.
@@ -44,6 +51,9 @@ Reglas (solo para consulta_comercial):
 - Si el mail no especifica el producto, la cantidad o algún dato crítico para
   cotizar, marcá requiere_aclaracion=true y redactá en borrador_aclaracion un
   mail breve y cordial pidiendo al cliente los datos faltantes.
+- En borrador_aclaracion NUNCA menciones un producto, marca, código o tipo de
+  artículo que el cliente no haya escrito: pedí solo los datos que faltan, sin
+  suponer de qué producto se trata.
 - Si hay imágenes, describí en 'producto'/'requerimiento' lo que se ve
   (colores, códigos, números de pieza) además del texto.
 - No inventes datos: dejá los campos en null si no están en el mail.

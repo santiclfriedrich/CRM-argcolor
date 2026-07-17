@@ -12,7 +12,9 @@ from pydantic import BaseModel
 
 # Clasificación del mail entrante. Solo "consulta_comercial" genera oportunidad
 # y habilita respuesta automática; el resto se registra pero se descarta.
-CategoriaMail = Literal["consulta_comercial", "orden_compra", "administrativo", "otro"]
+CategoriaMail = Literal[
+    "consulta_comercial", "posventa", "orden_compra", "administrativo", "otro"
+]
 
 
 @dataclass
