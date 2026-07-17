@@ -13,11 +13,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Instalar dependencias primero (mejor cacheo de capas)
-COPY pyproject.toml ./
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir .
-
+# Copiamos el código y luego instalamos el proyecto + dependencias.
+# (pip install . necesita la carpeta `app/`, así que copiamos todo antes.)
 COPY . .
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir .
 
 EXPOSE 8000
 
