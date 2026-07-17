@@ -21,8 +21,10 @@ class ItemBase(BaseModel):
     cantidad: Decimal = Decimal(1)
     precio_unitario: Decimal = Decimal(0)
     descuento_pct: Decimal = Decimal(0)
+    iva: Decimal | None = None
     sku: str | None = None
     fabricante: str | None = None
+    observaciones: str | None = None
 
 
 class ItemRead(ItemBase):

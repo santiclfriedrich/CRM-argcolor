@@ -32,6 +32,8 @@ type Row = {
   cantidad: string;
   precio_unitario: string;
   descuento_pct: string;
+  iva: string;
+  observaciones: string;
 };
 
 let _seq = 0;
@@ -53,6 +55,8 @@ const filaVacia = (): Row => ({
   cantidad: "1",
   precio_unitario: "0",
   descuento_pct: "0",
+  iva: "",
+  observaciones: "",
 });
 
 function toRows(p: Presupuesto): Row[] {
@@ -64,6 +68,8 @@ function toRows(p: Presupuesto): Row[] {
     cantidad: String(it.cantidad),
     precio_unitario: String(it.precio_unitario),
     descuento_pct: String(it.descuento_pct),
+    iva: it.iva != null ? String(it.iva) : "",
+    observaciones: it.observaciones ?? "",
   }));
 }
 
@@ -112,8 +118,10 @@ export default function ArmadorPresupuestoPage() {
         cantidad: num(r.cantidad),
         precio_unitario: num(r.precio_unitario),
         descuento_pct: num(r.descuento_pct),
+        iva: r.iva.trim() ? num(r.iva) : null,
         sku: r.sku.trim() || null,
         fabricante: r.fabricante.trim() || null,
+        observaciones: r.observaciones.trim() || null,
       }));
 
   const guardar = () =>
@@ -209,7 +217,9 @@ export default function ArmadorPresupuestoPage() {
               <th className="px-2 py-2 font-medium">Cant.</th>
               <th className="px-2 py-2 font-medium">P. unit.</th>
               <th className="px-2 py-2 font-medium">Desc.%</th>
+              <th className="px-2 py-2 font-medium">IVA%</th>
               <th className="px-2 py-2 text-right font-medium">Subtotal</th>
+              <th className="px-2 py-2 font-medium">Observación</th>
               <th className="px-2 py-2" />
             </tr>
           </thead>
@@ -222,9 +232,11 @@ export default function ArmadorPresupuestoPage() {
                 <td className="p-1 w-20"><Input type="number" value={r.cantidad} onChange={(e) => setCampo(r.key, "cantidad", e.target.value)} className="text-right" /></td>
                 <td className="p-1 w-28"><Input type="number" value={r.precio_unitario} onChange={(e) => setCampo(r.key, "precio_unitario", e.target.value)} className="text-right" /></td>
                 <td className="p-1 w-20"><Input type="number" value={r.descuento_pct} onChange={(e) => setCampo(r.key, "descuento_pct", e.target.value)} className="text-right" /></td>
+                <td className="p-1 w-20"><Input type="number" value={r.iva} onChange={(e) => setCampo(r.key, "iva", e.target.value)} placeholder="21" className="text-right" /></td>
                 <td className="px-2 py-1 text-right tabular-nums text-slate-700 dark:text-slate-200">
                   {fmtMonto(subtotalRow(r), moneda)}
                 </td>
+                <td className="p-1 min-w-[160px]"><Input value={r.observaciones} onChange={(e) => setCampo(r.key, "observaciones", e.target.value)} placeholder="Nota de la línea" /></td>
                 <td className="px-1">
                   <Tooltip label="Quitar fila">
                     <button

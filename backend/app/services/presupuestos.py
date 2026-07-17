@@ -6,6 +6,7 @@ El PDF se arma con weasyprint (HTML -> PDF, ya en el stack). El armado de los
 
 from __future__ import annotations
 
+import base64
 import html
 import os
 import platform
@@ -70,8 +71,10 @@ def _items_desde_schema(items: list[ItemBase]) -> list[PresupuestoItem]:
             cantidad=Decimal(it.cantidad or 0),
             precio_unitario=Decimal(it.precio_unitario or 0),
             descuento_pct=Decimal(it.descuento_pct or 0),
+            iva=Decimal(it.iva) if it.iva is not None else None,
             sku=it.sku,
             fabricante=it.fabricante,
+            observaciones=it.observaciones,
             orden=orden,
         )
         item.subtotal = calcular_subtotal(item)
@@ -131,8 +134,10 @@ def crear_desde_solicitud(db: Session, solicitud: SolicitudCompras) -> Presupues
             descripcion=it.descripcion,
             cantidad=Decimal(str(it.cantidad or 1)),
             precio_unitario=Decimal(str(it.precio_unitario or 0)),
+            iva=Decimal(str(it.iva)) if it.iva is not None else None,
             sku=it.sku,
             fabricante=it.fabricante,
+            observaciones=it.observaciones,
         )
         for it in draft.items
     ]
@@ -218,83 +223,189 @@ def _fmt_money(valor: Decimal | None, moneda: str) -> str:
     return f"{moneda} {entero},{dec}"
 
 
+_LOGO_PATH = Path(__file__).resolve().parent.parent / "assets" / "logo.png"
+
+
+def _logo_data_uri() -> str | None:
+    """Logo de la empresa como data URI (para embeberlo en el PDF)."""
+    try:
+        data = _LOGO_PATH.read_bytes()
+    except OSError:
+        return None
+    return f"data:image/png;base64,{base64.b64encode(data).decode()}"
+
+
+def _fmt_forma_pago(valor: str | None) -> str | None:
+    """'30' -> '30 días'; 'Transferencia' -> 'Transferencia'."""
+    if not valor:
+        return None
+    v = valor.strip()
+    return f"{v} días" if v.isdigit() else v
+
+
 def _render_html(presupuesto: Presupuesto) -> str:
     op = presupuesto.oportunidad
-    cliente = op.cliente.razon_social if op and op.cliente else "—"
+    cli = op.cliente if op else None
+    vend = op.vendedor if op else None
+    contacto = op.contacto if op else None
     moneda = presupuesto.moneda or "USD"
+
+    esc = html.escape
+    empresa = esc(settings.EMPRESA_NOMBRE)
+    logo = _logo_data_uri()
+    logo_html = f"<img class='logo' src='{logo}' alt='logo'/>" if logo else ""
+
+    # "13175-LACAU Y CIA. S.A." (número de cliente + razón social).
+    if cli and cli.numero_cliente:
+        cliente_nombre = f"{cli.numero_cliente}-{cli.razon_social}"
+    else:
+        cliente_nombre = cli.razon_social if cli else "—"
 
     filas = "".join(
         f"<tr>"
-        f"<td>{html.escape(it.fabricante or '')}</td>"
-        f"<td>{html.escape(it.sku or '')}</td>"
-        f"<td>{html.escape(it.descripcion)}</td>"
+        f"<td>{esc(it.sku or '')}</td>"
+        f"<td>{esc(it.descripcion)}</td>"
         f"<td class='num'>{_q(it.cantidad):g}</td>"
-        f"<td class='num'>{_fmt_money(it.precio_unitario, moneda)}</td>"
         f"<td class='num'>{_q(it.descuento_pct):g}%</td>"
+        f"<td class='num'>{_fmt_money(it.precio_unitario, moneda)}</td>"
+        f"<td class='num'>{(f'{_q(it.iva):g}%' if it.iva is not None else '')}</td>"
         f"<td class='num'>{_fmt_money(it.subtotal, moneda)}</td>"
         f"</tr>"
         for it in presupuesto.items
     )
 
-    def dato(label: str, valor: str | None) -> str:
-        return f"<p><strong>{label}:</strong> {html.escape(valor)}</p>" if valor else ""
+    # Totales: el neto (suma de subtotales) + el IVA calculado por línea.
+    neto = _q(presupuesto.monto_total or 0)
+    iva_total = Decimal(0)
+    for it in presupuesto.items:
+        if it.iva:
+            iva_total += _q(it.subtotal) * (_q(it.iva) / Decimal(100))
+    iva_total = _q(iva_total)
+    total = _q(neto + iva_total)
+
+    def fila_dato(label: str, valor: str | None) -> str:
+        return (
+            f"<tr><td class='lbl'>{esc(label)}</td>"
+            f"<td>{esc(valor or '')}</td></tr>"
+        )
+
+    izq = "".join(
+        [
+            fila_dato("Cliente", cliente_nombre),
+            fila_dato("Dirección", cli.direccion_facturacion if cli else None),
+            fila_dato("Teléfono", cli.telefono if cli else None),
+            fila_dato("C.U.I.T", cli.cuit if cli else None),
+            fila_dato("Forma de Pago", _fmt_forma_pago(presupuesto.condicion_pago)),
+        ]
+    )
+    derecha = "".join(
+        [
+            fila_dato("Fecha", now_utc().strftime("%d/%m/%Y")),
+            fila_dato("Vendedor", vend.nombre if vend else None),
+            fila_dato("e-mail", contacto.email if contacto else None),
+            fila_dato("Plazo de entrega", presupuesto.plazo_entrega),
+            fila_dato("Validez", presupuesto.validez),
+        ]
+    )
+
+    obs = [it.observaciones for it in presupuesto.items if it.observaciones]
+    obs_html = (
+        "".join(f"<p>{esc(o)}</p>" for o in obs)
+        if obs
+        else "<p class='muted'>—</p>"
+    )
 
     sub_partes = [
-        settings.EMPRESA_CUIT,
         settings.EMPRESA_DIRECCION,
         settings.EMPRESA_TELEFONO,
-        settings.EMPRESA_EMAIL,
+        settings.EMPRESA_CUIT,
     ]
-    sub_line = html.escape(" · ".join(v for v in sub_partes if v))
+    sub_line = esc(" · ".join(v for v in sub_partes if v))
 
     return f"""<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><style>
-  @page {{ size: A4; margin: 2cm; }}
-  body {{ font-family: Helvetica, Arial, sans-serif; color: #1e293b; font-size: 12px; }}
-  .header {{ border-bottom: 3px solid #1d4ed8; padding-bottom: 10px; margin-bottom: 18px; }}
-  .header h1 {{ color: #1d4ed8; margin: 0; font-size: 22px; }}
-  .header .sub {{ color: #64748b; font-size: 11px; margin-top: 2px; }}
-  .meta {{ display: flex; justify-content: space-between; margin-bottom: 16px; }}
-  .meta .box p {{ margin: 2px 0; }}
-  .codigo {{ text-align: right; }}
-  .codigo .big {{ font-size: 16px; font-weight: bold; color: #1d4ed8; }}
-  table {{ width: 100%; border-collapse: collapse; margin-top: 8px; }}
-  th {{ background: #1d4ed8; color: #fff; text-align: left; padding: 6px 8px; font-size: 11px; }}
-  td {{ padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }}
-  td.num, th.num {{ text-align: right; }}
-  .total {{ text-align: right; margin-top: 12px; font-size: 15px; font-weight: bold; }}
-  .cond {{ margin-top: 20px; color: #334155; }}
-  .foot {{ margin-top: 40px; color: #94a3b8; font-size: 10px; text-align: center; }}
+  @page {{ size: A4; margin: 1.4cm; }}
+  body {{ font-family: Helvetica, Arial, sans-serif; color: #111827; font-size: 11px; }}
+  .top {{ display: flex; justify-content: space-between; align-items: flex-start;
+          border-bottom: 2px solid #111827; padding-bottom: 8px; }}
+  .top h1 {{ margin: 0; font-size: 18px; }}
+  .top .sub {{ color: #4b5563; font-size: 10px; margin-top: 3px; line-height: 1.5; }}
+  .top .right {{ text-align: right; }}
+  .top .logo {{ height: 32px; margin-bottom: 4px; }}
+  .aviso {{ font-weight: bold; font-size: 10px; }}
+  .prep {{ color: #374151; font-weight: bold; font-size: 12px; margin-top: 4px; }}
+  .titulo {{ display: flex; justify-content: space-between; align-items: baseline;
+             margin: 12px 0 8px; }}
+  .titulo .cod {{ font-size: 15px; font-weight: bold; }}
+  .datos {{ width: 100%; border-collapse: collapse; margin-bottom: 10px; }}
+  .datos td {{ vertical-align: top; padding: 0; }}
+  .datos .col {{ width: 50%; }}
+  .datos table {{ width: 100%; border-collapse: collapse; }}
+  .datos .lbl {{ font-weight: bold; width: 42%; padding: 1px 6px 1px 0; }}
+  .datos td td {{ padding: 1px 0; }}
+  table.items {{ width: 100%; border-collapse: collapse; margin-top: 4px; }}
+  table.items th {{ background: #e5e7eb; color: #111827; text-align: left;
+                    padding: 5px 6px; font-size: 10px; border-bottom: 1px solid #9ca3af; }}
+  table.items td {{ padding: 5px 6px; border-bottom: 1px solid #e5e7eb; }}
+  table.items .num {{ text-align: right; }}
+  .resumen {{ width: 42%; margin-left: auto; margin-top: 10px; border-collapse: collapse; }}
+  .resumen td {{ padding: 3px 6px; }}
+  .resumen .lbl {{ font-weight: bold; }}
+  .resumen .num {{ text-align: right; }}
+  .resumen .tot td {{ border-top: 1.5px solid #111827; font-size: 13px; font-weight: bold; }}
+  .barra {{ background: #e5e7eb; font-weight: bold; padding: 4px 6px; margin: 16px 0 6px; }}
+  .firmas {{ margin-top: 24px; color: #374151; line-height: 2.2; }}
+  .muted {{ color: #9ca3af; }}
+  .foot {{ margin-top: 28px; color: #9ca3af; font-size: 9px; text-align: center; }}
 </style></head><body>
-  <div class="header">
-    <h1>{html.escape(settings.EMPRESA_NOMBRE)}</h1>
-    <div class="sub">{sub_line}</div>
-  </div>
-  <div class="meta">
-    <div class="box">
-      <p><strong>Cliente:</strong> {html.escape(cliente)}</p>
-      <p><strong>Fecha:</strong> {now_utc().strftime('%d/%m/%Y')}</p>
+  <div class="top">
+    <div>
+      <h1>{empresa}</h1>
+      <div class="sub">{sub_line}</div>
     </div>
-    <div class="box codigo">
-      <p class="big">PRESUPUESTO {html.escape(presupuesto.codigo)}</p>
-      <p>Versión {presupuesto.version}</p>
+    <div class="right">
+      {logo_html}
+      <div class="aviso">Documento no válido como Factura</div>
+      <div class="prep">EN PREPARACIÓN</div>
     </div>
   </div>
-  <table>
+
+  <div class="titulo">
+    <span class="cod">Presupuesto&nbsp;&nbsp;# {esc(presupuesto.codigo)}</span>
+    <span>Documento a Emitir: Presupuesto {esc(moneda)}</span>
+  </div>
+
+  <table class="datos"><tr>
+    <td class="col"><table>{izq}</table></td>
+    <td class="col"><table>{derecha}</table></td>
+  </tr></table>
+
+  <table class="items">
     <thead><tr>
-      <th>Fabricante</th><th>SKU</th><th>Descripción</th>
-      <th class="num">Cant.</th><th class="num">P. unit.</th>
-      <th class="num">Desc.</th><th class="num">Subtotal</th>
+      <th>Código</th><th>Descripción</th>
+      <th class="num">Cantidad</th><th class="num">Descuento</th>
+      <th class="num">Precio</th><th class="num">IVA</th>
+      <th class="num">Subtotal</th>
     </tr></thead>
     <tbody>{filas or '<tr><td colspan="7">Sin ítems.</td></tr>'}</tbody>
   </table>
-  <p class="total">Total: {_fmt_money(presupuesto.monto_total, moneda)}</p>
-  <div class="cond">
-    {dato("Condición de pago", presupuesto.condicion_pago)}
-    {dato("Plazo de entrega", presupuesto.plazo_entrega)}
-    {dato("Validez de la oferta", presupuesto.validez)}
+
+  <table class="resumen">
+    <tr><td class="lbl">SubTotal</td><td class="num">{_fmt_money(neto, moneda)}</td></tr>
+    <tr><td class="lbl">IVA</td><td class="num">{_fmt_money(iva_total, moneda)}</td></tr>
+    <tr class="tot"><td>Total</td><td class="num">{_fmt_money(total, moneda)}</td></tr>
+  </table>
+
+  <div class="barra">Observaciones</div>
+  {obs_html}
+
+  <div class="firmas">
+    Preparó: ...................................&nbsp;&nbsp;&nbsp;Fecha: ...................<br/>
+    Autorizó: ..................................&nbsp;&nbsp;&nbsp;Fecha: ...................<br/>
+    Cantidad de Bultos: ...................
   </div>
-  <div class="foot">Documento generado por el CRM de {html.escape(settings.EMPRESA_NOMBRE)}.</div>
+
+  <div class="foot">Impreso el {now_utc().strftime('%d/%m/%Y')} &middot; {empresa}</div>
 </body></html>"""
 
 

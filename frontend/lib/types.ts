@@ -399,9 +399,11 @@ export interface PresupuestoItem {
   cantidad: number;
   precio_unitario: number;
   descuento_pct: number;
+  iva: number | null;
   subtotal: number;
   sku: string | null;
   fabricante: string | null;
+  observaciones: string | null;
   orden: number;
 }
 
@@ -430,8 +432,10 @@ export type ItemInput = {
   cantidad: number;
   precio_unitario: number;
   descuento_pct?: number;
+  iva?: number | null;
   sku?: string | null;
   fabricante?: string | null;
+  observaciones?: string | null;
 };
 
 export type PresupuestoCreate = {
