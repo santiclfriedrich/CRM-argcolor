@@ -447,9 +447,9 @@ def test_flujo_multimodal_pasa_imagen_a_ia_y_guarda_adjunto(
     assert len(ai.images_recibidas) == 1
     assert ai.images_recibidas[0].mime_type == "image/jpeg"
 
-    # Se guardó el adjunto (fila + archivo en disco).
+    # Se guardó el adjunto (fila + archivo en el storage; path_storage es la key).
     adj = db.scalars(select(AdjuntoModel).where(AdjuntoModel.mail_id == mail.id)).first()
     assert adj is not None and adj.nombre_archivo == "toner.jpg"
-    from pathlib import Path
+    from app.services.storage import get_storage
 
-    assert Path(adj.path_storage).exists()
+    assert get_storage().exists(adj.path_storage)

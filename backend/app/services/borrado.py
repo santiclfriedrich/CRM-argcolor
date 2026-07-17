@@ -4,8 +4,6 @@ Centraliza la lógica de eliminación para que borrar un cliente arrastre sus
 oportunidades (y todo lo que cuelga de ellas) igual que el borrado individual.
 """
 
-from pathlib import Path
-
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
@@ -22,6 +20,7 @@ from app.db.models.recordatorios import Recordatorio
 from app.db.models.respuestas_compras import RespuestaCompras
 from app.db.models.solicitudes_compras import SolicitudCompras
 from app.db.models.tareas import Tarea
+from app.services.storage import get_storage
 
 
 def eliminar_oportunidades(db: Session, op_ids: list[int]) -> None:
@@ -33,9 +32,13 @@ def eliminar_oportunidades(db: Session, op_ids: list[int]) -> None:
 
     mail_ids = list(db.scalars(select(Mail.id).where(Mail.oportunidad_id.in_(op_ids))))
     if mail_ids:
-        for path in db.scalars(select(Adjunto.path_storage).where(Adjunto.mail_id.in_(mail_ids))):
-            if path:
-                Path(path).unlink(missing_ok=True)
+        storage = get_storage()
+        for key in db.scalars(select(Adjunto.path_storage).where(Adjunto.mail_id.in_(mail_ids))):
+            if key:
+                try:
+                    storage.delete(key)
+                except OSError:
+                    pass
         db.execute(delete(Adjunto).where(Adjunto.mail_id.in_(mail_ids)))
 
     # Mails de Gmail: marcarlos como eliminados para que el poller no los re-ingiera.

@@ -58,8 +58,14 @@ class Settings(BaseSettings):
     # Si está seteado, se leen las casillas de todos los usuarios (impersonación).
     GMAIL_SERVICE_ACCOUNT_FILE: str = ""
 
-    # --- Almacenamiento de adjuntos (imágenes de mails) ---
+    # --- Almacenamiento de archivos (adjuntos y PDFs) ---
+    # "local" (dev, disco MEDIA_DIR) | "r2" (prod, Cloudflare R2 / S3).
+    STORAGE_BACKEND: str = "local"
     MEDIA_DIR: str = "media"
+    R2_ENDPOINT_URL: str = ""  # https://<accountid>.r2.cloudflarestorage.com
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: str = ""
+    R2_BUCKET: str = ""
 
     # --- Datos de la empresa (encabezado de los PDF de presupuesto) ---
     EMPRESA_NOMBRE: str = "ARG COLOR S.R.L."

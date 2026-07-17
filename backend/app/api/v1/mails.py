@@ -1,9 +1,6 @@
 """Bandeja inteligente: ingesta manual de mails y listado de procesados."""
 
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from fastapi.responses import FileResponse
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -33,6 +30,7 @@ from app.schemas.mail import (
 from app.services.acuse import send_aclaracion, send_acuse, send_respuesta
 from app.services.gmail_poller import poll_all_mailboxes
 from app.services.ingest import process_incoming_email
+from app.services.storage import get_storage
 
 router = APIRouter(prefix="/mails", tags=["bandeja"])
 
@@ -47,17 +45,21 @@ def get_adjunto(
     adjunto_id: int,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
-) -> FileResponse:
+) -> Response:
     """Sirve el archivo de un adjunto (imagen) para mostrarlo en la bandeja."""
     adjunto = db.get(Adjunto, adjunto_id)
-    if adjunto is None or not adjunto.path_storage or not Path(adjunto.path_storage).exists():
+    if adjunto is None or not adjunto.path_storage:
         raise NotFoundError("Adjunto no encontrado")
     if adjunto.mail is not None:
         _assert_owner(adjunto.mail, current_user)
-    return FileResponse(
-        adjunto.path_storage,
+    try:
+        data = get_storage().get(adjunto.path_storage)
+    except FileNotFoundError as exc:
+        raise NotFoundError("Adjunto no encontrado") from exc
+    return Response(
+        content=data,
         media_type=adjunto.mime_type or "application/octet-stream",
-        filename=adjunto.nombre_archivo,
+        headers={"Content-Disposition": f'inline; filename="{adjunto.nombre_archivo}"'},
     )
 
 

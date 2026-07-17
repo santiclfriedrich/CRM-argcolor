@@ -1,10 +1,8 @@
 """CRUD endpoints for oportunidades."""
 
 from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
-from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -27,6 +25,7 @@ from app.services.oportunidades import (
     guardar_adjuntos_oportunidad,
 )
 from app.services.solicitudes import sugerir_requerimiento
+from app.services.storage import get_storage
 
 router = APIRouter(prefix="/oportunidades", tags=["oportunidades"])
 
@@ -199,17 +198,22 @@ def descargar_adjunto_oportunidad(
     adjunto_id: int,
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
-) -> FileResponse:
+) -> Response:
     oportunidad = db.get(Oportunidad, oportunidad_id)
     if oportunidad is None:
         raise NotFoundError("Oportunidad no encontrada")
     meta = buscar_adjunto(oportunidad, adjunto_id)
-    if meta is None or not Path(meta.get("path", "")).is_file():
+    if meta is None or not meta.get("path"):
         raise NotFoundError("Adjunto no encontrado")
-    return FileResponse(
-        meta["path"],
+    try:
+        data = get_storage().get(meta["path"])
+    except FileNotFoundError as exc:
+        raise NotFoundError("Adjunto no encontrado") from exc
+    filename = meta.get("filename") or "adjunto"
+    return Response(
+        content=data,
         media_type=meta.get("mime_type") or "application/octet-stream",
-        filename=meta.get("filename"),
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
     )
 
 

@@ -25,6 +25,7 @@ from app.db.models.presupuestos import EstadoPresupuesto, Presupuesto
 from app.db.models.solicitudes_compras import SolicitudCompras
 from app.integrations.ai.base import QuoteDraft
 from app.schemas.presupuesto import ItemBase, PresupuestoCreate, PresupuestoUpdate
+from app.services.storage import get_storage
 
 
 def now_utc() -> datetime:
@@ -211,8 +212,8 @@ def _ensure_native_libs() -> None:
             )
 
 
-def _pdf_path(presupuesto: Presupuesto) -> Path:
-    return Path(settings.MEDIA_DIR) / "presupuestos" / f"{presupuesto.codigo}.pdf"
+def _pdf_key(presupuesto: Presupuesto) -> str:
+    return f"presupuestos/{presupuesto.codigo}.pdf"
 
 
 def _fmt_money(valor: Decimal | None, moneda: str) -> str:
@@ -441,8 +442,7 @@ def enviar_al_cliente(
     if not to or not to.strip():
         raise ValueError("No hay email del cliente para enviar el presupuesto.")
 
-    ruta = render_pdf(db, presupuesto)  # regenera con los datos actuales
-    contenido = ruta.read_bytes()
+    contenido = render_pdf(db, presupuesto)  # regenera con los datos actuales
 
     asunto = f"Presupuesto {presupuesto.codigo} — {settings.EMPRESA_NOMBRE}"
     cuerpo = mensaje.strip() if mensaje and mensaje.strip() else _cuerpo_mail(presupuesto)
@@ -484,8 +484,9 @@ def enviar_al_cliente(
     return presupuesto
 
 
-def render_pdf(db: Session, presupuesto: Presupuesto) -> Path:
-    """Genera (o regenera) el PDF del presupuesto y devuelve su ruta."""
+def render_pdf(db: Session, presupuesto: Presupuesto) -> bytes:
+    """Genera (o regenera) el PDF del presupuesto, lo guarda en el storage y
+    devuelve sus bytes."""
     _ensure_native_libs()
     try:
         from weasyprint import HTML
@@ -495,10 +496,9 @@ def render_pdf(db: Session, presupuesto: Presupuesto) -> Path:
             "'brew install pango'."
         ) from exc
 
-    destino = _pdf_path(presupuesto)
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    HTML(string=_render_html(presupuesto)).write_pdf(str(destino))
+    contenido: bytes = HTML(string=_render_html(presupuesto)).write_pdf()
+    get_storage().put(_pdf_key(presupuesto), contenido, "application/pdf")
 
     presupuesto.pdf_url = f"/api/v1/presupuestos/{presupuesto.id}/pdf"
     db.commit()
-    return destino
+    return contenido

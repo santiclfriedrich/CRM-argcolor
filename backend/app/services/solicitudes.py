@@ -6,16 +6,15 @@
 
 import re
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Protocol
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.db.models.configuracion import Configuracion
 from app.db.models.mails import DireccionMail, Mail
 from app.db.models.solicitudes_compras import EstadoSolicitud, SolicitudCompras
+from app.services.storage import get_storage
 
 _SAFE = re.compile(r"[^A-Za-z0-9._-]+")
 
@@ -26,19 +25,18 @@ def guardar_adjuntos_solicitud(
     """Guarda los archivos en MEDIA_DIR/solicitudes/<id>/ y los agrega a
     `archivos_adjuntos`. `archivos`: [{filename, mime_type, data}]. Devuelve la
     lista completa de adjuntos de la solicitud."""
-    dest = Path(settings.MEDIA_DIR) / "solicitudes" / str(solicitud.id)
-    dest.mkdir(parents=True, exist_ok=True)
+    storage = get_storage()
     metas = list(solicitud.archivos_adjuntos or [])
     base = len(metas)
     for idx, f in enumerate(archivos, start=base):
         nombre = _SAFE.sub("_", f.get("filename") or "archivo").strip("_") or "archivo"
-        ruta = dest / f"{idx}_{nombre}"
-        ruta.write_bytes(f["data"])
+        key = f"solicitudes/{solicitud.id}/{idx}_{nombre}"
+        storage.put(key, f["data"], f.get("mime_type"))
         metas.append(
             {
                 "filename": f.get("filename") or nombre,
                 "mime_type": f.get("mime_type") or "application/octet-stream",
-                "path": str(ruta),
+                "path": key,
             }
         )
     solicitud.archivos_adjuntos = metas  # reasignar dispara el UPDATE del JSONB
@@ -173,17 +171,22 @@ def build_email_preview(solicitud: SolicitudCompras, db: Session) -> dict:
 
 
 def _cargar_adjuntos(solicitud: SolicitudCompras) -> list[dict]:
-    """Lee del disco los adjuntos de la solicitud y los deja listos para Gmail
+    """Lee del storage los adjuntos de la solicitud y los deja listos para Gmail
     ([{filename, content, mime}]). Ignora los que ya no existan."""
+    storage = get_storage()
     adjuntos: list[dict] = []
     for meta in solicitud.archivos_adjuntos or []:
-        ruta = Path(meta.get("path", ""))
-        if not ruta.is_file():
+        key = meta.get("path")
+        if not key:
+            continue
+        try:
+            content = storage.get(key)
+        except FileNotFoundError:
             continue
         adjuntos.append(
             {
-                "filename": meta.get("filename") or ruta.name,
-                "content": ruta.read_bytes(),
+                "filename": meta.get("filename") or "adjunto",
+                "content": content,
                 "mime": meta.get("mime_type") or "application/octet-stream",
             }
         )

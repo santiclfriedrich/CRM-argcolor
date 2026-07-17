@@ -1,9 +1,6 @@
 """Presupuestos: armador de cotizaciones y generación del PDF."""
 
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -195,16 +192,18 @@ def descargar_pdf(
     presupuesto_id: int,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
-) -> FileResponse:
+) -> Response:
     """Genera el PDF con los datos actuales y lo devuelve para descargar/ver."""
     presupuesto = _get_loaded(db, presupuesto_id)
     _assert_owner(presupuesto, current_user)
     try:
-        ruta: Path = render_pdf(db, presupuesto)
+        contenido = render_pdf(db, presupuesto)
     except RuntimeError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
         ) from exc
-    return FileResponse(
-        str(ruta), media_type="application/pdf", filename=f"{presupuesto.codigo}.pdf"
+    return Response(
+        content=contenido,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{presupuesto.codigo}.pdf"'},
     )
