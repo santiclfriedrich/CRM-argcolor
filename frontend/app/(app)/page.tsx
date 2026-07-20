@@ -319,7 +319,7 @@ function TareasDeHoy() {
       )}
 
       <div className="mt-3 border-t border-line pt-3 text-center">
-        <Link href="/tareas" className="text-sm font-semibold text-accent hover:underline">
+        <Link href="/tareas" className="inline-flex items-center justify-center rounded-lg border border-line px-5 py-2 text-sm font-semibold text-accent transition hover:bg-surface2">
           Ver todas
         </Link>
       </div>
@@ -382,7 +382,7 @@ function DashCard({
       <div className="mt-4 border-t border-line pt-3 text-center">
         <Link
           href={href}
-          className="text-sm font-semibold text-accent hover:underline"
+          className="inline-flex items-center justify-center rounded-lg border border-line px-5 py-2 text-sm font-semibold text-accent transition hover:bg-surface2"
         >
           {hrefLabel}
         </Link>
@@ -617,7 +617,7 @@ function RegistrosRecientes() {
       <div className="mt-3 border-t border-line pt-3 text-center">
         <Link
           href="/recientes"
-          className="text-sm font-semibold text-accent hover:underline"
+          className="inline-flex items-center justify-center rounded-lg border border-line px-5 py-2 text-sm font-semibold text-accent transition hover:bg-surface2"
         >
           Ver todos
         </Link>
