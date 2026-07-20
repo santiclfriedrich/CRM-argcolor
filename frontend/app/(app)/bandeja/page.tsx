@@ -15,6 +15,7 @@ import { useEffect, useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
@@ -442,9 +443,16 @@ function EliminarButton({
   cliente?: string;
 }) {
   const deleteMut = useDeleteOportunidad();
-  const eliminar = () => {
+  const confirm = useConfirm();
+  const eliminar = async () => {
     const quien = cliente ?? `#${oportunidadId}`;
-    if (window.confirm(`¿Eliminar la oportunidad de ${quien} y este mail? No se puede deshacer.`)) {
+    if (
+      await confirm({
+        title: "Eliminar oportunidad",
+        message: `¿Eliminar la oportunidad de ${quien} y este mail? No se puede deshacer.`,
+        danger: true,
+      })
+    ) {
       deleteMut.mutate(oportunidadId);
     }
   };

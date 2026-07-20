@@ -8,6 +8,7 @@ import { useState } from "react";
 import { SolicitudForm } from "@/components/solicitudes/solicitud-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { useCrearDesdeSolicitud } from "@/lib/presupuestos";
@@ -137,6 +138,7 @@ export default function SolicitudesPage() {
 function SolicitudDetailModal({ id, onClose }: { id: number; onClose: () => void }) {
   const { data: solicitud, isLoading } = useSolicitud(id);
   const updateMut = useUpdateSolicitud(id);
+  const confirm = useConfirm();
 
   const setEstado = (estado: EstadoSolicitud) => updateMut.mutate({ estado });
 
@@ -160,11 +162,14 @@ function SolicitudDetailModal({ id, onClose }: { id: number; onClose: () => void
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => {
+                  onClick={async () => {
                     if (
-                      window.confirm(
-                        "Marcar la solicitud como cerrada. Dejará de recibir la respuesta de Compras automáticamente. ¿Continuar?",
-                      )
+                      await confirm({
+                        message:
+                          "Marcar la solicitud como cerrada. Dejará de recibir la respuesta de Compras automáticamente. ¿Continuar?",
+                        danger: true,
+                        title: "Cerrar solicitud",
+                      })
                     ) {
                       setEstado("cerrada");
                     }

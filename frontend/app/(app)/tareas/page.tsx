@@ -6,6 +6,7 @@ import { useState } from "react";
 import { TareaModal } from "@/components/tareas/tarea-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   estaVencidaTarea,
   PRIORIDAD_META,
@@ -144,9 +145,11 @@ export default function TareasPage() {
 function DetalleTarea({ tarea, onModificar }: { tarea: Tarea; onModificar: () => void }) {
   const actualizar = useUpdateTarea();
   const borrar = useDeleteTarea();
+  const confirm = useConfirm();
 
-  const eliminar = () => {
-    if (window.confirm(`¿Eliminar la tarea "${tarea.titulo}"?`)) borrar.mutate(tarea.id);
+  const eliminar = async () => {
+    if (await confirm({ title: "Eliminar tarea", message: `¿Eliminar la tarea "${tarea.titulo}"?`, danger: true }))
+      borrar.mutate(tarea.id);
   };
   const toggle = () =>
     actualizar.mutate({ id: tarea.id, body: { completada: !tarea.completada } });

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider, useSession } from "next-auth/react";
 import { useState, type ReactNode } from "react";
 
+import { ConfirmProvider } from "@/components/ui/confirm-dialog";
 import { setAuthToken } from "@/lib/api";
 
 // Sincroniza el JWT del backend (guardado en la sesión) con axios.
@@ -22,7 +23,9 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <SessionProvider>
       <QueryClientProvider client={queryClient}>
-        <ApiTokenSync>{children}</ApiTokenSync>
+        <ApiTokenSync>
+          <ConfirmProvider>{children}</ConfirmProvider>
+        </ApiTokenSync>
       </QueryClientProvider>
     </SessionProvider>
   );

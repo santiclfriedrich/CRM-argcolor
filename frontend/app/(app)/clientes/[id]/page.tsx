@@ -11,6 +11,7 @@ import { DominiosSection } from "@/components/clientes/dominios-section";
 import { TareaModal } from "@/components/tareas/tarea-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useCliente, useDeleteCliente, useUpdateCliente } from "@/lib/clientes";
 import { ESTADO_META, useOportunidades } from "@/lib/oportunidades";
 import { fmtMonto } from "@/lib/presupuestos";
@@ -29,6 +30,7 @@ export default function ClienteDetailPage() {
   const { data: oportunidades } = useOportunidades({ cliente_id: clienteId });
   const { data: misTareas } = useTareas();
   const [editarTarea, setEditarTarea] = useState<Tarea | null>(null);
+  const confirm = useConfirm();
 
   if (isLoading) return <p className="text-ink-2">Cargando…</p>;
   if (isError || !cliente) return <p className="text-red-600">No se pudo cargar la cuenta.</p>;
@@ -36,12 +38,15 @@ export default function ClienteDetailPage() {
   const opps = oportunidades ?? [];
   const tareas = (misTareas ?? []).filter((t) => t.cliente_id === clienteId);
 
-  const eliminar = () => {
+  const eliminar = async () => {
     if (
-      window.confirm(
-        `¿Eliminar la cuenta "${cliente.razon_social}"?\n\nSe borran también sus contactos, ` +
-          `dominios y oportunidades (con mails, presupuestos y solicitudes). No se puede deshacer.`
-      )
+      await confirm({
+        message:
+          `¿Eliminar la cuenta "${cliente.razon_social}"?\n\nSe borran también sus contactos, ` +
+          `dominios y oportunidades (con mails, presupuestos y solicitudes). No se puede deshacer.`,
+        danger: true,
+        title: "Eliminar cuenta",
+      })
     ) {
       deleteMut.mutate(clienteId, { onSuccess: () => router.push("/clientes") });
     }

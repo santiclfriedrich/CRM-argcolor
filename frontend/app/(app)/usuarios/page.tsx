@@ -7,6 +7,7 @@ import { useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,6 +42,7 @@ export default function UsuariosPage() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Usuario | null>(null);
   const deleteMut = useDeleteUsuario();
+  const confirm = useConfirm();
 
   if (!esAdmin) {
     return (
@@ -53,8 +55,8 @@ export default function UsuariosPage() {
     );
   }
 
-  const eliminar = (u: Usuario) => {
-    if (!window.confirm(`¿Eliminar a ${u.nombre} (${u.email})?`)) return;
+  const eliminar = async (u: Usuario) => {
+    if (!(await confirm({ title: "Eliminar usuario", message: `¿Eliminar a ${u.nombre} (${u.email})?`, danger: true }))) return;
     deleteMut.mutate(u.id, {
       onError: (err) =>
         window.alert(

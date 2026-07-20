@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
@@ -43,6 +44,7 @@ export function TareaModal({ open, onClose, tarea, fechaPorDefecto }: Props) {
   const crear = useCreateTarea();
   const actualizar = useUpdateTarea();
   const borrar = useDeleteTarea();
+  const confirm = useConfirm();
 
   const { data: clientes } = useClientes();
   const { data: oportunidades } = useOportunidades();
@@ -90,8 +92,8 @@ export function TareaModal({ open, onClose, tarea, fechaPorDefecto }: Props) {
     }
   };
 
-  const eliminar = () => {
-    if (tarea && window.confirm("¿Eliminar esta tarea?")) {
+  const eliminar = async () => {
+    if (tarea && (await confirm({ message: "¿Eliminar esta tarea?", danger: true, title: "Eliminar tarea" }))) {
       borrar.mutate(tarea.id, { onSuccess: onClose });
     }
   };

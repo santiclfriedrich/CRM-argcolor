@@ -31,6 +31,7 @@ import { OportunidadForm } from "@/components/oportunidades/oportunidad-form";
 import { SolicitudForm } from "@/components/solicitudes/solicitud-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import {
@@ -399,6 +400,7 @@ export default function OportunidadesPage() {
   const deleteMut = useDeleteOportunidad();
   const crearPresupuesto = useCreatePresupuesto();
   const toggleGbp = useToggleCargadaGbp();
+  const confirm = useConfirm();
 
   // Links viejos con ?op=ID redirigen a la página de detalle.
   useEffect(() => {
@@ -494,9 +496,15 @@ export default function OportunidadesPage() {
     </th>
   );
 
-  const eliminar = (o: Oportunidad) => {
+  const eliminar = async (o: Oportunidad) => {
     const quien = o.cliente?.razon_social ?? `#${o.id}`;
-    if (window.confirm(`¿Eliminar la oportunidad de ${quien}? Esta acción no se puede deshacer.`)) {
+    if (
+      await confirm({
+        title: "Eliminar oportunidad",
+        message: `¿Eliminar la oportunidad de ${quien}? Esta acción no se puede deshacer.`,
+        danger: true,
+      })
+    ) {
       deleteMut.mutate(o.id);
     }
   };

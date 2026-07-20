@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   abrirPdf,
@@ -18,9 +19,16 @@ import type { Presupuesto } from "@/lib/types";
 export default function PresupuestosPage() {
   const { data, isLoading, isError } = usePresupuestos();
   const deleteMut = useDeletePresupuesto();
+  const confirm = useConfirm();
 
-  const eliminar = (p: Presupuesto) => {
-    if (window.confirm(`¿Eliminar el presupuesto ${p.codigo}? No se puede deshacer.`)) {
+  const eliminar = async (p: Presupuesto) => {
+    if (
+      await confirm({
+        title: "Eliminar presupuesto",
+        message: `¿Eliminar el presupuesto ${p.codigo}? No se puede deshacer.`,
+        danger: true,
+      })
+    ) {
       deleteMut.mutate(p.id);
     }
   };

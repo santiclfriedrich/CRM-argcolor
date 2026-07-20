@@ -19,6 +19,7 @@ import { useState, type FormEvent } from "react";
 import { OportunidadForm } from "@/components/oportunidades/oportunidad-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useMails } from "@/lib/mails";
 import {
@@ -43,6 +44,7 @@ export default function OportunidadDetallePage() {
   const { data: o, isLoading, isError } = useOportunidad(id);
   const updateMut = useUpdateOportunidad(id);
   const deleteMut = useDeleteOportunidad();
+  const confirm = useConfirm();
 
   if (isLoading) return <p className="text-ink-2">Cargando…</p>;
   if (isError || !o) {
@@ -56,12 +58,15 @@ export default function OportunidadDetallePage() {
 
   const cliente = o.cliente?.razon_social ?? `#${o.id}`;
 
-  const eliminar = () => {
+  const eliminar = async () => {
     if (
-      window.confirm(
-        `¿Eliminar la oportunidad de ${cliente}? Se borra todo lo asociado (mails, ` +
+      await confirm({
+        title: "Eliminar oportunidad",
+        message:
+          `¿Eliminar la oportunidad de ${cliente}? Se borra todo lo asociado (mails, ` +
           `solicitudes, presupuestos). No se puede deshacer.`,
-      )
+        danger: true,
+      })
     ) {
       deleteMut.mutate(o.id, { onSuccess: () => router.push("/oportunidades") });
     }
@@ -139,6 +144,7 @@ function Bitacora({
 }) {
   const comentarioMut = useAgregarComentario(id);
   const eliminarMut = useEliminarComentario(id);
+  const confirm = useConfirm();
   const [texto, setTexto] = useState("");
   // Guardamos el índice real en la lista para poder borrarlo (la vista está invertida).
   const ordenados = comentarios.map((c, i) => ({ ...c, indice: i })).reverse();
@@ -182,8 +188,14 @@ function Bitacora({
                   <span>{new Date(c.fecha).toLocaleString("es-AR")}</span>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (window.confirm("¿Eliminar este comentario?")) {
+                    onClick={async () => {
+                      if (
+                        await confirm({
+                          title: "Eliminar comentario",
+                          message: "¿Eliminar este comentario?",
+                          danger: true,
+                        })
+                      ) {
                         eliminarMut.mutate(c.indice);
                       }
                     }}
