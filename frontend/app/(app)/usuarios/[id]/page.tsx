@@ -43,11 +43,11 @@ export default function PerfilUsuarioPage() {
       <BackLink />
 
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+        <h1 className="text-2xl font-bold text-ink">
           {usuario?.nombre ?? "Cargando…"}
         </h1>
         {usuario && (
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-ink-2">
             {usuario.email} · {usuario.rol}
           </p>
         )}
@@ -90,7 +90,7 @@ export default function PerfilUsuarioPage() {
         vacio="Sin presupuestos."
         cabeceras={["Código", "Cliente", "Monto", "Estado"]}
         filas={(presupuestos.data ?? []).map((p) => [
-          <Link key="c" href={`/presupuestos/${p.id}`} className="font-medium text-brand hover:underline">
+          <Link key="c" href={`/presupuestos/${p.id}`} className="font-medium text-accent hover:underline">
             {p.codigo}
           </Link>,
           p.oportunidad?.cliente?.razon_social ?? "—",
@@ -108,7 +108,7 @@ function BackLink() {
   return (
     <Link
       href="/usuarios"
-      className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+      className="inline-flex items-center gap-1 text-sm text-ink-2 hover:text-ink"
     >
       <ArrowLeft size={15} /> Usuarios
     </Link>
@@ -133,16 +133,16 @@ function Section({
   return (
     <section>
       <div className="mb-2 flex items-baseline gap-2">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{titulo}</h2>
+        <h2 className="text-lg font-semibold text-ink">{titulo}</h2>
         {total != null && (
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          <span className="rounded-full bg-surface2 px-2 py-0.5 text-xs font-medium text-ink-2">
             {total}
           </span>
         )}
       </div>
-      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+      <div className="overflow-x-auto rounded-lg border border-line">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500 dark:bg-slate-800/40 dark:text-slate-400">
+          <thead className="bg-surface2 text-left text-xs uppercase text-ink-2">
             <tr>
               {cabeceras.map((c) => (
                 <th key={c} className="px-4 py-2 font-medium">{c}</th>
@@ -152,21 +152,21 @@ function Section({
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={cabeceras.length} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={cabeceras.length} className="px-4 py-6 text-center text-ink-3">
                   Cargando…
                 </td>
               </tr>
             ) : filas.length === 0 ? (
               <tr>
-                <td colSpan={cabeceras.length} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                <td colSpan={cabeceras.length} className="px-4 py-6 text-center text-ink-3">
                   {vacio}
                 </td>
               </tr>
             ) : (
               filas.map((fila, i) => (
-                <tr key={i} className="border-t border-slate-100 dark:border-slate-800">
+                <tr key={i} className="border-t border-line">
                   {fila.map((celda, j) => (
-                    <td key={j} className="px-4 py-2 text-slate-700 dark:text-slate-300">{celda}</td>
+                    <td key={j} className="px-4 py-2 text-ink-2">{celda}</td>
                   ))}
                 </tr>
               ))

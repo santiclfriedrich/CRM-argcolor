@@ -44,7 +44,7 @@ export default function OportunidadDetallePage() {
   const updateMut = useUpdateOportunidad(id);
   const deleteMut = useDeleteOportunidad();
 
-  if (isLoading) return <p className="text-slate-500 dark:text-slate-400">Cargando…</p>;
+  if (isLoading) return <p className="text-ink-2">Cargando…</p>;
   if (isError || !o) {
     return (
       <div className="space-y-4">
@@ -73,13 +73,13 @@ export default function OportunidadDetallePage() {
 
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {cliente} <span className="text-slate-400">· #{o.id}</span>
+          <h1 className="text-2xl font-bold text-ink">
+            {cliente} <span className="text-ink-3">· #{o.id}</span>
           </h1>
           <div className="mt-1 flex items-center gap-2">
             <Badge className={ESTADO_META[o.estado].color}>{ESTADO_META[o.estado].label}</Badge>
             {o.asunto && (
-              <span className="text-sm text-slate-500 dark:text-slate-400">{o.asunto}</span>
+              <span className="text-sm text-ink-2">{o.asunto}</span>
             )}
           </div>
         </div>
@@ -91,8 +91,8 @@ export default function OportunidadDetallePage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Columna principal: datos + bitácora */}
         <div className="space-y-6 lg:col-span-2">
-          <section className="rounded-lg border border-slate-200 p-5 dark:border-slate-800">
-            <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100">
+          <section className="rounded-lg border border-line p-5">
+            <h2 className="mb-4 text-lg font-semibold text-ink">
               Datos de la oportunidad
             </h2>
             <OportunidadForm
@@ -123,7 +123,7 @@ function BackLink() {
   return (
     <Link
       href="/oportunidades"
-      className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+      className="inline-flex items-center gap-1 text-sm text-ink-2 hover:text-ink"
     >
       <ArrowLeft size={15} /> Oportunidades
     </Link>
@@ -150,8 +150,8 @@ function Bitacora({
   };
 
   return (
-    <section className="rounded-lg border border-slate-200 p-5 dark:border-slate-800">
-      <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-slate-100">
+    <section className="rounded-lg border border-line p-5">
+      <h2 className="mb-3 text-lg font-semibold text-ink">
         Bitácora de seguimiento
       </h2>
       <form onSubmit={agregar} className="mb-3 flex items-start gap-2">
@@ -167,16 +167,16 @@ function Bitacora({
       </form>
       <div className="max-h-72 space-y-2 overflow-y-auto">
         {ordenados.length === 0 ? (
-          <p className="rounded-md border border-dashed border-slate-200 p-4 text-center text-xs text-slate-400 dark:border-slate-700 dark:text-slate-500">
+          <p className="rounded-md border border-dashed border-line p-4 text-center text-xs text-ink-3">
             Sin anotaciones todavía.
           </p>
         ) : (
           ordenados.map((c) => (
             <div
               key={c.indice}
-              className="group rounded-md border border-slate-200 bg-white p-2 text-sm dark:border-slate-800 dark:bg-slate-900"
+              className="group rounded-md border border-line bg-surface p-2 text-sm"
             >
-              <div className="mb-0.5 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+              <div className="mb-0.5 flex items-center justify-between text-[11px] text-ink-3">
                 <span>{c.autor ?? "—"}</span>
                 <div className="flex items-center gap-2">
                   <span>{new Date(c.fecha).toLocaleString("es-AR")}</span>
@@ -189,13 +189,13 @@ function Bitacora({
                     }}
                     disabled={eliminarMut.isPending}
                     aria-label="Eliminar comentario"
-                    className="text-slate-300 hover:text-red-600 dark:text-slate-600"
+                    className="text-ink-3 hover:text-red-600"
                   >
                     <X size={13} />
                   </button>
                 </div>
               </div>
-              <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-200">{c.texto}</p>
+              <p className="whitespace-pre-wrap text-ink">{c.texto}</p>
             </div>
           ))
         )}
@@ -220,34 +220,34 @@ function Adjuntos({
   };
 
   return (
-    <section className="rounded-lg border border-slate-200 p-5 dark:border-slate-800">
-      <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-slate-100">Adjuntos</h2>
+    <section className="rounded-lg border border-line p-5">
+      <h2 className="mb-3 text-lg font-semibold text-ink">Adjuntos</h2>
 
       {adjuntos.length === 0 ? (
-        <p className="mb-3 text-sm text-slate-400 dark:text-slate-500">Sin archivos adjuntos.</p>
+        <p className="mb-3 text-sm text-ink-3">Sin archivos adjuntos.</p>
       ) : (
         <ul className="mb-3 space-y-1">
           {adjuntos.map((a) => (
             <li
               key={a.id}
-              className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2.5 py-1.5 text-sm dark:bg-slate-800/50"
+              className="flex items-center justify-between gap-2 rounded-md bg-surface2 px-2.5 py-1.5 text-sm"
             >
               <button
                 type="button"
                 onClick={() => descargarAdjuntoOportunidad(oportunidad.id, a.id, a.filename)}
-                className="flex min-w-0 items-center gap-1.5 text-slate-700 hover:text-brand dark:text-slate-200"
+                className="flex min-w-0 items-center gap-1.5 text-ink hover:text-accent"
                 title="Descargar"
               >
                 <Paperclip size={13} className="shrink-0" />
                 <span className="truncate">{a.filename}</span>
-                <Download size={13} className="shrink-0 text-slate-400" />
+                <Download size={13} className="shrink-0 text-ink-3" />
               </button>
               <button
                 type="button"
                 onClick={() => eliminar.mutate(a.id)}
                 disabled={eliminar.isPending}
                 aria-label="Eliminar adjunto"
-                className="shrink-0 text-slate-400 hover:text-red-600"
+                className="shrink-0 text-ink-3 hover:text-red-600"
               >
                 <X size={15} />
               </button>
@@ -269,7 +269,7 @@ function Adjuntos({
           });
           e.target.value = "";
         }}
-        className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-300 dark:file:bg-slate-800 dark:file:text-slate-200"
+        className="block w-full text-sm text-ink-2 file:mr-3 file:rounded-md file:border-0 file:bg-surface2 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink hover:file:bg-surface2"
       />
       {files.length > 0 && (
         <>
@@ -277,13 +277,13 @@ function Adjuntos({
             {files.map((f, i) => (
               <li
                 key={i}
-                className="flex items-center justify-between rounded-md bg-slate-50 px-2.5 py-1 text-xs text-slate-600 dark:bg-slate-800/50 dark:text-slate-300"
+                className="flex items-center justify-between rounded-md bg-surface2 px-2.5 py-1 text-xs text-ink-2"
               >
                 <span className="truncate">{f.name}</span>
                 <button
                   type="button"
                   onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
-                  className="ml-2 shrink-0 text-slate-400 hover:text-red-600"
+                  className="ml-2 shrink-0 text-ink-3 hover:text-red-600"
                 >
                   Quitar
                 </button>
@@ -305,22 +305,22 @@ function Relacionados({ oportunidadId }: { oportunidadId: number }) {
   const mails = useMails(oportunidadId);
 
   return (
-    <section className="rounded-lg border border-slate-200 p-5 dark:border-slate-800">
-      <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-slate-100">Relacionados</h2>
+    <section className="rounded-lg border border-line p-5">
+      <h2 className="mb-3 text-lg font-semibold text-ink">Relacionados</h2>
       <div className="space-y-4">
         <SubSeccion titulo="Presupuestos" total={presupuestos.data?.length}>
           {(presupuestos.data ?? []).map((p) => (
             <Link
               key={p.id}
               href={`/presupuestos/${p.id}`}
-              className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2.5 py-1.5 text-sm hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+              className="flex items-center justify-between gap-2 rounded-md bg-surface2 px-2.5 py-1.5 text-sm hover:bg-surface2"
             >
-              <span className="flex items-center gap-1.5 truncate text-slate-700 dark:text-slate-200">
-                <FileText size={13} className="shrink-0 text-slate-400" />
+              <span className="flex items-center gap-1.5 truncate text-ink">
+                <FileText size={13} className="shrink-0 text-ink-3" />
                 {p.codigo}
               </span>
               <span className="flex shrink-0 items-center gap-2">
-                <span className="text-xs text-slate-500 dark:text-slate-400">
+                <span className="text-xs text-ink-2">
                   {fmtMonto(p.monto_total, p.moneda)}
                 </span>
                 <Badge className={ESTADO_PRESUPUESTO[p.estado].color}>
@@ -336,10 +336,10 @@ function Relacionados({ oportunidadId }: { oportunidadId: number }) {
             <Link
               key={s.id}
               href="/solicitudes"
-              className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2.5 py-1.5 text-sm hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800"
+              className="flex items-center justify-between gap-2 rounded-md bg-surface2 px-2.5 py-1.5 text-sm hover:bg-surface2"
             >
-              <span className="flex items-center gap-1.5 truncate text-slate-700 dark:text-slate-200">
-                <ClipboardList size={13} className="shrink-0 text-slate-400" />
+              <span className="flex items-center gap-1.5 truncate text-ink">
+                <ClipboardList size={13} className="shrink-0 text-ink-3" />
                 #{s.id} · {s.requerimiento}
               </span>
               <Badge className={ESTADO_SOLICITUD_META[s.estado].color}>
@@ -354,9 +354,9 @@ function Relacionados({ oportunidadId }: { oportunidadId: number }) {
             <Link
               key={m.id}
               href="/bandeja"
-              className="flex items-center gap-1.5 truncate rounded-md bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700 hover:bg-slate-100 dark:bg-slate-800/50 dark:text-slate-200 dark:hover:bg-slate-800"
+              className="flex items-center gap-1.5 truncate rounded-md bg-surface2 px-2.5 py-1.5 text-sm text-ink hover:bg-surface2"
             >
-              <Mail size={13} className="shrink-0 text-slate-400" />
+              <Mail size={13} className="shrink-0 text-ink-3" />
               <span className="truncate">{m.asunto || m.de || "(sin asunto)"}</span>
             </Link>
           ))}
@@ -379,15 +379,15 @@ function SubSeccion({
   return (
     <div>
       <div className="mb-1.5 flex items-baseline gap-2">
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{titulo}</h3>
+        <h3 className="text-sm font-semibold text-ink">{titulo}</h3>
         {total != null && (
-          <span className="rounded-full bg-slate-100 px-1.5 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+          <span className="rounded-full bg-surface2 px-1.5 text-xs font-medium text-ink-2">
             {total}
           </span>
         )}
       </div>
       {vacio ? (
-        <p className="text-xs text-slate-400 dark:text-slate-500">—</p>
+        <p className="text-xs text-ink-3">—</p>
       ) : (
         <div className="space-y-1">{children}</div>
       )}

@@ -48,15 +48,15 @@ export function ContactosSection({ clienteId, contactos }: Props) {
   return (
     <section>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Contactos</h2>
+        <h2 className="text-lg font-semibold text-ink">Contactos</h2>
         <Button size="sm" onClick={() => setCreating(true)}>
           <Plus size={16} /> Agregar
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+      <div className="overflow-hidden rounded-lg border border-line">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 dark:bg-slate-800/50 text-left text-slate-500 dark:text-slate-400">
+          <thead className="bg-surface2 text-left text-ink-2">
             <tr>
               <th className="px-3 py-2 font-medium">Nombre</th>
               <th className="px-3 py-2 font-medium">Email</th>
@@ -67,16 +67,16 @@ export function ContactosSection({ clienteId, contactos }: Props) {
           </thead>
           <tbody>
             {contactos.map((c) => (
-              <tr key={c.id} className="border-t border-slate-100 dark:border-slate-800">
+              <tr key={c.id} className="border-t border-line">
                 <td className="px-3 py-2">
-                  <span className="inline-flex items-center gap-1 font-medium text-slate-800 dark:text-slate-100">
+                  <span className="inline-flex items-center gap-1 font-medium text-ink">
                     {c.es_principal && <Star size={14} className="text-amber-500" fill="currentColor" />}
                     {c.nombre}
                   </span>
-                  {c.cargo && <span className="ml-1 text-xs text-slate-400 dark:text-slate-500">· {c.cargo}</span>}
+                  {c.cargo && <span className="ml-1 text-xs text-ink-3">· {c.cargo}</span>}
                 </td>
-                <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{c.email ?? "—"}</td>
-                <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{c.telefono ?? "—"}</td>
+                <td className="px-3 py-2 text-ink-2">{c.email ?? "—"}</td>
+                <td className="px-3 py-2 text-ink-2">{c.telefono ?? "—"}</td>
                 <td className="px-3 py-2">
                   <Badge>{c.rol_compra}</Badge>
                 </td>
@@ -103,7 +103,7 @@ export function ContactosSection({ clienteId, contactos }: Props) {
             ))}
             {contactos.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-slate-400 dark:text-slate-500">
+                <td colSpan={5} className="px-3 py-6 text-center text-ink-3">
                   Sin contactos cargados.
                 </td>
               </tr>
@@ -193,12 +193,12 @@ function ContactoForm({ initial, isPending, onSubmit, onCancel }: ContactoFormPr
           />
         </div>
       </div>
-      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+      <label className="flex items-center gap-2 text-sm text-ink">
         <input
           type="checkbox"
           checked={esPrincipal}
           onChange={(e) => setEsPrincipal(e.target.checked)}
-          className="h-4 w-4 rounded border-slate-300 dark:border-slate-700"
+          className="h-4 w-4 rounded border-line"
         />
         Contacto principal
       </label>

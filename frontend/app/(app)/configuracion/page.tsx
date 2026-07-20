@@ -19,16 +19,16 @@ export default function ConfiguracionPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Configuración</h1>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      <h1 className="text-2xl font-bold text-ink">Configuración</h1>
+      <p className="mt-1 text-sm text-ink-2">
         Automatización de las respuestas de la IA y destinatarios de Compras.
       </p>
 
-      {isLoading && <p className="mt-6 text-slate-500 dark:text-slate-400">Cargando…</p>}
+      {isLoading && <p className="mt-6 text-ink-2">Cargando…</p>}
       {isError && <p className="mt-6 text-red-600">No se pudo cargar la configuración.</p>}
 
       {data && (
-        <div className="mt-6 divide-y divide-slate-100 rounded-lg border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+        <div className="mt-6 divide-y divide-line rounded-lg border border-line">
           <Row
             titulo="Acuse de recibo automático"
             detalle="Cuando entra un pedido claro, el cliente recibe automáticamente un acuse de recibo."
@@ -79,19 +79,19 @@ function DestinatariosCompras() {
 
   return (
     <div className="mt-8">
-      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+      <h2 className="text-lg font-semibold text-ink">
         Destinatarios de Compras
       </h2>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      <p className="mt-1 text-sm text-ink-2">
         A quién se le envía el mail al pedir una cotización a Compras.
       </p>
 
       {isLoading ? (
-        <p className="mt-4 text-slate-500 dark:text-slate-400">Cargando…</p>
+        <p className="mt-4 text-ink-2">Cargando…</p>
       ) : (
         <form
           onSubmit={guardar}
-          className="mt-4 space-y-4 rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+          className="mt-4 space-y-4 rounded-lg border border-line p-4"
         >
           <div>
             <Label htmlFor="c-to">Email de Compras (principal) *</Label>
@@ -146,8 +146,8 @@ function Row({
   return (
     <div className="flex items-start justify-between gap-4 p-4">
       <div>
-        <p className="font-medium text-slate-800 dark:text-slate-100">{titulo}</p>
-        <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{detalle}</p>
+        <p className="font-medium text-ink">{titulo}</p>
+        <p className="mt-0.5 text-sm text-ink-2">{detalle}</p>
       </div>
       <Switch checked={checked} onCheckedChange={onChange} disabled={disabled} />
     </div>

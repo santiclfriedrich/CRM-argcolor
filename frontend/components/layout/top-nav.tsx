@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { signIn, signOut, useSession } from "next-auth/react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -54,19 +55,27 @@ export function TopNav() {
   const iniciales = nombre.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+    <header className="sticky top-0 z-30 border-b border-white/10 bg-navy">
       <div className="flex h-14 items-center gap-3 px-4">
         <button
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
-          className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 lg:hidden"
+          className="rounded-md p-1.5 text-white/70 transition hover:bg-white/10 lg:hidden"
           aria-label="Menú"
         >
           {menuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
 
-        <Link href="/" className="shrink-0 text-base font-bold text-brand dark:text-brand-light">
-          CRM ARG COLOR
+        <Link href="/" className="flex shrink-0 items-center" aria-label="Argentina Color - Inicio">
+          {/* Logo en blanco (monocromo) para que lea sobre el navbar navy. */}
+          <Image
+            src="/logo-largo.png"
+            alt="Argentina Color"
+            width={158}
+            height={28}
+            priority
+            className="h-7 w-auto brightness-0 invert"
+          />
         </Link>
 
         {/* Nav horizontal (desktop) */}
@@ -78,8 +87,8 @@ export function TopNav() {
               className={cn(
                 "flex h-14 items-center border-b-2 px-3 text-sm font-medium transition",
                 activo(href)
-                  ? "border-brand text-brand"
-                  : "border-transparent text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
+                  ? "border-white text-white"
+                  : "border-transparent text-white/60 hover:text-white"
               )}
             >
               {label}
@@ -99,7 +108,7 @@ export function TopNav() {
             <button
               type="button"
               onClick={() => setUserOpen((v) => !v)}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-sm font-bold text-white"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white"
               aria-label="Cuenta"
             >
               {iniciales || "U"}
@@ -113,8 +122,8 @@ export function TopNav() {
                   className="fixed inset-0 z-40 cursor-default"
                   onClick={() => setUserOpen(false)}
                 />
-                <div className="absolute right-0 top-10 z-50 w-56 rounded-lg border border-slate-200 bg-white p-3 shadow-lg dark:border-slate-700 dark:bg-slate-900">
-                  <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
+                <div className="absolute right-0 top-10 z-50 w-56 rounded-lg border border-line bg-surface p-3 shadow-lg">
+                  <p className="truncate text-sm font-medium text-ink">
                     {nombre}
                   </p>
                   {gmailConectado ? (
@@ -131,7 +140,7 @@ export function TopNav() {
                   )}
                   <button
                     onClick={() => signOut({ callbackUrl: "/login" })}
-                    className="mt-3 flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                    className="mt-3 flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-ink-2 transition hover:bg-surface2"
                   >
                     <LogOut size={16} /> Cerrar sesión
                   </button>
@@ -144,7 +153,7 @@ export function TopNav() {
 
       {/* Menú mobile desplegable */}
       {menuOpen && (
-        <div className="border-t border-slate-200 dark:border-slate-800 lg:hidden">
+        <div className="border-t border-line lg:hidden">
           <div className="p-3 sm:hidden">
             <GlobalSearch />
           </div>
@@ -157,8 +166,8 @@ export function TopNav() {
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition",
                   activo(href)
-                    ? "bg-brand text-white"
-                    : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                    ? "bg-white/15 text-white"
+                    : "text-white/70 hover:bg-white/10"
                 )}
               >
                 <Icon size={18} /> {label}

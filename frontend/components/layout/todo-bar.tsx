@@ -30,23 +30,23 @@ export function ToDoBar() {
     <div className="fixed bottom-0 left-0 z-40 w-full">
       {/* Panel expandible */}
       {open && (
-        <div className="max-h-[55vh] overflow-y-auto border-t border-slate-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.08)] dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center justify-between border-b border-slate-100 p-3 dark:border-slate-800">
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+        <div className="max-h-[55vh] overflow-y-auto border-t border-line bg-surface shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
+          <div className="flex items-center justify-between border-b border-line p-3">
+            <span className="text-sm font-semibold text-ink">
               Tareas pendientes
             </span>
             <button
               type="button"
               onClick={() => setCreando(true)}
-              className="flex h-9 items-center gap-1 rounded-md bg-brand px-3 text-sm font-semibold text-white"
+              className="flex h-9 items-center gap-1 rounded-md bg-navy px-3 text-sm font-semibold text-white hover:bg-navy-hover"
             >
               <Plus size={15} /> Nueva tarea
             </button>
           </div>
 
-          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+          <ul className="divide-y divide-line">
             {pendientes.length === 0 && (
-              <li className="px-4 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
+              <li className="px-4 py-6 text-center text-sm text-ink-3">
                 No hay tareas pendientes.
               </li>
             )}
@@ -56,7 +56,7 @@ export function ToDoBar() {
                   type="checkbox"
                   checked={t.completada}
                   onChange={() => updateMut.mutate({ id: t.id, body: { completada: true } })}
-                  className="h-4 w-4 shrink-0 cursor-pointer accent-brand"
+                  className="h-4 w-4 shrink-0 cursor-pointer accent-navy"
                   title="Marcar como hecha"
                 />
                 <span
@@ -68,11 +68,11 @@ export function ToDoBar() {
                   onClick={() => setEditar(t)}
                   className="min-w-0 flex-1 text-left"
                 >
-                  <span className="block truncate text-sm text-slate-800 hover:text-brand dark:text-slate-100">
+                  <span className="block truncate text-sm text-ink hover:text-accent">
                     {t.titulo}
                   </span>
                   {(t.cliente || t.oportunidad) && (
-                    <span className="block truncate text-xs text-slate-400 dark:text-slate-500">
+                    <span className="block truncate text-xs text-ink-3">
                       {t.cliente?.razon_social ?? t.oportunidad?.asunto}
                     </span>
                   )}
@@ -82,7 +82,7 @@ export function ToDoBar() {
                     className={`shrink-0 text-xs ${
                       estaVencidaTarea(t)
                         ? "font-semibold text-red-600"
-                        : "text-slate-400 dark:text-slate-500"
+                        : "text-ink-3"
                     }`}
                   >
                     {fmtDia(t.fecha_vencimiento)}
@@ -91,7 +91,7 @@ export function ToDoBar() {
                 <button
                   type="button"
                   onClick={() => deleteMut.mutate(t.id)}
-                  className="shrink-0 text-slate-300 hover:text-red-600 dark:text-slate-600"
+                  className="shrink-0 text-ink-3 hover:text-red-600"
                   aria-label="Eliminar tarea"
                 >
                   <Trash2 size={14} />
@@ -106,12 +106,12 @@ export function ToDoBar() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between border-t border-slate-200 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white dark:border-slate-700"
+        className="flex w-full items-center justify-between border-t border-line bg-navy px-4 py-2.5 text-sm font-semibold text-white"
       >
         <span className="flex items-center gap-2">
           <ListTodo size={16} /> To Do List
           {pendientes.length > 0 && (
-            <span className="rounded-full bg-brand px-2 py-0.5 text-xs text-white">
+            <span className="rounded-full bg-accent px-2 py-0.5 text-xs text-white">
               {pendientes.length}
             </span>
           )}

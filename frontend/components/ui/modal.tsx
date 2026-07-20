@@ -39,19 +39,19 @@ export function Modal({ open, onClose, title, children, size = "lg" }: ModalProp
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className={`flex max-h-[85vh] w-full flex-col overflow-hidden rounded-2xl bg-white shadow-soft ring-1 ring-slate-900/5 dark:bg-slate-900 dark:ring-white/10 ${SIZE[size]}`}
+        className={`flex max-h-[85vh] w-full flex-col overflow-hidden rounded-2xl bg-surface shadow-soft ring-1 ring-line ${SIZE[size]}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
-        <div className="relative flex shrink-0 items-center justify-center border-b border-slate-200 px-12 py-3.5 dark:border-slate-800">
-          <h2 className="text-center text-lg font-bold text-slate-800 dark:text-slate-100">{title}</h2>
+        <div className="relative flex shrink-0 items-center justify-center border-b border-line px-12 py-3.5">
+          <h2 className="text-center text-lg font-bold text-ink">{title}</h2>
           <Button
             variant="ghost"
             size="icon"

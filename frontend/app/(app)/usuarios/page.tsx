@@ -45,8 +45,8 @@ export default function UsuariosPage() {
   if (!esAdmin) {
     return (
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Usuarios</h1>
-        <p className="mt-4 text-slate-500 dark:text-slate-400">
+        <h1 className="text-2xl font-bold text-ink">Usuarios</h1>
+        <p className="mt-4 text-ink-2">
           Solo un administrador puede gestionar usuarios.
         </p>
       </div>
@@ -67,8 +67,8 @@ export default function UsuariosPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Usuarios</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          <h1 className="text-2xl font-bold text-ink">Usuarios</h1>
+          <p className="mt-1 text-sm text-ink-2">
             Autorizá vendedores para que puedan iniciar sesión y conectar su Gmail.
           </p>
         </div>
@@ -77,12 +77,12 @@ export default function UsuariosPage() {
         </Button>
       </div>
 
-      {isLoading && <p className="mt-4 text-slate-500 dark:text-slate-400">Cargando…</p>}
+      {isLoading && <p className="mt-4 text-ink-2">Cargando…</p>}
 
       {data && (
-        <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+        <div className="mt-6 overflow-hidden rounded-lg border border-line">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+            <thead className="bg-surface2 text-left text-ink-2">
               <tr>
                 <th className="px-4 py-2 font-medium">Nombre</th>
                 <th className="px-4 py-2 font-medium">Email</th>
@@ -93,11 +93,11 @@ export default function UsuariosPage() {
             </thead>
             <tbody>
               {data.map((u) => (
-                <tr key={u.id} className="border-t border-slate-100 dark:border-slate-800">
-                  <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">
+                <tr key={u.id} className="border-t border-line">
+                  <td className="px-4 py-2 font-medium text-ink">
                     {u.nombre}
                   </td>
-                  <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{u.email}</td>
+                  <td className="px-4 py-2 text-ink-2">{u.email}</td>
                   <td className="px-4 py-2">
                     <Badge>{ROL_LABEL[u.rol]}</Badge>
                   </td>
@@ -108,7 +108,7 @@ export default function UsuariosPage() {
                           Activo
                         </Badge>
                       ) : (
-                        <Badge className="bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                        <Badge className="bg-surface2 text-ink-2">
                           Inactivo
                         </Badge>
                       )}
@@ -124,7 +124,7 @@ export default function UsuariosPage() {
                       <Link
                         href={`/usuarios/${u.id}`}
                         aria-label="Ver perfil"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-all hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-2 transition-all hover:bg-surface2"
                       >
                         <Eye size={15} />
                       </Link>
@@ -141,7 +141,7 @@ export default function UsuariosPage() {
                         onClick={() => eliminar(u)}
                         disabled={deleteMut.isPending}
                         aria-label="Eliminar"
-                        className="text-slate-400 hover:text-red-600 dark:text-slate-500"
+                        className="text-ink-3 hover:text-red-600"
                       >
                         <Trash2 size={15} />
                       </Button>
@@ -151,7 +151,7 @@ export default function UsuariosPage() {
               ))}
               {data.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={5} className="px-4 py-6 text-center text-ink-3">
                     No hay usuarios todavía.
                   </td>
                 </tr>

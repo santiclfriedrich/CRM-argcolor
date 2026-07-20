@@ -33,13 +33,13 @@ export default function SolicitudesPage() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Solicitudes a Compras</h1>
+        <h1 className="text-2xl font-bold text-ink">Solicitudes a Compras</h1>
         <Button onClick={() => setCreating(true)}>
           <Plus size={16} /> Nueva solicitud
         </Button>
       </div>
 
-      {isLoading && <p className="mt-4 text-slate-500 dark:text-slate-400">Cargando…</p>}
+      {isLoading && <p className="mt-4 text-ink-2">Cargando…</p>}
       {isError && (
         <p className="mt-4 text-red-600">
           No se pudo cargar. ¿El backend está corriendo en {process.env.NEXT_PUBLIC_API_URL}?
@@ -47,9 +47,9 @@ export default function SolicitudesPage() {
       )}
 
       {data && (
-        <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+        <div className="mt-6 overflow-hidden rounded-lg border border-line">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-800/50 text-left text-slate-500 dark:text-slate-400">
+            <thead className="bg-surface2 text-left text-ink-2">
               <tr>
                 <th className="px-4 py-2 font-medium">ID</th>
                 <th className="px-4 py-2 font-medium">Oportunidad</th>
@@ -66,37 +66,37 @@ export default function SolicitudesPage() {
                 return (
                   <tr
                     key={s.id}
-                    className="cursor-pointer border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    className="cursor-pointer border-t border-line hover:bg-surface2"
                     onClick={() => setDetailId(s.id)}
                   >
-                    <td className="px-4 py-2 font-mono text-slate-500 dark:text-slate-400">{s.id}</td>
+                    <td className="px-4 py-2 font-mono text-ink-2">{s.id}</td>
                     <td className="px-4 py-2">
                       <div className="flex flex-col items-start gap-1">
                         <Link
                           href={`/oportunidades?op=${s.oportunidad_id}`}
                           onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                          className="inline-flex items-center rounded-md border border-brand/30 bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand hover:bg-brand/20"
+                          className="inline-flex items-center rounded-md border border-accent bg-accent-dim px-2 py-0.5 text-xs font-semibold text-accent hover:bg-accent-dim"
                         >
                           #{s.oportunidad_id}
                         </Link>
                         {s.oportunidad?.asunto && (
-                          <span className="max-w-[16rem] truncate text-xs text-slate-500 dark:text-slate-400">
+                          <span className="max-w-[16rem] truncate text-xs text-ink-2">
                             {s.oportunidad.asunto}
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">
+                    <td className="px-4 py-2 font-medium text-ink">
                       {s.oportunidad?.cliente?.razon_social ?? "—"}
                     </td>
-                    <td className="max-w-xs truncate px-4 py-2 text-slate-600 dark:text-slate-300">
+                    <td className="max-w-xs truncate px-4 py-2 text-ink-2">
                       {s.requerimiento}
                     </td>
-                    <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{s.solicitante?.nombre ?? "—"}</td>
+                    <td className="px-4 py-2 text-ink-2">{s.solicitante?.nombre ?? "—"}</td>
                     <td className="px-4 py-2">
                       <Badge className={meta.color}>{meta.label}</Badge>
                     </td>
-                    <td className="px-4 py-2 text-right text-slate-400 dark:text-slate-500">
+                    <td className="px-4 py-2 text-right text-ink-3">
                       <Mail size={15} className="inline" />
                     </td>
                   </tr>
@@ -104,7 +104,7 @@ export default function SolicitudesPage() {
               })}
               {data.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={7} className="px-4 py-6 text-center text-ink-3">
                     No hay solicitudes todavía.
                   </td>
                 </tr>
@@ -143,11 +143,11 @@ function SolicitudDetailModal({ id, onClose }: { id: number; onClose: () => void
   return (
     <Modal open onClose={onClose} title={`Solicitud #${id}`}>
       {isLoading || !solicitud ? (
-        <p className="text-slate-500 dark:text-slate-400">Cargando…</p>
+        <p className="text-ink-2">Cargando…</p>
       ) : (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-slate-500 dark:text-slate-400">Estado:</span>
+            <span className="text-sm text-ink-2">Estado:</span>
             <Badge className={ESTADO_SOLICITUD_META[solicitud.estado].color}>
               {ESTADO_SOLICITUD_META[solicitud.estado].label}
             </Badge>
@@ -198,26 +198,26 @@ function EnvioCompras({ solicitud }: { solicitud: SolicitudDetail }) {
   };
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-800/50">
+    <div className="rounded-lg border border-line bg-surface2 p-3 text-sm">
       <div className="mb-2 flex items-center justify-between">
-        <p className="font-medium text-slate-700 dark:text-slate-200">Mail a Compras</p>
+        <p className="font-medium text-ink">Mail a Compras</p>
         {yaEnviado && <span className="text-xs text-green-600">Enviado por Gmail ✓</span>}
       </div>
-      <dl className="space-y-1 text-slate-600 dark:text-slate-300">
+      <dl className="space-y-1 text-ink-2">
         <Row label="Para" value={solicitud.email_preview.to ?? "(configurar email de Compras)"} />
         <Row label="CC" value={solicitud.email_preview.cc.join(", ") || "—"} />
         <Row label="Asunto" value={solicitud.email_preview.subject} />
       </dl>
-      <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-slate-200 bg-white p-2 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+      <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-line bg-surface p-2 text-xs text-ink">
         {solicitud.email_preview.body}
       </pre>
       {solicitud.archivos_adjuntos && solicitud.archivos_adjuntos.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-xs text-slate-500 dark:text-slate-400">Adjuntos:</span>
+          <span className="text-xs text-ink-2">Adjuntos:</span>
           {solicitud.archivos_adjuntos.map((a, i) => (
             <span
               key={i}
-              className="inline-flex items-center gap-1 rounded bg-white px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-300"
+              className="inline-flex items-center gap-1 rounded bg-surface px-2 py-0.5 text-xs text-ink-2"
             >
               <Paperclip size={12} /> {a.filename}
             </span>
@@ -259,8 +259,8 @@ function RespuestaCompras({
   const items = ultima?.datos_parseados_ia?.items ?? [];
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm dark:border-slate-800 dark:bg-slate-900">
-      <p className="mb-2 font-medium text-slate-700 dark:text-slate-200">Respuesta de Compras</p>
+    <div className="rounded-lg border border-line bg-surface p-3 text-sm">
+      <p className="mb-2 font-medium text-ink">Respuesta de Compras</p>
 
       {items.length === 0 ? (
         <>
@@ -287,9 +287,9 @@ function RespuestaCompras({
         </>
       ) : (
         <>
-          <div className="overflow-hidden rounded-md border border-slate-200 dark:border-slate-800">
+          <div className="overflow-hidden rounded-md border border-line">
             <table className="w-full text-xs">
-              <thead className="bg-slate-50 text-left text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+              <thead className="bg-surface2 text-left text-ink-2">
                 <tr>
                   <th className="px-2 py-1 font-medium">Descripción</th>
                   <th className="px-2 py-1 font-medium">Cant.</th>
@@ -298,13 +298,13 @@ function RespuestaCompras({
               </thead>
               <tbody>
                 {items.map((it, i) => (
-                  <tr key={i} className="border-t border-slate-100 dark:border-slate-800">
-                    <td className="px-2 py-1 text-slate-700 dark:text-slate-200">
+                  <tr key={i} className="border-t border-line">
+                    <td className="px-2 py-1 text-ink">
                       {it.fabricante ? `${it.fabricante} · ` : ""}
                       {it.descripcion}
                     </td>
-                    <td className="px-2 py-1 text-slate-600 dark:text-slate-300">{it.cantidad}</td>
-                    <td className="px-2 py-1 text-right tabular-nums text-slate-600 dark:text-slate-300">
+                    <td className="px-2 py-1 text-ink-2">{it.cantidad}</td>
+                    <td className="px-2 py-1 text-right tabular-nums text-ink-2">
                       {it.precio_unitario}
                     </td>
                   </tr>
@@ -313,7 +313,7 @@ function RespuestaCompras({
             </table>
           </div>
           {ultima?.notas_compras && (
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-2 text-xs text-ink-2">
               Notas: {ultima.notas_compras}
             </p>
           )}
@@ -348,8 +348,8 @@ function RespuestaCompras({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex gap-2">
-      <dt className="w-14 shrink-0 font-medium text-slate-500 dark:text-slate-400">{label}:</dt>
-      <dd className="text-slate-700 dark:text-slate-200">{value}</dd>
+      <dt className="w-14 shrink-0 font-medium text-ink-2">{label}:</dt>
+      <dd className="text-ink">{value}</dd>
     </div>
   );
 }

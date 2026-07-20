@@ -102,7 +102,7 @@ export default function ArmadorPresupuestoPage() {
   }, [presupuesto, cargado]);
 
   if (isLoading || !presupuesto) {
-    return <p className="text-slate-500 dark:text-slate-400">Cargando…</p>;
+    return <p className="text-ink-2">Cargando…</p>;
   }
 
   const setCampo = (key: string, campo: keyof Row, valor: string) =>
@@ -153,21 +153,21 @@ export default function ArmadorPresupuestoPage() {
     <div className="mx-auto max-w-4xl">
       <Link
         href="/presupuestos"
-        className="mb-3 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400"
+        className="mb-3 inline-flex items-center gap-1 text-sm text-ink-2 hover:text-ink"
       >
         <ArrowLeft size={15} /> Presupuestos
       </Link>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="text-2xl font-bold text-ink">
             {presupuesto.codigo}
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-ink-2">
             {cliente} ·{" "}
             <Link
               href={`/oportunidades?op=${presupuesto.oportunidad_id}`}
-              className="font-medium text-brand hover:underline"
+              className="font-medium text-accent hover:underline"
             >
               Oportunidad #{presupuesto.oportunidad_id}
             </Link>
@@ -179,7 +179,7 @@ export default function ArmadorPresupuestoPage() {
       </div>
 
       {/* Cabecera: condiciones comerciales */}
-      <div className="mt-5 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40 sm:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-3 rounded-lg border border-line bg-surface2 p-4 sm:grid-cols-4">
         <div>
           <Label>Moneda</Label>
           <SelectMenu
@@ -207,9 +207,9 @@ export default function ArmadorPresupuestoPage() {
       </div>
 
       {/* Ítems */}
-      <div className="mt-5 overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+      <div className="mt-5 overflow-x-auto rounded-lg border border-line">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+          <thead className="bg-surface2 text-left text-xs text-ink-2">
             <tr>
               <th className="px-2 py-2 font-medium">Fabricante</th>
               <th className="px-2 py-2 font-medium">SKU</th>
@@ -225,7 +225,7 @@ export default function ArmadorPresupuestoPage() {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.key} className="border-t border-slate-100 dark:border-slate-800">
+              <tr key={r.key} className="border-t border-line">
                 <td className="p-1"><Input value={r.fabricante} onChange={(e) => setCampo(r.key, "fabricante", e.target.value)} /></td>
                 <td className="p-1"><Input value={r.sku} onChange={(e) => setCampo(r.key, "sku", e.target.value)} /></td>
                 <td className="p-1 min-w-[180px]"><Input value={r.descripcion} onChange={(e) => setCampo(r.key, "descripcion", e.target.value)} placeholder="Producto / servicio" /></td>
@@ -233,7 +233,7 @@ export default function ArmadorPresupuestoPage() {
                 <td className="p-1 w-28"><Input type="number" value={r.precio_unitario} onChange={(e) => setCampo(r.key, "precio_unitario", e.target.value)} className="text-right" /></td>
                 <td className="p-1 w-20"><Input type="number" value={r.descuento_pct} onChange={(e) => setCampo(r.key, "descuento_pct", e.target.value)} className="text-right" /></td>
                 <td className="p-1 w-20"><Input type="number" value={r.iva} onChange={(e) => setCampo(r.key, "iva", e.target.value)} placeholder="21" className="text-right" /></td>
-                <td className="px-2 py-1 text-right tabular-nums text-slate-700 dark:text-slate-200">
+                <td className="px-2 py-1 text-right tabular-nums text-ink">
                   {fmtMonto(subtotalRow(r), moneda)}
                 </td>
                 <td className="p-1 min-w-[160px]"><Input value={r.observaciones} onChange={(e) => setCampo(r.key, "observaciones", e.target.value)} placeholder="Nota de la línea" /></td>
@@ -242,7 +242,7 @@ export default function ArmadorPresupuestoPage() {
                     <button
                       type="button"
                       onClick={() => setRows((rs) => rs.filter((x) => x.key !== r.key))}
-                      className="text-slate-400 hover:text-red-600"
+                      className="text-ink-3 hover:text-red-600"
                       aria-label="Quitar fila"
                     >
                       <Trash2 size={14} />
@@ -260,15 +260,15 @@ export default function ArmadorPresupuestoPage() {
           <Plus size={14} /> Agregar ítem
         </Button>
         <div className="text-right">
-          <span className="text-sm text-slate-500 dark:text-slate-400">Total</span>
-          <p className="text-xl font-bold text-slate-900 dark:text-slate-100">
+          <span className="text-sm text-ink-2">Total</span>
+          <p className="text-xl font-bold text-ink">
             {fmtMonto(total, moneda)}
           </p>
         </div>
       </div>
 
       {/* Acciones */}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
         <div className="w-44">
           <Label>Estado</Label>
           <SelectMenu
@@ -349,7 +349,7 @@ function EnviarModal({
           {emailError ? (
             <p className="mt-1 text-xs text-red-600">{emailError}</p>
           ) : (
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+            <p className="mt-1 text-xs text-ink-3">
               Si lo dejás vacío, se usa el email del contacto de la oportunidad.
             </p>
           )}

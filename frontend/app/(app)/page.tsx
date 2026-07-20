@@ -139,23 +139,23 @@ export default function InicioPage() {
     <div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="text-2xl font-bold text-ink">
             Inicio de vendedor
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-ink-2">
             {saludo()}
             {nombre ? `, ${nombre.split(" ")[0]}` : ""}. ¡Empecemos a vender!
           </p>
         </div>
-        <div className="flex rounded-md border border-slate-200 p-0.5 text-sm dark:border-slate-800">
+        <div className="flex rounded-md border border-line p-0.5 text-sm">
           {(["todas", "mias"] as Filtro[]).map((f) => (
             <button
               key={f}
               onClick={() => setFiltro(f)}
               className={`rounded px-3 py-1 font-medium transition ${
                 filtro === f
-                  ? "bg-brand text-white"
-                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                  ? "bg-navy text-white"
+                  : "text-ink-2 hover:bg-surface2"
               }`}
             >
               {f === "todas" ? "Todas" : "Mías"}
@@ -165,7 +165,7 @@ export default function InicioPage() {
       </div>
 
       {isLoading && (
-        <p className="mt-6 text-slate-500 dark:text-slate-400">Cargando…</p>
+        <p className="mt-6 text-ink-2">Cargando…</p>
       )}
 
       {/* Cards principales estilo Salesforce */}
@@ -176,21 +176,21 @@ export default function InicioPage() {
           centro={montoCompacto(totalDeals)}
           centroLabel="En total"
           segments={[
-            { value: vista.montos.abiertas, color: "#22c55e" },
-            { value: vista.montos.ganadas, color: "#3b82f6" },
-            { value: vista.montos.perdidas, color: "#ef4444" },
+            { value: vista.montos.abiertas, color: "#3cb178" },
+            { value: vista.montos.ganadas, color: "#4586da" },
+            { value: vista.montos.perdidas, color: "#e7644a" },
           ]}
           legend={[
             {
-              dot: "#22c55e",
+              dot: "#3cb178",
               label: `${montoCompacto(vista.montos.abiertas)} Abiertas`,
             },
             {
-              dot: "#3b82f6",
+              dot: "#4586da",
               label: `${montoCompacto(vista.montos.ganadas)} Ganadas`,
             },
             {
-              dot: "#ef4444",
+              dot: "#e7644a",
               label: `${montoCompacto(vista.montos.perdidas)} Perdidas`,
             },
           ]}
@@ -204,21 +204,21 @@ export default function InicioPage() {
           centro={String(vista.activasTotal)}
           centroLabel="Activas"
           segments={[
-            { value: vista.sem.rojo, color: "#ef4444" },
-            { value: vista.sem.amarillo, color: "#f59e0b" },
-            { value: vista.sem.verde, color: "#22c55e" },
+            { value: vista.sem.rojo, color: "#e7644a" },
+            { value: vista.sem.amarillo, color: "#eca62f" },
+            { value: vista.sem.verde, color: "#3cb178" },
           ]}
           legend={[
             {
-              dot: "#ef4444",
+              dot: "#e7644a",
               label: `${vista.sem.rojo} ${SEMAFORO_META.rojo.label}`,
             },
             {
-              dot: "#f59e0b",
+              dot: "#eca62f",
               label: `${vista.sem.amarillo} ${SEMAFORO_META.amarillo.label}`,
             },
             {
-              dot: "#22c55e",
+              dot: "#3cb178",
               label: `${vista.sem.verde} ${SEMAFORO_META.verde.label}`,
             },
           ]}
@@ -232,21 +232,21 @@ export default function InicioPage() {
           centro={String(vista.cuentas.total)}
           centroLabel="Cuentas"
           segments={[
-            { value: vista.cuentas.conActiva, color: "#22c55e" },
-            { value: vista.cuentas.soloCerradas, color: "#3b82f6" },
-            { value: vista.cuentas.sinActividad, color: "#ef4444" },
+            { value: vista.cuentas.conActiva, color: "#3cb178" },
+            { value: vista.cuentas.soloCerradas, color: "#4586da" },
+            { value: vista.cuentas.sinActividad, color: "#6d7495" },
           ]}
           legend={[
             {
-              dot: "#22c55e",
+              dot: "#3cb178",
               label: `${vista.cuentas.conActiva} Con oportunidad activa`,
             },
             {
-              dot: "#3b82f6",
+              dot: "#4586da",
               label: `${vista.cuentas.soloCerradas} Solo cerradas`,
             },
             {
-              dot: "#ef4444",
+              dot: "#6d7495",
               label: `${vista.cuentas.sinActividad} Sin actividad`,
             },
           ]}
@@ -280,46 +280,46 @@ function TareasDeHoy() {
     );
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <section className="rounded-lg border border-line bg-surface p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Tareas de hoy</h2>
+        <h2 className="text-lg font-semibold text-ink">Tareas de hoy</h2>
         <Button size="sm" variant="outline" onClick={() => setCreando(true)}>
           <Plus size={14} /> Nueva tarea
         </Button>
       </div>
 
       {items.length === 0 ? (
-        <p className="py-6 text-center text-sm text-slate-400 dark:text-slate-500">
+        <p className="py-6 text-center text-sm text-ink-3">
           No hay nada pendiente para hoy. Tomá la iniciativa.
         </p>
       ) : (
-        <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+        <ul className="divide-y divide-line">
           {items.map((t) => (
             <li key={t.id} className="flex items-center gap-3 py-2">
               <input
                 type="checkbox"
                 onChange={() => actualizar.mutate({ id: t.id, body: { completada: true } })}
-                className="h-4 w-4 shrink-0 cursor-pointer accent-brand"
+                className="h-4 w-4 shrink-0 cursor-pointer accent-navy"
                 title="Marcar como hecha"
               />
               <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${PRIORIDAD_META[t.prioridad].color}`} />
               <button
                 type="button"
                 onClick={() => setEditar(t)}
-                className="min-w-0 flex-1 truncate text-left text-sm text-slate-800 hover:text-brand dark:text-slate-100"
+                className="min-w-0 flex-1 truncate text-left text-sm text-ink hover:text-accent"
               >
                 {t.titulo}
               </button>
               {estaVencidaTarea(t) && (
-                <span className="shrink-0 text-xs font-semibold text-red-600">atrasada</span>
+                <span className="shrink-0 text-xs font-semibold text-[#e7644a]">atrasada</span>
               )}
             </li>
           ))}
         </ul>
       )}
 
-      <div className="mt-3 border-t border-slate-100 pt-3 text-center dark:border-slate-800">
-        <Link href="/tareas" className="text-sm font-semibold text-brand hover:underline">
+      <div className="mt-3 border-t border-line pt-3 text-center">
+        <Link href="/tareas" className="text-sm font-semibold text-accent hover:underline">
           Ver todas
         </Link>
       </div>
@@ -353,12 +353,12 @@ function DashCard({
   hrefLabel: string;
 }) {
   return (
-    <section className="flex flex-col rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <section className="flex flex-col rounded-lg border border-line bg-surface p-5 shadow-sm">
       <div>
-        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+        <h2 className="text-base font-semibold text-ink">
           {titulo}
         </h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-ink-2">
           {subtitulo}
         </p>
       </div>
@@ -368,7 +368,7 @@ function DashCard({
           {legend.map((l, i) => (
             <li
               key={i}
-              className="flex items-center gap-2 rounded-md bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700 dark:bg-slate-800/60 dark:text-slate-200"
+              className="flex items-center gap-2 rounded-md bg-surface2 px-2.5 py-1.5 text-sm text-ink"
             >
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -379,10 +379,10 @@ function DashCard({
           ))}
         </ul>
       </div>
-      <div className="mt-4 border-t border-slate-100 pt-3 text-center dark:border-slate-800">
+      <div className="mt-4 border-t border-line pt-3 text-center">
         <Link
           href={href}
-          className="text-sm font-semibold text-brand hover:underline"
+          className="text-sm font-semibold text-accent hover:underline"
         >
           {hrefLabel}
         </Link>
@@ -415,7 +415,7 @@ function Donut({
           r={r}
           fill="none"
           strokeWidth={thickness}
-          className="stroke-slate-100 dark:stroke-slate-800"
+          className="stroke-line"
         />
         {total > 0 &&
           segments.map((s, i) => {
@@ -438,10 +438,10 @@ function Donut({
           })}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+        <span className="text-2xl font-bold text-ink">
           {centro}
         </span>
-        <span className="text-[11px] text-slate-400 dark:text-slate-500">
+        <span className="text-[11px] text-ink-3">
           {centroLabel}
         </span>
       </div>
@@ -464,32 +464,32 @@ function SeguimientoHoy({ buckets }: { buckets: BucketsSeguimiento }) {
       key: "vencida",
       label: "Vencidas",
       icon: <AlarmClock size={15} />,
-      tono: "text-red-600",
+      tono: "text-[#e7644a]",
     },
     {
       key: "sin_avance",
       label: "Sin avance (+3 días)",
       icon: <Clock size={15} />,
-      tono: "text-amber-600",
+      tono: "text-[#eca62f]",
     },
     {
       key: "por_vencer",
       label: "Por vencer",
       icon: <BellRing size={15} />,
-      tono: "text-blue-600",
+      tono: "text-[#4586da]",
     },
   ];
 
   const totalAcciones = buckets.vencida.length + buckets.sin_avance.length;
 
   return (
-    <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <section className="mt-6 rounded-lg border border-line bg-surface p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          <h2 className="text-lg font-semibold text-ink">
             Seguimiento de hoy
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-ink-2">
             Lo que necesita acción hoy. Se avisa al vendedor en la campana (auto
             cada mañana).
           </p>
@@ -517,9 +517,9 @@ function SeguimientoHoy({ buckets }: { buckets: BucketsSeguimiento }) {
           return (
             <div
               key={c.key}
-              className="rounded-md border border-slate-200 dark:border-slate-800"
+              className="rounded-md border border-line"
             >
-              <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2 dark:border-slate-800">
+              <div className="flex items-center justify-between border-b border-line px-3 py-2">
                 <span
                   className={`flex items-center gap-1.5 text-sm font-semibold ${c.tono}`}
                 >
@@ -529,7 +529,7 @@ function SeguimientoHoy({ buckets }: { buckets: BucketsSeguimiento }) {
               </div>
               <div className="max-h-52 space-y-1 overflow-y-auto p-2">
                 {items.length === 0 ? (
-                  <p className="px-1 py-3 text-center text-xs text-slate-400 dark:text-slate-500">
+                  <p className="px-1 py-3 text-center text-xs text-ink-3">
                     Nada por acá.
                   </p>
                 ) : (
@@ -538,12 +538,12 @@ function SeguimientoHoy({ buckets }: { buckets: BucketsSeguimiento }) {
                       key={o.id}
                       type="button"
                       onClick={() => router.push(`/oportunidades?op=${o.id}`)}
-                      className="flex w-full flex-col items-start gap-0.5 rounded-md px-2 py-1.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                      className="flex w-full flex-col items-start gap-0.5 rounded-md px-2 py-1.5 text-left hover:bg-surface2"
                     >
-                      <span className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">
+                      <span className="truncate text-sm font-medium text-ink">
                         {o.cliente?.razon_social ?? o.asunto ?? `#${o.id}`}
                       </span>
-                      <span className="truncate text-xs text-slate-400 dark:text-slate-500">
+                      <span className="truncate text-xs text-muted">
                         {c.key === "sin_avance"
                           ? `${diasSinMovimiento(o, new Date())} días sin avance`
                           : `Validez: ${o.fecha_limite ? o.fecha_limite.split("-").reverse().join("/") : "—"}`}
@@ -558,7 +558,7 @@ function SeguimientoHoy({ buckets }: { buckets: BucketsSeguimiento }) {
       </div>
 
       {totalAcciones === 0 && (
-        <p className="mt-3 text-center text-sm text-green-600">
+        <p className="mt-3 text-center text-sm text-[#3cb178]">
           Estás al día con los seguimientos.
         </p>
       )}
@@ -571,16 +571,16 @@ function RegistrosRecientes() {
   const { data } = useRegistrosRecientes(6);
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-slate-100">
+    <section className="rounded-lg border border-line bg-surface p-4 shadow-sm">
+      <h2 className="mb-3 text-lg font-semibold text-ink">
         Registros recientes
       </h2>
       {data.length === 0 ? (
-        <p className="py-4 text-center text-sm text-slate-400 dark:text-slate-500">
+        <p className="py-4 text-center text-sm text-ink-3">
           Todavía no hay movimientos.
         </p>
       ) : (
-        <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+        <ul className="divide-y divide-line">
           {data.map((r) => {
             const { icon: Icon, bg } = RECIENTE_ICONO[r.tipo];
             return (
@@ -597,15 +597,15 @@ function RegistrosRecientes() {
                       <Icon size={14} />
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate font-medium text-brand">
+                      <span className="block truncate font-medium text-accent">
                         {r.nombre}
                       </span>
-                      <span className="block truncate text-xs text-slate-400 dark:text-slate-500">
+                      <span className="block truncate text-xs text-muted">
                         {r.tipo}
                       </span>
                     </span>
                   </span>
-                  <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">
+                  <span className="shrink-0 text-xs text-muted">
                     {new Date(r.fecha).toLocaleDateString("es-AR")}
                   </span>
                 </button>
@@ -614,10 +614,10 @@ function RegistrosRecientes() {
           })}
         </ul>
       )}
-      <div className="mt-3 border-t border-slate-100 pt-3 text-center dark:border-slate-800">
+      <div className="mt-3 border-t border-line pt-3 text-center">
         <Link
           href="/recientes"
-          className="text-sm font-semibold text-brand hover:underline"
+          className="text-sm font-semibold text-accent hover:underline"
         >
           Ver todos
         </Link>

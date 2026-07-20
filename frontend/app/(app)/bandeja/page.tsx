@@ -77,8 +77,8 @@ export default function BandejaPage() {
     <div>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Bandeja inteligente</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          <h1 className="text-2xl font-bold text-ink">Bandeja inteligente</h1>
+          <p className="mt-1 text-sm text-ink-2">
             La IA identifica la cuenta, extrae el pedido y crea la oportunidad. Podés pegar un
             mail abajo o sincronizar la casilla comercial.
           </p>
@@ -104,6 +104,11 @@ export default function BandejaPage() {
               {syncMut.data.ultimo_error ? ` ${syncMut.data.ultimo_error}` : ""}
             </p>
           )}
+          {syncMut.data.errores === 0 &&
+            syncMut.data.procesados === 0 &&
+            syncMut.data.ultimo_error && (
+              <p className="text-amber-600">{syncMut.data.ultimo_error}</p>
+            )}
         </div>
       )}
       {syncMut.isError && (
@@ -114,7 +119,7 @@ export default function BandejaPage() {
 
       <form
         onSubmit={procesar}
-        className="mt-6 space-y-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-4"
+        className="mt-6 space-y-3 rounded-lg border border-line bg-surface2 p-4"
       >
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -149,7 +154,7 @@ export default function BandejaPage() {
           </p>
         )}
         {ingestMut.isSuccess && ingestMut.data.descartado && (
-          <p className="rounded-md border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 p-2 text-sm text-slate-600 dark:text-slate-300">
+          <p className="rounded-md border border-line bg-surface2 p-2 text-sm text-ink-2">
             La IA lo clasificó como{" "}
             <span className="font-medium">
               {ingestMut.data.categoria
@@ -167,16 +172,16 @@ export default function BandejaPage() {
       </form>
 
       <div className="mt-8 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Mails procesados</h2>
-        <div className="flex rounded-md border border-slate-200 p-0.5 text-sm dark:border-slate-800">
+        <h2 className="text-lg font-semibold text-ink">Mails procesados</h2>
+        <div className="flex rounded-md border border-line p-0.5 text-sm">
           {(["todos", "personal"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFiltro(f)}
               className={`rounded px-3 py-1 font-medium transition ${
                 filtro === f
-                  ? "bg-brand text-white"
-                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                  ? "bg-navy text-white hover:bg-navy-hover"
+                  : "text-ink-2 hover:bg-surface2"
               }`}
             >
               {f === "todos" ? "Todos" : "Personal"}
@@ -184,11 +189,11 @@ export default function BandejaPage() {
           ))}
         </div>
       </div>
-      {isLoading && <p className="mt-2 text-slate-500 dark:text-slate-400">Cargando…</p>}
+      {isLoading && <p className="mt-2 text-ink-2">Cargando…</p>}
       <div className="mt-3 space-y-4">
         {visibles.map((m) => <MailCard key={m.id} mail={m} />)}
         {!isLoading && visibles.length === 0 && (
-          <p className="rounded-lg border border-dashed border-slate-200 dark:border-slate-800 p-6 text-center text-sm text-slate-400 dark:text-slate-500">
+          <p className="rounded-lg border border-dashed border-line p-6 text-center text-sm text-ink-3">
             {filtro === "personal"
               ? "No tenés mails propios todavía."
               : "Todavía no procesaste ningún mail."}
@@ -213,33 +218,33 @@ function Descartados() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700"
+        className="flex items-center gap-1 text-sm font-medium text-ink-2 hover:text-ink"
       >
         <ChevronRight size={16} className={open ? "rotate-90 transition" : "transition"} />
         Descartados por la IA
-        {data && <span className="text-slate-400 dark:text-slate-500">({data.length})</span>}
+        {data && <span className="text-ink-3">({data.length})</span>}
       </button>
       {open && (
         <div className="mt-3 space-y-2">
-          {isLoading && <p className="text-sm text-slate-400 dark:text-slate-500">Cargando…</p>}
+          {isLoading && <p className="text-sm text-ink-3">Cargando…</p>}
           {data?.map((d) => (
             <div
               key={d.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-sm"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-line bg-surface2 px-3 py-2 text-sm"
             >
               <div className="min-w-0">
-                <span className="text-slate-700 dark:text-slate-200">{d.de ?? "—"}</span>
-                {d.asunto && <span className="ml-2 text-slate-400 dark:text-slate-500">· {d.asunto}</span>}
+                <span className="text-ink">{d.de ?? "—"}</span>
+                {d.asunto && <span className="ml-2 text-ink-3">· {d.asunto}</span>}
               </div>
               <div className="flex items-center gap-2">
-                <Badge className="bg-slate-200 text-slate-600 dark:text-slate-300">
+                <Badge className="bg-surface2 text-ink-2">
                   {CATEGORIA_LABEL[d.categoria]}
                 </Badge>
                 <button
                   type="button"
                   onClick={() => reprocesarMut.mutate(d.id)}
                   disabled={reprocesarMut.isPending}
-                  className="text-xs font-medium text-brand hover:underline disabled:opacity-50"
+                  className="text-xs font-medium text-accent hover:underline disabled:opacity-50"
                   title="Sacar de descartados para que la próxima sincronización lo vuelva a leer"
                 >
                   Reprocesar
@@ -248,7 +253,7 @@ function Descartados() {
             </div>
           ))}
           {data && data.length === 0 && (
-            <p className="text-sm text-slate-400 dark:text-slate-500">No hay mails descartados.</p>
+            <p className="text-sm text-ink-3">No hay mails descartados.</p>
           )}
         </div>
       )}
@@ -261,11 +266,11 @@ function MailCard({ mail }: { mail: Mail }) {
   const estado = mail.oportunidad?.estado;
   const [chatOpen, setChatOpen] = useState(false);
   return (
-    <article className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 shadow-sm dark:shadow-none">
+    <article className="rounded-lg border border-line bg-surface p-4 shadow-sm dark:shadow-none">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <span className="font-medium text-slate-800 dark:text-slate-100">{mail.de}</span>
-          {mail.asunto && <span className="ml-2 text-sm text-slate-500 dark:text-slate-400">· {mail.asunto}</span>}
+          <span className="font-medium text-ink">{mail.de}</span>
+          {mail.asunto && <span className="ml-2 text-sm text-ink-2">· {mail.asunto}</span>}
         </div>
         <div className="flex items-center gap-2">
           {mail.oportunidad?.cliente ? (
@@ -273,7 +278,7 @@ function MailCard({ mail }: { mail: Mail }) {
               {mail.oportunidad.cliente.razon_social}
             </Badge>
           ) : (
-            <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">cliente por identificar</Badge>
+            <Badge className="bg-surface2 text-ink-2">cliente por identificar</Badge>
           )}
           {estado && <Badge className={ESTADO_META[estado].color}>{ESTADO_META[estado].label}</Badge>}
         </div>
@@ -294,7 +299,7 @@ function MailCard({ mail }: { mail: Mail }) {
           {mail.oportunidad_id && (
             <Link
               href={`/oportunidades?op=${mail.oportunidad_id}`}
-              className="inline-flex items-center rounded-md border border-brand/30 bg-brand/10 px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand/20"
+              className="inline-flex items-center rounded-md border border-accent bg-accent-dim px-2.5 py-1 text-xs font-semibold text-accent hover:bg-accent-dim"
             >
               Oportunidad #{mail.oportunidad_id}
             </Link>
@@ -303,7 +308,7 @@ function MailCard({ mail }: { mail: Mail }) {
             <button
               type="button"
               onClick={() => setChatOpen(true)}
-              className="text-xs text-slate-500 dark:text-slate-400 hover:underline"
+              className="text-xs text-ink-2 hover:underline"
             >
               Ver mail original
             </button>
@@ -356,9 +361,9 @@ function ConversacionPanel({ mail }: { mail: Mail }) {
   return (
     <div className="space-y-3">
       {isLoading ? (
-        <p className="text-xs text-slate-400 dark:text-slate-500">Cargando conversación…</p>
+        <p className="text-xs text-ink-3">Cargando conversación…</p>
       ) : (
-        <div className="max-h-[50vh] space-y-2 overflow-y-auto rounded-md border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/40">
+        <div className="max-h-[50vh] space-y-2 overflow-y-auto rounded-md border border-line bg-surface2 p-3">
           {mensajes.map((m) => (
             <Burbuja key={m.id} mail={m} />
           ))}
@@ -373,7 +378,7 @@ function ConversacionPanel({ mail }: { mail: Mail }) {
           placeholder={`Escribí tu respuesta para ${mail.de}…`}
         />
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-slate-400 dark:text-slate-500">
+          <span className="text-xs text-ink-3">
             Se envía desde tu casilla, dentro del mismo hilo.
           </span>
           <div className="flex items-center gap-2">
@@ -410,13 +415,13 @@ function Burbuja({ mail }: { mail: Mail }) {
       <div
         className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
           esSaliente
-            ? "bg-brand text-white"
-            : "border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            ? "bg-navy text-white"
+            : "border border-line bg-surface text-ink"
         }`}
       >
         <div
           className={`mb-0.5 flex items-center gap-2 text-[11px] ${
-            esSaliente ? "text-white/70" : "text-slate-400 dark:text-slate-500"
+            esSaliente ? "text-white/70" : "text-ink-3"
           }`}
         >
           <span className="truncate">{esSaliente ? mail.de ?? "Vos" : mail.de}</span>
@@ -450,7 +455,7 @@ function EliminarButton({
       onClick={eliminar}
       disabled={deleteMut.isPending}
       aria-label="Eliminar"
-      className="text-slate-400 dark:text-slate-500 hover:text-red-600"
+      className="text-ink-3 hover:text-red-600"
     >
       <Trash2 size={14} /> {deleteMut.isPending ? "Eliminando…" : "Eliminar"}
     </Button>
@@ -512,7 +517,7 @@ function AttachmentImage({ adjunto }: { adjunto: Adjunto }) {
 
   const isImage = (adjunto.mime_type ?? "").startsWith("image/");
   if (!isImage) {
-    return <span className="text-xs text-slate-500 dark:text-slate-400">{adjunto.nombre_archivo}</span>;
+    return <span className="text-xs text-ink-2">{adjunto.nombre_archivo}</span>;
   }
   return (
     <a href={url ?? undefined} target="_blank" rel="noreferrer" title={adjunto.nombre_archivo}>
@@ -521,10 +526,10 @@ function AttachmentImage({ adjunto }: { adjunto: Adjunto }) {
         <img
           src={url}
           alt={adjunto.nombre_archivo}
-          className="max-h-40 rounded-md border border-slate-200 dark:border-slate-800 object-contain"
+          className="max-h-40 rounded-md border border-line object-contain"
         />
       ) : (
-        <div className="flex h-24 w-32 items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 text-xs text-slate-400 dark:text-slate-500">
+        <div className="flex h-24 w-32 items-center justify-center rounded-md border border-line text-xs text-ink-3">
           cargando…
         </div>
       )}
@@ -536,7 +541,7 @@ function Extraccion({ data }: { data: EmailData }) {
   const copy = () => data.borrador_aclaracion && navigator.clipboard.writeText(data.borrador_aclaracion);
   return (
     <div className="mt-3 space-y-2 text-sm">
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-slate-600 dark:text-slate-300 sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-ink-2 sm:grid-cols-4">
         <Field label="Producto" value={data.producto} />
         <Field label="Cantidad" value={data.cantidad} />
         <Field label="Plazo" value={data.plazo} />
@@ -547,7 +552,7 @@ function Extraccion({ data }: { data: EmailData }) {
           <p className="mb-1 text-xs font-medium text-amber-700 dark:text-amber-400">
             Requiere aclaración — borrador para el cliente:
           </p>
-          <pre className="whitespace-pre-wrap text-xs text-slate-700 dark:text-slate-200">
+          <pre className="whitespace-pre-wrap text-xs text-ink">
             {data.borrador_aclaracion ?? "—"}
           </pre>
           {data.borrador_aclaracion && (
@@ -564,8 +569,8 @@ function Extraccion({ data }: { data: EmailData }) {
 function Field({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
-      <dt className="text-xs text-slate-400 dark:text-slate-500">{label}</dt>
-      <dd className="text-slate-700 dark:text-slate-200">{value ?? "—"}</dd>
+      <dt className="text-xs text-ink-3">{label}</dt>
+      <dd className="text-ink">{value ?? "—"}</dd>
     </div>
   );
 }

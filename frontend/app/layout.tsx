@@ -1,8 +1,23 @@
 import type { Metadata } from "next";
+import { DM_Mono, Plus_Jakarta_Sans } from "next/font/google";
 
 import { Providers } from "@/components/providers";
 
 import "./globals.css";
+
+// Fuentes self-hosted por Next (no dependemos de CDNs externos).
+const sans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+  display: "swap",
+});
+const mono = DM_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "CRM Comercial ARG COLOR",
@@ -15,7 +30,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html
+      lang="es"
+      suppressHydrationWarning
+      className={`${sans.variable} ${mono.variable}`}
+    >
       <head>
         {/* Aplica el tema antes del primer paint para evitar parpadeo (FOUC). */}
         <script

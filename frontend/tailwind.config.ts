@@ -8,6 +8,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+      },
       colors: {
         // Paleta base ARG COLOR (ajustable). Azul más vivo que el navy anterior.
         brand: {
@@ -17,6 +21,27 @@ const config: Config = {
           50: "#eff6ff",
           100: "#dbeafe",
         },
+        // Tokens semánticos: cambian solos entre claro/oscuro (ver globals.css).
+        bg: "var(--c-bg)",
+        surface: "var(--c-surface)",
+        surface2: "var(--c-surface-2)",
+        surface3: "var(--c-surface-3)",
+        line: "var(--c-line)",
+        ink: {
+          DEFAULT: "var(--c-ink)",
+          2: "var(--c-ink-2)",
+          3: "var(--c-ink-3)",
+        },
+        accent: {
+          DEFAULT: "rgb(var(--c-accent) / <alpha-value>)",
+          dim: "var(--c-accent-dim)",
+          hover: "rgb(var(--c-accent-hover) / <alpha-value>)",
+        },
+        navy: {
+          DEFAULT: "var(--c-navy)",
+          hover: "var(--c-navy-hover)",
+        },
+        muted: "var(--c-muted)",
       },
       boxShadow: {
         // Sombras suaves para dar profundidad a cards y modales.

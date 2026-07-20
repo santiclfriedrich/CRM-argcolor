@@ -188,20 +188,20 @@ export function SolicitudForm({
             // Limpiamos el input para poder volver a elegir el mismo archivo.
             e.target.value = "";
           }}
-          className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-300 dark:file:bg-slate-800 dark:file:text-slate-200"
+          className="block w-full text-sm text-ink-2 file:mr-3 file:rounded-md file:border-0 file:bg-surface2 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink hover:file:bg-surface3"
         />
         {files.length > 0 && (
           <ul className="mt-2 space-y-1">
             {files.map((f, i) => (
               <li
                 key={i}
-                className="flex items-center justify-between rounded-md bg-slate-50 px-2.5 py-1 text-xs text-slate-600 dark:bg-slate-800/50 dark:text-slate-300"
+                className="flex items-center justify-between rounded-md bg-surface2 px-2.5 py-1 text-xs text-ink-2"
               >
                 <span className="truncate">{f.name}</span>
                 <button
                   type="button"
                   onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
-                  className="ml-2 shrink-0 text-slate-400 hover:text-red-600"
+                  className="ml-2 shrink-0 text-ink-3 hover:text-red-600"
                 >
                   Quitar
                 </button>

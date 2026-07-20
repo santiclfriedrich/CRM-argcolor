@@ -6,13 +6,51 @@
   --background: #eef2f7;
   --foreground: #0f172a;
   --tint: rgba(37, 99, 235, 0.06);
+
+  /* Tokens semánticos (modo claro). Los usan los componentes migrados. */
+  --c-bg: #eef2f7;
+  --c-surface: #ffffff;
+  --c-surface-2: #f8fafc;
+  --c-surface-3: #f1f5f9;
+  --c-line: #e2e8f0;
+  --c-ink: #0f172a;
+  --c-ink-2: #64748b;
+  --c-ink-3: #94a3b8;
+  --c-accent: 37 99 235;
+  --c-accent-dim: rgba(37, 99, 235, 0.1);
+  --c-accent-hover: 29 78 216;
+
+  /* Azul marino de marca: chrome estructural (navbar) y acciones primarias.
+     Valor fijo en ambos modos. */
+  --c-navy: #03234d;
+  --c-navy-hover: #063a78;
+
+  /* Neutro frío: estados dormidos/neutros y metadatos (no es un acento). */
+  --c-muted: #6d7495;
 }
 
 .dark {
-  /* Fondo casi negro (slate-950) para que las tarjetas slate-900 resalten. */
-  --background: #020617;
-  --foreground: #e2e8f0;
-  --tint: rgba(37, 99, 235, 0.1);
+  /* Paleta oscura "neo": negros neutros en capas + acento índigo. */
+  --background: #09090f;
+  --foreground: #eef0ff;
+  --tint: rgba(99, 102, 241, 0.12);
+
+  --c-bg: #09090f;
+  --c-surface: #101120;
+  --c-surface-2: #171826;
+  --c-surface-3: #1e2030;
+  --c-line: rgba(255, 255, 255, 0.12);
+  --c-ink: #f4f5ff;
+  --c-ink-2: #a6aac2;
+  --c-ink-3: #71748c;
+  --c-accent: 99 102 241;
+  --c-accent-dim: rgba(99, 102, 241, 0.15);
+  --c-accent-hover: 129 140 248;
+
+  --c-navy: #03234d;
+  --c-navy-hover: #063a78;
+
+  --c-muted: #6d7495;
 }
 
 body {
@@ -22,6 +60,33 @@ body {
     var(--background);
   background-attachment: fixed;
   color: var(--foreground);
+  font-family: var(--font-sans, system-ui, sans-serif);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbars finas: ocultas por defecto, aparecen sutiles al pasar el mouse. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+}
+.dark *:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
 }

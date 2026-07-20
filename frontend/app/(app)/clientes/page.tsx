@@ -32,7 +32,7 @@ export default function CuentasPage() {
         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-white">
           <Building2 size={18} />
         </span>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Cuentas</h1>
+        <h1 className="text-2xl font-bold text-ink">Cuentas</h1>
         <div className="ml-auto flex gap-2">
           <Button onClick={() => setCreating(true)}>
             <Plus size={16} /> Nueva cuenta
@@ -40,7 +40,7 @@ export default function CuentasPage() {
         </div>
       </div>
 
-      {isLoading && <p className="mt-4 text-slate-500 dark:text-slate-400">Cargando…</p>}
+      {isLoading && <p className="mt-4 text-ink-2">Cargando…</p>}
       {isError && (
         <p className="mt-4 text-red-600">
           No se pudo conectar al backend. ¿Está corriendo en {process.env.NEXT_PUBLIC_API_URL}?
@@ -50,26 +50,26 @@ export default function CuentasPage() {
       {data && (
         <>
           <div className="mt-4 flex items-center justify-between gap-3">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-ink-2">
               {cuentas.length} {cuentas.length === 1 ? "elemento" : "elementos"}
             </p>
             <div className="relative w-64 max-w-full">
               <Search
                 size={15}
-                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3"
               />
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Buscar en esta lista…"
-                className="h-9 w-full rounded-md border border-slate-300 bg-white pl-8 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="h-9 w-full rounded-md border border-line bg-surface pl-8 pr-3 text-sm text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
               />
             </div>
           </div>
 
-          <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+          <div className="mt-3 overflow-x-auto rounded-lg border border-line">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+              <thead className="bg-surface2 text-left text-xs uppercase tracking-wide text-ink-2">
                 <tr>
                   <th className="w-10 px-3 py-2 font-medium">#</th>
                   <th className="px-3 py-2 font-medium">Nombre de la cuenta</th>
@@ -81,21 +81,21 @@ export default function CuentasPage() {
                 {cuentas.map((c, i) => (
                   <tr
                     key={c.id}
-                    className="cursor-pointer border-t border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
+                    className="cursor-pointer border-t border-line hover:bg-surface2"
                     onClick={() => router.push(`/clientes/${c.id}`)}
                   >
-                    <td className="px-3 py-2 text-slate-400 dark:text-slate-500">{i + 1}</td>
-                    <td className="px-3 py-2 font-medium text-brand">
+                    <td className="px-3 py-2 text-ink-3">{i + 1}</td>
+                    <td className="px-3 py-2 font-medium text-accent">
                       <Link href={`/clientes/${c.id}`} onClick={(e) => e.stopPropagation()}>
                         {c.razon_social}
                       </Link>
                     </td>
-                    <td className="px-3 py-2 text-slate-600 dark:text-slate-300">{c.cuit ?? "—"}</td>
+                    <td className="px-3 py-2 text-ink-2">{c.cuit ?? "—"}</td>
                     <td className="px-3 py-2">
                       {c.activo ? (
                         <Badge className="bg-green-100 text-green-700">activo</Badge>
                       ) : (
-                        <Badge className="bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                        <Badge className="bg-surface2 text-ink-2">
                           inactivo
                         </Badge>
                       )}
@@ -104,7 +104,7 @@ export default function CuentasPage() {
                 ))}
                 {cuentas.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                    <td colSpan={4} className="px-4 py-6 text-center text-ink-3">
                       {termino ? "Sin coincidencias." : "No hay cuentas todavía."}
                     </td>
                   </tr>

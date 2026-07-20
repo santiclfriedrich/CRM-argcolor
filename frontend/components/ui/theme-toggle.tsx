@@ -33,7 +33,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
         onClick={toggle}
         aria-label={titulo}
         title={titulo}
-        className="flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+        className="flex h-8 w-8 items-center justify-center rounded-md text-white/70 transition hover:bg-white/10"
       >
         {dark ? <Sun size={16} /> : <Moon size={16} />}
       </button>
@@ -45,7 +45,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
       type="button"
       onClick={toggle}
       aria-label={titulo}
-      className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+      className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm text-ink-2 transition hover:bg-surface2"
     >
       {dark ? <Sun size={16} /> : <Moon size={16} />}
       {dark ? "Modo claro" : "Modo nocturno"}

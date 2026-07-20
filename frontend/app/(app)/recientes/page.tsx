@@ -17,14 +17,14 @@ export default function RecientesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Registros recientes</h1>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      <h1 className="text-2xl font-bold text-ink">Registros recientes</h1>
+      <p className="mt-1 text-sm text-ink-2">
         {isLoading ? "Cargando…" : `${data.length} elemento${data.length === 1 ? "" : "s"}`}
       </p>
 
-      <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+      <div className="mt-6 overflow-hidden rounded-lg border border-line">
         <table className="w-full text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
+          <thead className="border-b border-line bg-surface2 text-left text-xs font-medium uppercase tracking-wide text-ink-2">
             <tr>
               <th className="px-4 py-3">Nombre</th>
               <th className="px-4 py-3">Tipo</th>
@@ -37,23 +37,23 @@ export default function RecientesPage() {
                 <tr
                   key={r.key}
                   onClick={() => router.push(r.href)}
-                  className="cursor-pointer border-t border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
+                  className="cursor-pointer border-t border-line hover:bg-surface2"
                 >
                   <td className="px-4 py-3">
                     <span className="flex items-center gap-3">
                       <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white ${bg}`}>
                         <Icon size={16} />
                       </span>
-                      <span className="font-medium text-brand">{r.nombre}</span>
+                      <span className="font-medium text-accent">{r.nombre}</span>
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{r.tipo}</td>
+                  <td className="px-4 py-3 text-ink-2">{r.tipo}</td>
                 </tr>
               );
             })}
             {!isLoading && data.length === 0 && (
               <tr>
-                <td colSpan={2} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
+                <td colSpan={2} className="px-4 py-8 text-center text-ink-3">
                   Todavía no hay registros.
                 </td>
               </tr>

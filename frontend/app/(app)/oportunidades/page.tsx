@@ -83,7 +83,7 @@ function IngInput({ o }: { o: Oportunidad }) {
       onClick={(e) => e.stopPropagation()}
       placeholder="—"
       aria-label="Ing. asignado"
-      className="w-12 rounded bg-slate-100 px-1 py-0.5 text-center text-xs font-semibold text-slate-700 placeholder:font-normal placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-brand dark:bg-slate-800 dark:text-slate-200"
+      className="w-12 rounded bg-surface2 px-1 py-0.5 text-center text-xs font-semibold text-ink placeholder:font-normal placeholder:text-ink-3 focus:outline-none focus:ring-1 focus:ring-accent"
     />
   );
 }
@@ -200,7 +200,7 @@ function FiltroColumna({
   };
 
   const itemCls =
-    "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-slate-100 dark:hover:bg-slate-800";
+    "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-surface2";
 
   return (
     <span className="inline-flex items-center gap-1">
@@ -212,7 +212,7 @@ function FiltroColumna({
         aria-label={`Ordenar o filtrar ${label}`}
         className={cn(
           "rounded p-0.5 transition-colors",
-          activo ? "text-brand" : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+          activo ? "text-accent" : "text-ink-3 hover:text-ink"
         )}
       >
         {dir === "asc" ? <ArrowUp size={13} /> : dir === "desc" ? <ArrowDown size={13} /> : <Filter size={12} />}
@@ -221,7 +221,7 @@ function FiltroColumna({
         <div
           ref={panelRef}
           style={{ position: "fixed", top: pos.top, left: pos.left }}
-          className="z-50 w-56 rounded-lg border border-slate-200 bg-white p-1.5 font-normal text-slate-700 shadow-pop dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          className="z-50 w-56 rounded-lg border border-line bg-surface p-1.5 font-normal text-ink shadow-pop"
         >
           <button className={itemCls} onClick={() => { onSort(colKey, "asc"); setOpen(false); }}>
             <ArrowUp size={13} /> Ascendente
@@ -230,18 +230,18 @@ function FiltroColumna({
             <ArrowDown size={13} /> Descendente
           </button>
           {dir && (
-            <button className={cn(itemCls, "text-slate-500")} onClick={() => { onSort(colKey, null); setOpen(false); }}>
+            <button className={cn(itemCls, "text-ink-2")} onClick={() => { onSort(colKey, null); setOpen(false); }}>
               Quitar orden
             </button>
           )}
-          <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+          <div className="my-1 border-t border-line" />
           <div className="relative mb-1">
-            <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-ink-3" />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar valor…"
-              className="w-full rounded border border-slate-200 py-1 pl-6 pr-2 text-xs dark:border-slate-700 dark:bg-slate-800"
+              className="w-full rounded border border-line py-1 pl-6 pr-2 text-xs bg-surface2"
             />
           </div>
           <label className={cn(itemCls, "font-medium")}>
@@ -259,7 +259,7 @@ function FiltroColumna({
                 <span className="truncate">{mostrarValor(v, tipo)}</span>
               </label>
             ))}
-            {visibles.length === 0 && <p className="px-2 py-1 text-xs text-slate-400">Sin valores</p>}
+            {visibles.length === 0 && <p className="px-2 py-1 text-xs text-ink-3">Sin valores</p>}
           </div>
         </div>
       )}
@@ -329,8 +329,8 @@ function MenuAcciones({
         fn();
       }}
       className={cn(
-        "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-slate-800",
-        opts?.danger ? "text-red-600" : "text-slate-700 dark:text-slate-200",
+        "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-surface2 disabled:opacity-50",
+        opts?.danger ? "text-red-600" : "text-ink",
       )}
     >
       {icon} {label}
@@ -344,7 +344,7 @@ function MenuAcciones({
         type="button"
         onClick={abrir}
         aria-label="Acciones"
-        className="rounded-md p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+        className="rounded-md p-1.5 text-ink-3 hover:bg-surface2 hover:text-ink"
       >
         <ChevronDown size={16} />
       </button>
@@ -352,14 +352,14 @@ function MenuAcciones({
         <div
           ref={panelRef}
           style={{ position: "fixed", top: pos.top, left: pos.left }}
-          className="z-50 w-44 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-pop dark:border-slate-700 dark:bg-slate-900"
+          className="z-50 w-44 overflow-hidden rounded-lg border border-line bg-surface py-1 shadow-pop"
         >
           {item("Modificar", onModificar, <Pencil size={14} />)}
           {item("Pedir a Compras", onPedir, <ClipboardList size={14} />)}
           {item("Crear presupuesto", onPresupuesto, <FileText size={14} />, {
             disabled: presupuestoPending,
           })}
-          <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+          <div className="my-1 border-t border-line" />
           {item("Eliminar", onEliminar, <Trash2 size={14} />, { danger: true })}
         </div>
       )}
@@ -513,7 +513,7 @@ export default function OportunidadesPage() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Oportunidades</h1>
+        <h1 className="text-2xl font-bold text-ink">Oportunidades</h1>
         <Button onClick={() => setCreating(true)}>
           <Plus size={16} /> Nueva oportunidad
         </Button>
@@ -522,7 +522,7 @@ export default function OportunidadesPage() {
       {/* Controles: Mías/Todas a la izquierda; período centrado. */}
       <div className="relative mt-3 flex flex-wrap items-center justify-center gap-3">
         {/* Mías / Todas (pegado a la izquierda en pantallas grandes) */}
-        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 dark:border-slate-800 dark:bg-slate-800/60 sm:absolute sm:left-0 sm:top-1/2 sm:-translate-y-1/2">
+        <div className="inline-flex rounded-lg border border-line bg-surface2 p-0.5 sm:absolute sm:left-0 sm:top-1/2 sm:-translate-y-1/2">
           {[
             { value: true, label: "Mías" },
             { value: false, label: "Todas" },
@@ -534,8 +534,8 @@ export default function OportunidadesPage() {
               className={cn(
                 "rounded-md px-3 py-1 text-sm font-medium transition-colors",
                 Boolean(filtros.solo_mias) === opt.value
-                  ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100"
-                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+                  ? "bg-surface text-ink shadow-sm"
+                  : "text-ink-2 hover:text-ink",
               )}
             >
               {opt.label}
@@ -544,7 +544,7 @@ export default function OportunidadesPage() {
         </div>
 
         {/* Período: Mes / Rango / Todos */}
-        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 dark:border-slate-800 dark:bg-slate-800/60">
+        <div className="inline-flex rounded-lg border border-line bg-surface2 p-0.5">
           {[
             { value: "mes", label: "Mes" },
             { value: "rango", label: "Rango" },
@@ -557,8 +557,8 @@ export default function OportunidadesPage() {
               className={cn(
                 "rounded-md px-3 py-1 text-sm font-medium transition-colors",
                 periodoModo === opt.value
-                  ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100"
-                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
+                  ? "bg-surface text-ink shadow-sm"
+                  : "text-ink-2 hover:text-ink",
               )}
             >
               {opt.label}
@@ -572,7 +572,7 @@ export default function OportunidadesPage() {
             <Button variant="outline" size="icon" onClick={() => cambiarMes(-1)} aria-label="Mes anterior">
               <ChevronLeft size={16} />
             </Button>
-            <span className="min-w-[120px] text-center text-sm font-semibold capitalize text-slate-900 dark:text-slate-100">
+            <span className="min-w-[120px] text-center text-sm font-semibold capitalize text-ink">
               {labelMes}
             </span>
             <Button
@@ -587,7 +587,7 @@ export default function OportunidadesPage() {
           </div>
         )}
         {periodoModo === "rango" && (
-          <div className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+          <div className="inline-flex items-center gap-2 text-sm text-ink-2">
             <Input
               type="date"
               value={rango.desde}
@@ -604,7 +604,7 @@ export default function OportunidadesPage() {
           </div>
         )}
 
-        <span className="text-xs text-slate-500 dark:text-slate-400">
+        <span className="text-xs text-ink-2">
           {oportunidadesDelMes.length}{" "}
           {oportunidadesDelMes.length === 1 ? "oportunidad" : "oportunidades"}
         </span>
@@ -612,7 +612,7 @@ export default function OportunidadesPage() {
 
       {/* Buscador global */}
       <div className="relative mt-4 w-full max-w-xs">
-        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3" />
         <Input
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
@@ -624,14 +624,14 @@ export default function OportunidadesPage() {
             type="button"
             onClick={() => setBusqueda("")}
             aria-label="Limpiar búsqueda"
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-ink-3 hover:text-ink"
           >
             <X size={14} />
           </button>
         )}
       </div>
 
-      {isLoading && <p className="mt-4 text-slate-500 dark:text-slate-400">Cargando…</p>}
+      {isLoading && <p className="mt-4 text-ink-2">Cargando…</p>}
       {isError && (
         <p className="mt-4 text-red-600">
           No se pudo cargar. ¿El backend está corriendo en {process.env.NEXT_PUBLIC_API_URL}?
@@ -639,9 +639,9 @@ export default function OportunidadesPage() {
       )}
 
       {data && (
-        <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800">
+        <div className="mt-4 overflow-x-auto rounded-lg border border-line">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+            <thead className="bg-surface2 text-left text-ink-2">
               <tr className="whitespace-nowrap">
                 <th className="px-2 py-1.5 font-medium">ID</th>
                 {th("cliente", "Cliente")}
@@ -666,9 +666,9 @@ export default function OportunidadesPage() {
                 <tr
                   key={o.id}
                   onClick={() => router.push(`/oportunidades/${o.id}`)}
-                  className="cursor-pointer border-t border-slate-100 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/40"
+                  className="cursor-pointer border-t border-line hover:bg-surface2"
                 >
-                  <td className="whitespace-nowrap px-2 py-1.5 font-medium text-slate-500 dark:text-slate-400">
+                  <td className="whitespace-nowrap px-2 py-1.5 font-medium text-ink-2">
                     <span className="inline-flex items-center gap-1.5 leading-none">
                       {/* Slot fijo para el punto: así los números arrancan siempre alineados. */}
                       <span className="flex h-1.5 w-1.5 shrink-0 items-center justify-center">
@@ -683,7 +683,7 @@ export default function OportunidadesPage() {
                       <span className="leading-none">#{o.id}</span>
                     </span>
                   </td>
-                  <td className="max-w-[12rem] px-2 py-1.5 font-medium text-slate-800 dark:text-slate-100">
+                  <td className="max-w-[12rem] px-2 py-1.5 font-medium text-ink">
                     <div className="flex items-center gap-1.5">
                       <span className="truncate" title={o.cliente?.razon_social ?? ""}>
                         {o.cliente?.razon_social ?? "—"}
@@ -695,36 +695,36 @@ export default function OportunidadesPage() {
                       )}
                     </div>
                   </td>
-                  <td className="px-2 py-1.5 text-slate-500 dark:text-slate-400">
+                  <td className="px-2 py-1.5 text-ink-2">
                     {o.cliente?.numero_cliente ?? "—"}
                   </td>
-                  <td className="max-w-[11rem] truncate px-2 py-1.5 text-slate-600 dark:text-slate-300" title={o.asunto ?? ""}>
+                  <td className="max-w-[11rem] truncate px-2 py-1.5 text-ink-2" title={o.asunto ?? ""}>
                     {o.asunto ?? "—"}
                   </td>
-                  <td className="max-w-[8rem] truncate px-2 py-1.5 text-slate-600 dark:text-slate-300" title={o.producto ?? ""}>
+                  <td className="max-w-[8rem] truncate px-2 py-1.5 text-ink-2" title={o.producto ?? ""}>
                     {o.producto ?? "—"}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-600 dark:text-slate-300">
+                  <td className="whitespace-nowrap px-2 py-1.5 text-ink-2">
                     {o.numero_pedido ?? "—"}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-600 dark:text-slate-300">
+                  <td className="whitespace-nowrap px-2 py-1.5 text-ink-2">
                     {fmtDate(o.fecha_enviado_compras)}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-600 dark:text-slate-300">
+                  <td className="whitespace-nowrap px-2 py-1.5 text-ink-2">
                     {fmtDate(o.fecha_respuesta_compras)}
                   </td>
                   <td className="px-2 py-1.5 text-center">
                     {estaCotizada(o) ? (
                       <Check size={16} className="mx-auto text-green-600" aria-label="Cotizado" />
                     ) : (
-                      <span className="text-slate-300 dark:text-slate-600">—</span>
+                      <span className="text-ink-3">—</span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-600 dark:text-slate-300">
+                  <td className="whitespace-nowrap px-2 py-1.5 text-ink-2">
                     {fmtDate(o.fecha_enviado_cliente)}
                   </td>
                   <td className="whitespace-nowrap px-2 py-1.5">
-                    <span className={estaVencida(o) ? "font-semibold text-red-600" : "text-slate-500 dark:text-slate-400"}>
+                    <span className={estaVencida(o) ? "font-semibold text-red-600" : "text-ink-2"}>
                       {fmtDate(o.fecha_limite)}
                     </span>
                   </td>
@@ -741,10 +741,10 @@ export default function OportunidadesPage() {
                       onChange={(e) => toggleGbp.mutate({ id: o.id, valor: e.target.checked })}
                       aria-label="Cargada en GBP"
                       title="Cargada en GBP"
-                      className="h-4 w-4 rounded border-slate-300 accent-brand dark:border-slate-700"
+                      className="h-4 w-4 rounded border-line accent-navy"
                     />
                   </td>
-                  <td className="max-w-[10rem] truncate px-2 py-1.5 text-slate-500 dark:text-slate-400" title={o.observacion ?? ""}>
+                  <td className="max-w-[10rem] truncate px-2 py-1.5 text-ink-2" title={o.observacion ?? ""}>
                     {o.observacion ?? "—"}
                   </td>
                   <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
@@ -760,7 +760,7 @@ export default function OportunidadesPage() {
               ))}
               {filas.length === 0 && (
                 <tr>
-                  <td colSpan={16} className="px-4 py-6 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={16} className="px-4 py-6 text-center text-ink-3">
                     {oportunidadesDelMes.length > 0
                       ? "No hay oportunidades que coincidan con la búsqueda o los filtros."
                       : periodoModo === "mes"
@@ -800,7 +800,7 @@ function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad;
   return (
     <Modal open onClose={onClose} title={`Pedir a Compras — ${cliente}`}>
       {isLoading ? (
-        <p className="text-slate-500 dark:text-slate-400">Cargando sugerencia…</p>
+        <p className="text-ink-2">Cargando sugerencia…</p>
       ) : (
         <div className="space-y-3">
           <SolicitudForm

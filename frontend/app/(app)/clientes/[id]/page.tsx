@@ -30,7 +30,7 @@ export default function ClienteDetailPage() {
   const { data: misTareas } = useTareas();
   const [editarTarea, setEditarTarea] = useState<Tarea | null>(null);
 
-  if (isLoading) return <p className="text-slate-500 dark:text-slate-400">Cargando…</p>;
+  if (isLoading) return <p className="text-ink-2">Cargando…</p>;
   if (isError || !cliente) return <p className="text-red-600">No se pudo cargar la cuenta.</p>;
 
   const opps = oportunidades ?? [];
@@ -51,7 +51,7 @@ export default function ClienteDetailPage() {
     <div className="space-y-6">
       <Link
         href="/clientes"
-        className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400"
+        className="inline-flex items-center gap-1 text-sm text-ink-2 hover:text-ink"
       >
         <ArrowLeft size={15} /> Volver a cuentas
       </Link>
@@ -63,21 +63,21 @@ export default function ClienteDetailPage() {
             <Building2 size={22} />
           </span>
           <div>
-            <p className="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">Cuenta</p>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <p className="text-xs uppercase tracking-wide text-ink-3">Cuenta</p>
+            <h1 className="text-2xl font-bold text-ink">
               {cliente.razon_social}
             </h1>
-            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
+            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-ink-2">
               <span>Contactos: {cliente.contactos.length}</span>
               <span>Oportunidades: {opps.length}</span>
               <span>Tareas: {tareas.length}</span>
             </div>
             {cliente.cuenta_principal && (
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-1 text-xs text-ink-2">
                 Subcuenta de{" "}
                 <Link
                   href={`/clientes/${cliente.cuenta_principal.id}`}
-                  className="text-brand hover:underline"
+                  className="text-accent hover:underline"
                 >
                   {cliente.cuenta_principal.razon_social}
                 </Link>
@@ -99,8 +99,8 @@ export default function ClienteDetailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Columna principal */}
         <div className="space-y-6 lg:col-span-2">
-          <section className="rounded-lg border border-slate-200 p-5 dark:border-slate-800">
-            <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100">
+          <section className="rounded-lg border border-line p-5">
+            <h2 className="mb-4 text-lg font-semibold text-ink">
               Datos de la cuenta
             </h2>
             <ClienteForm
@@ -131,25 +131,25 @@ export default function ClienteDetailPage() {
 
         {/* Columna lateral: relacionados */}
         <div className="space-y-6">
-          <section className="rounded-lg border border-slate-200 dark:border-slate-800">
-            <header className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+          <section className="rounded-lg border border-line">
+            <header className="flex items-center gap-2 border-b border-line px-4 py-3">
               <Target size={16} className="text-orange-500" />
-              <span className="font-semibold text-slate-800 dark:text-slate-100">Oportunidades</span>
+              <span className="font-semibold text-ink">Oportunidades</span>
               <Badge className="ml-auto">{opps.length}</Badge>
             </header>
-            <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+            <ul className="divide-y divide-line">
               {opps.map((o) => (
                 <li key={o.id}>
                   <button
                     type="button"
                     onClick={() => router.push(`/oportunidades?op=${o.id}`)}
-                    className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-surface2"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-slate-800 dark:text-slate-100">
+                      <span className="block truncate text-sm font-medium text-ink">
                         {o.asunto ?? `Oportunidad #${o.id}`}
                       </span>
-                      <span className="text-xs text-slate-400 dark:text-slate-500">
+                      <span className="text-xs text-ink-3">
                         {o.valor_estimado != null ? fmtMonto(o.valor_estimado, "USD") : "—"}
                       </span>
                     </span>
@@ -158,44 +158,44 @@ export default function ClienteDetailPage() {
                 </li>
               ))}
               {opps.length === 0 && (
-                <li className="px-4 py-5 text-center text-xs text-slate-400 dark:text-slate-500">
+                <li className="px-4 py-5 text-center text-xs text-ink-3">
                   Sin oportunidades.
                 </li>
               )}
             </ul>
           </section>
 
-          <section className="rounded-lg border border-slate-200 dark:border-slate-800">
-            <header className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 dark:border-slate-800">
-              <ListChecks size={16} className="text-brand" />
-              <span className="font-semibold text-slate-800 dark:text-slate-100">Tareas</span>
+          <section className="rounded-lg border border-line">
+            <header className="flex items-center gap-2 border-b border-line px-4 py-3">
+              <ListChecks size={16} className="text-accent" />
+              <span className="font-semibold text-ink">Tareas</span>
               <Badge className="ml-auto">{tareas.length}</Badge>
             </header>
-            <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+            <ul className="divide-y divide-line">
               {tareas.map((t) => (
                 <li key={t.id}>
                   <button
                     type="button"
                     onClick={() => setEditarTarea(t)}
-                    className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                    className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-surface2"
                   >
                     <span
                       className={`min-w-0 truncate text-sm ${
                         t.completada
-                          ? "text-slate-400 line-through dark:text-slate-500"
-                          : "text-slate-800 dark:text-slate-100"
+                          ? "text-ink-3 line-through"
+                          : "text-ink"
                       }`}
                     >
                       {t.titulo}
                     </span>
-                    <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">
+                    <span className="shrink-0 text-xs text-ink-3">
                       {fmtDia(t.fecha_vencimiento)}
                     </span>
                   </button>
                 </li>
               ))}
               {tareas.length === 0 && (
-                <li className="px-4 py-5 text-center text-xs text-slate-400 dark:text-slate-500">
+                <li className="px-4 py-5 text-center text-xs text-ink-3">
                   Sin tareas.
                 </li>
               )}
@@ -203,18 +203,18 @@ export default function ClienteDetailPage() {
           </section>
 
           {cliente.subcuentas.length > 0 && (
-            <section className="rounded-lg border border-slate-200 dark:border-slate-800">
-              <header className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+            <section className="rounded-lg border border-line">
+              <header className="flex items-center gap-2 border-b border-line px-4 py-3">
                 <Building2 size={16} className="text-blue-500" />
-                <span className="font-semibold text-slate-800 dark:text-slate-100">Subcuentas</span>
+                <span className="font-semibold text-ink">Subcuentas</span>
                 <Badge className="ml-auto">{cliente.subcuentas.length}</Badge>
               </header>
-              <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+              <ul className="divide-y divide-line">
                 {cliente.subcuentas.map((s) => (
                   <li key={s.id}>
                     <Link
                       href={`/clientes/${s.id}`}
-                      className="block truncate px-4 py-2.5 text-sm font-medium text-brand hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                      className="block truncate px-4 py-2.5 text-sm font-medium text-accent hover:bg-surface2"
                     >
                       {s.razon_social}
                     </Link>

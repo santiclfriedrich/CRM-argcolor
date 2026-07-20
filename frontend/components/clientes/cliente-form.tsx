@@ -66,7 +66,7 @@ const TIPOS = [
 function Seccion({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <section>
-      <div className="mb-4 rounded-md bg-slate-100 px-4 py-2 text-[15px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+      <div className="mb-4 rounded-md bg-surface2 px-4 py-2 text-[15px] font-bold text-ink">
         {titulo}
       </div>
       <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">{children}</div>
@@ -154,7 +154,7 @@ export function ClienteForm({
 
   return (
     <form id={formId} onSubmit={enviar} className="space-y-6" noValidate>
-      <p className="text-right text-xs text-slate-500 dark:text-slate-400">
+      <p className="text-right text-xs text-ink-2">
         <Req /> = Información obligatoria
       </p>
 
@@ -277,17 +277,17 @@ export function ClienteForm({
         </div>
       </Seccion>
 
-      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+      <label className="flex items-center gap-2 text-sm text-ink">
         <input
           type="checkbox"
           {...register("activo")}
-          className="h-4 w-4 rounded border-slate-300 accent-brand dark:border-slate-700"
+          className="h-4 w-4 rounded border-line accent-navy"
         />
         Cuenta activa
       </label>
 
       {!hideSubmit && (
-        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
+        <div className="flex justify-end gap-2 border-t border-line pt-4">
           {onCancel && (
             <Button variant="outline" onClick={onCancel} disabled={isPending}>
               Cancelar

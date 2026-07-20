@@ -201,13 +201,13 @@ export function TareaModal({ open, onClose, tarea, fechaPorDefecto }: Props) {
         </div>
 
         {/* Otra información: recordatorio */}
-        <div className="rounded-md border border-slate-200 p-3 dark:border-slate-800">
-          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+        <div className="rounded-md border border-line p-3">
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-ink">
             <input
               type="checkbox"
               checked={recordatorioOn}
               onChange={(e) => setRecordatorioOn(e.target.checked)}
-              className="h-4 w-4 accent-brand"
+              className="h-4 w-4 accent-navy"
             />
             Recordatorio establecido
           </label>
@@ -237,18 +237,18 @@ export function TareaModal({ open, onClose, tarea, fechaPorDefecto }: Props) {
 
         {/* Información del sistema (solo edición) */}
         {esEdicion && tarea && (
-          <div className="grid grid-cols-2 gap-3 rounded-md bg-slate-50 p-3 text-xs dark:bg-slate-800/50">
+          <div className="grid grid-cols-2 gap-3 rounded-md bg-surface2 p-3 text-xs">
             <div>
-              <div className="font-semibold text-slate-600 dark:text-slate-300">Creado por</div>
-              <div className="text-slate-500 dark:text-slate-400">
+              <div className="font-semibold text-ink-2">Creado por</div>
+              <div className="text-ink-2">
                 {tarea.usuario?.nombre ?? "—"}, {fmtDateTime(tarea.created_at)}
               </div>
             </div>
             <div>
-              <div className="font-semibold text-slate-600 dark:text-slate-300">
+              <div className="font-semibold text-ink-2">
                 Última modificación
               </div>
-              <div className="text-slate-500 dark:text-slate-400">
+              <div className="text-ink-2">
                 {tarea.usuario?.nombre ?? "—"}, {fmtDateTime(tarea.updated_at)}
               </div>
             </div>

@@ -17,7 +17,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
 
   if (status === "loading" || status === "unauthenticated") {
     return (
-      <div className="flex min-h-screen items-center justify-center text-slate-400">
+      <div className="flex min-h-screen items-center justify-center text-ink-3">
         Cargando…
       </div>
     );

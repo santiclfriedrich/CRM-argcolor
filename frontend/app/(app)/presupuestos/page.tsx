@@ -27,19 +27,19 @@ export default function PresupuestosPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Presupuestos</h1>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      <h1 className="text-2xl font-bold text-ink">Presupuestos</h1>
+      <p className="mt-1 text-sm text-ink-2">
         Cotizaciones armadas en el CRM. Para crear una nueva, entrá a una oportunidad y usá
         “Armar presupuesto”.
       </p>
 
-      {isLoading && <p className="mt-4 text-slate-500 dark:text-slate-400">Cargando…</p>}
+      {isLoading && <p className="mt-4 text-ink-2">Cargando…</p>}
       {isError && <p className="mt-4 text-red-600">No se pudo cargar.</p>}
 
       {data && (
-        <div className="mt-6 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+        <div className="mt-6 overflow-hidden rounded-lg border border-line">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+            <thead className="bg-surface2 text-left text-ink-2">
               <tr>
                 <th className="px-4 py-2 font-medium">Código</th>
                 <th className="px-4 py-2 font-medium">Oportunidad</th>
@@ -53,12 +53,12 @@ export default function PresupuestosPage() {
               {data.map((p) => (
                 <tr
                   key={p.id}
-                  className="border-t border-slate-100 dark:border-slate-800"
+                  className="border-t border-line"
                 >
                   <td className="px-4 py-2">
                     <Link
                       href={`/presupuestos/${p.id}`}
-                      className="font-medium text-brand hover:underline"
+                      className="font-medium text-accent hover:underline"
                     >
                       {p.codigo}
                     </Link>
@@ -67,21 +67,21 @@ export default function PresupuestosPage() {
                     <div className="flex flex-col items-start gap-1">
                       <Link
                         href={`/oportunidades?op=${p.oportunidad_id}`}
-                        className="inline-flex items-center rounded-md border border-brand/30 bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand hover:bg-brand/20"
+                        className="inline-flex items-center rounded-md border border-accent/30 bg-accent-dim px-2 py-0.5 text-xs font-semibold text-accent hover:bg-accent/20"
                       >
                         #{p.oportunidad_id}
                       </Link>
                       {p.oportunidad?.asunto && (
-                        <span className="max-w-[16rem] truncate text-xs text-slate-500 dark:text-slate-400">
+                        <span className="max-w-[16rem] truncate text-xs text-ink-2">
                           {p.oportunidad.asunto}
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-2 text-slate-700 dark:text-slate-200">
+                  <td className="px-4 py-2 text-ink">
                     {p.oportunidad?.cliente?.razon_social ?? "—"}
                   </td>
-                  <td className="px-4 py-2 text-slate-700 dark:text-slate-200">
+                  <td className="px-4 py-2 text-ink">
                     {fmtMonto(p.monto_total, p.moneda)}
                   </td>
                   <td className="px-4 py-2">
@@ -101,7 +101,7 @@ export default function PresupuestosPage() {
                           onClick={() => eliminar(p)}
                           disabled={deleteMut.isPending}
                           aria-label="Eliminar"
-                          className="text-slate-400 hover:text-red-600 dark:text-slate-500"
+                          className="text-ink-3 hover:text-red-600"
                         >
                           <Trash2 size={14} />
                         </Button>
@@ -112,7 +112,7 @@ export default function PresupuestosPage() {
               ))}
               {data.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-ink-3">
                     Todavía no hay presupuestos.
                   </td>
                 </tr>
