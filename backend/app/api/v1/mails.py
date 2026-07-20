@@ -28,7 +28,7 @@ from app.schemas.mail import (
     ResponderRequest,
 )
 from app.services.acuse import send_aclaracion, send_acuse, send_respuesta
-from app.services.gmail_poller import poll_all_mailboxes
+from app.services.gmail_poller import poll_user_mailbox
 from app.services.ingest import process_incoming_email
 from app.services.storage import get_storage
 
@@ -93,9 +93,10 @@ def ingest_email(
     """Procesa un mail entrante: identifica cliente/contacto, extrae con IA y
     crea la oportunidad. El transporte real (Gmail) usará este mismo pipeline.
 
-    La oportunidad queda a nombre del usuario logueado (salvo que el cliente ya
-    tenga un vendedor asignado, que tiene prioridad). Si la IA lo clasifica como
-    no comercial, no crea oportunidad y devuelve un aviso de descarte."""
+    La oportunidad queda a nombre del usuario logueado (dueño de la casilla que
+    recibió el mail); las cuentas son compartidas y no cambian esa asignación.
+    Si la IA lo clasifica como no comercial, no crea oportunidad y devuelve un
+    aviso de descarte."""
     try:
         mail = process_incoming_email(
             db,
@@ -131,12 +132,14 @@ def sync_gmail(
     ai: AIProvider = Depends(get_ai),
     current_user: Usuario = Depends(get_current_user),
 ) -> dict[str, int | str | None]:
-    """Dispara una corrida de polling ahora mismo (todas las casillas configuradas).
+    """Sincroniza SOLO la casilla del usuario logueado (su propio Gmail).
 
-    Útil para probar sin esperar al scheduler. Requiere Gmail configurado.
+    Cada vendedor lee únicamente su casilla y los mails quedan a su nombre; el
+    sync de un usuario nunca toca la de otro. El polling de todas las casillas
+    corre aparte en el scheduler de fondo.
     Devuelve {procesados, errores, ultimo_error}."""
     try:
-        resultado = poll_all_mailboxes(db, ai, default_vendedor_id=current_user.id)
+        resultado = poll_user_mailbox(db, ai, current_user)
     except Exception as exc:  # noqa: BLE001 - frontera con Gmail
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

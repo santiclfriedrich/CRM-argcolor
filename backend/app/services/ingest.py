@@ -206,14 +206,10 @@ def process_incoming_email(
         else EstadoOportunidad.nueva
     )
 
-    # Vendedor: el asignado al cliente; si no hay, el dueño de la casilla.
+    # Vendedor: el dueño de la casilla que recibió el mail. Las cuentas son
+    # compartidas, así que la oportunidad queda en la bandeja de quien recibió
+    # el correo, sin importar el vendedor asignado a la cuenta.
     vendedor_id: int | None = default_vendedor_id
-    if cliente_id is not None:
-        from app.db.models.clientes import Cliente
-
-        cliente = db.get(Cliente, cliente_id)
-        if cliente and cliente.vendedor_asignado_id:
-            vendedor_id = cliente.vendedor_asignado_id
 
     oportunidad = Oportunidad(
         cliente_id=cliente_id,

@@ -152,6 +152,39 @@ def poll_once(
     return {"procesados": procesados, "errores": errores, "ultimo_error": ultimo_error}
 
 
+def poll_user_mailbox(
+    db: Session, ai: AIProvider, usuario: Usuario
+) -> dict[str, int | str | None]:
+    """Pollea SOLO la casilla del usuario dado, con su propio refresh token.
+
+    Es lo que usa la sincronización manual (botón "Sincronizar"): cada vendedor
+    lee ÚNICAMENTE su propia casilla y los mails quedan a su nombre. Así el sync
+    de un usuario nunca toca la casilla de otro ni le atribuye mails ajenos.
+    """
+    from app.core.crypto import decrypt
+    from app.integrations.gmail.client import GmailClient
+
+    if not usuario.gmail_refresh_token:
+        return {
+            "procesados": 0,
+            "errores": 0,
+            "ultimo_error": (
+                "No tenés Gmail conectado. Conectalo desde tu perfil para "
+                "sincronizar tu casilla."
+            ),
+        }
+    token = decrypt(usuario.gmail_refresh_token)
+    if not token:
+        return {
+            "procesados": 0,
+            "errores": 0,
+            "ultimo_error": "No se pudo leer tu token de Gmail. Reconectá tu cuenta.",
+        }
+    query = build_poll_query(db)
+    gmail = GmailClient(refresh_token=token)
+    return poll_once(db, ai, gmail, query=query, default_vendedor_id=usuario.id)
+
+
 def poll_all_mailboxes(
     db: Session, ai: AIProvider, default_vendedor_id: int | None = None
 ) -> dict[str, int | str | None]:
