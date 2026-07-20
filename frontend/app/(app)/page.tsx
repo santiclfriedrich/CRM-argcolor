@@ -66,6 +66,15 @@ function montoCompacto(n: number): string {
   return `$${Math.round(n)}`;
 }
 
+// Fondo suave a partir del color del punto de la leyenda (hex -> rgba tenue).
+function tinte(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export default function InicioPage() {
   const { data: session } = useSession();
   const currentUserId = Number(session?.usuario?.id) || null;
@@ -368,7 +377,8 @@ function DashCard({
           {legend.map((l, i) => (
             <li
               key={i}
-              className="flex items-center gap-2 rounded-md bg-surface2 px-2.5 py-1.5 text-sm text-ink"
+              className="flex w-fit items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-ink"
+              style={{ backgroundColor: tinte(l.dot, 0.14) }}
             >
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
