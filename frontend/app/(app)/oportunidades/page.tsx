@@ -4,10 +4,10 @@ import {
   ArrowDown,
   ArrowUp,
   Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Eye,
   FileText,
   Filter,
   Pencil,
@@ -23,7 +23,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
 
@@ -280,40 +279,56 @@ function estaVencida(o: Oportunidad): boolean {
 
 // Menú de acciones de la fila (reemplaza los íconos sueltos). Se posiciona con
 // `fixed` para no quedar recortado por el scroll horizontal de la tabla.
-function MenuAcciones({
+// Menú de acciones de una fila: aparece donde se hace clic sobre la fila.
+function RowMenu({
+  o,
+  x,
+  y,
+  onClose,
+  onVerDetalle,
   onModificar,
   onPedir,
   onPresupuesto,
   onEliminar,
   presupuestoPending,
 }: {
+  o: Oportunidad;
+  x: number;
+  y: number;
+  onClose: () => void;
+  onVerDetalle: () => void;
   onModificar: () => void;
   onPedir: () => void;
   onPresupuesto: () => void;
   onEliminar: () => void;
   presupuestoPending: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-  const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return;
     const cerrar = (e: MouseEvent) => {
-      if (panelRef.current?.contains(e.target as Node) || btnRef.current?.contains(e.target as Node)) return;
-      setOpen(false);
+      if (panelRef.current?.contains(e.target as Node)) return;
+      onClose();
     };
-    document.addEventListener("mousedown", cerrar);
-    return () => document.removeEventListener("mousedown", cerrar);
-  }, [open]);
+    // Diferido para no capturar el mismo clic que abrió el menú.
+    const t = window.setTimeout(() => document.addEventListener("mousedown", cerrar), 0);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      window.clearTimeout(t);
+      document.removeEventListener("mousedown", cerrar);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
 
-  const abrir = (e: ReactMouseEvent) => {
-    e.stopPropagation();
-    const r = btnRef.current?.getBoundingClientRect();
-    if (r) setPos({ top: r.bottom + 4, left: Math.max(8, r.right - 180) });
-    setOpen((v) => !v);
-  };
+  const W = 208;
+  const H = 250;
+  const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+  const left = Math.max(8, Math.min(x, vw - W - 8));
+  const top = Math.max(8, Math.min(y, vh - H - 8));
 
   const item = (
     label: string,
@@ -324,13 +339,12 @@ function MenuAcciones({
     <button
       type="button"
       disabled={opts?.disabled}
-      onClick={(e) => {
-        e.stopPropagation();
-        setOpen(false);
+      onClick={() => {
+        onClose();
         fn();
       }}
       className={cn(
-        "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-surface2 disabled:opacity-50",
+        "flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-surface2 disabled:opacity-50",
         opts?.danger ? "text-red-600" : "text-ink",
       )}
     >
@@ -339,31 +353,22 @@ function MenuAcciones({
   );
 
   return (
-    <div className="flex justify-end">
-      <button
-        ref={btnRef}
-        type="button"
-        onClick={abrir}
-        aria-label="Acciones"
-        className="rounded-md p-1.5 text-ink-3 hover:bg-surface2 hover:text-ink"
-      >
-        <ChevronDown size={16} />
-      </button>
-      {open && (
-        <div
-          ref={panelRef}
-          style={{ position: "fixed", top: pos.top, left: pos.left }}
-          className="z-50 w-44 overflow-hidden rounded-lg border border-line bg-surface py-1 shadow-pop"
-        >
-          {item("Modificar", onModificar, <Pencil size={14} />)}
-          {item("Pedir a Compras", onPedir, <ClipboardList size={14} />)}
-          {item("Crear presupuesto", onPresupuesto, <FileText size={14} />, {
-            disabled: presupuestoPending,
-          })}
-          <div className="my-1 border-t border-line" />
-          {item("Eliminar", onEliminar, <Trash2 size={14} />, { danger: true })}
-        </div>
-      )}
+    <div
+      ref={panelRef}
+      style={{ position: "fixed", top, left, width: W }}
+      className="z-50 overflow-hidden rounded-lg border border-line bg-surface py-1 shadow-pop"
+    >
+      <div className="truncate border-b border-line px-3 py-1.5 text-xs font-semibold text-ink-3">
+        {o.cliente?.razon_social ?? `#${o.id}`}
+      </div>
+      {item("Ver detalle", onVerDetalle, <Eye size={14} />)}
+      {item("Pedir a Compras", onPedir, <ClipboardList size={14} />)}
+      {item("Crear presupuesto", onPresupuesto, <FileText size={14} />, {
+        disabled: presupuestoPending,
+      })}
+      {item("Modificar", onModificar, <Pencil size={14} />)}
+      <div className="my-1 border-t border-line" />
+      {item("Eliminar", onEliminar, <Trash2 size={14} />, { danger: true })}
     </div>
   );
 }
@@ -375,6 +380,8 @@ export default function OportunidadesPage() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Oportunidad | null>(null);
   const [pidiendo, setPidiendo] = useState<Oportunidad | null>(null);
+  // Menú de acciones que aparece al clickear una fila (posición del cursor).
+  const [menu, setMenu] = useState<{ o: Oportunidad; x: number; y: number } | null>(null);
   const [filtros, setFiltros] = useState<OportunidadFiltros>({
     estado: "",
     cliente_id: null,
@@ -666,14 +673,13 @@ export default function OportunidadesPage() {
                 {th("estado", "Estado")}
                 <th className="px-2 py-1.5 text-center font-medium">GBP</th>
                 {th("observacion", "Observación")}
-                <th className="px-2 py-1.5" />
               </tr>
             </thead>
             <tbody>
               {filas.map((o) => (
                 <tr
                   key={o.id}
-                  onClick={() => router.push(`/oportunidades/${o.id}`)}
+                  onClick={(e) => setMenu({ o, x: e.clientX, y: e.clientY })}
                   className="cursor-pointer border-t border-line hover:bg-surface2"
                 >
                   <td className="whitespace-nowrap px-2 py-1.5 font-medium text-ink-2">
@@ -755,20 +761,11 @@ export default function OportunidadesPage() {
                   <td className="max-w-[10rem] truncate px-2 py-1.5 text-ink-2" title={o.observacion ?? ""}>
                     {o.observacion ?? "—"}
                   </td>
-                  <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
-                    <MenuAcciones
-                      onModificar={() => setEditing(o)}
-                      onPedir={() => setPidiendo(o)}
-                      onPresupuesto={() => armarPresupuesto(o)}
-                      onEliminar={() => eliminar(o)}
-                      presupuestoPending={crearPresupuesto.isPending}
-                    />
-                  </td>
                 </tr>
               ))}
               {filas.length === 0 && (
                 <tr>
-                  <td colSpan={16} className="px-4 py-6 text-center text-ink-3">
+                  <td colSpan={15} className="px-4 py-6 text-center text-ink-3">
                     {oportunidadesDelMes.length > 0
                       ? "No hay oportunidades que coincidan con la búsqueda o los filtros."
                       : periodoModo === "mes"
@@ -795,6 +792,21 @@ export default function OportunidadesPage() {
 
       {editing && <EditOportunidadModal oportunidad={editing} onClose={() => setEditing(null)} />}
       {pidiendo && <PedirComprasModal oportunidad={pidiendo} onClose={() => setPidiendo(null)} />}
+
+      {menu && (
+        <RowMenu
+          o={menu.o}
+          x={menu.x}
+          y={menu.y}
+          onClose={() => setMenu(null)}
+          onVerDetalle={() => router.push(`/oportunidades/${menu.o.id}`)}
+          onModificar={() => setEditing(menu.o)}
+          onPedir={() => setPidiendo(menu.o)}
+          onPresupuesto={() => armarPresupuesto(menu.o)}
+          onEliminar={() => eliminar(menu.o)}
+          presupuestoPending={crearPresupuesto.isPending}
+        />
+      )}
     </div>
   );
 }
