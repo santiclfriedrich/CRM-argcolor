@@ -31,7 +31,11 @@ class Usuario(Base, TimestampMixin):
     gmail_refresh_token: Mapped[str | None] = mapped_column(Text)
     gmail_conectado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    clientes = relationship("Cliente", back_populates="vendedor_asignado")
+    clientes = relationship(
+        "Cliente",
+        back_populates="vendedor_asignado",
+        foreign_keys="Cliente.vendedor_asignado_id",
+    )
     oportunidades = relationship("Oportunidad", back_populates="vendedor")
 
     @property

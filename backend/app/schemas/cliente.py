@@ -53,11 +53,20 @@ class CuentaMini(BaseModel):
     razon_social: str
 
 
+class UsuarioMini(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nombre: str
+
+
 class ClienteRead(ClienteBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     created_at: datetime
+    creado_por_id: int | None = None
+    creado_por: UsuarioMini | None = None
 
 
 class ClienteDetail(ClienteRead):

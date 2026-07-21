@@ -19,6 +19,8 @@ export interface Cliente {
   direccion_facturacion: string | null;
   direccion_envio: string | null;
   created_at: string;
+  creado_por_id: number | null;
+  creado_por: { id: number; nombre: string } | null;
 }
 
 export interface CuentaMini {

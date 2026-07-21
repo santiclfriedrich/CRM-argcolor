@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user
 from app.core.exceptions import NotFoundError
@@ -37,15 +37,23 @@ def _validar_cuenta_principal(
 def list_clientes(
     db: Session = Depends(get_db), _: Usuario = Depends(get_current_user)
 ) -> list[Cliente]:
-    return list(db.scalars(select(Cliente).order_by(Cliente.razon_social)))
+    return list(
+        db.scalars(
+            select(Cliente)
+            .options(selectinload(Cliente.creado_por))
+            .order_by(Cliente.razon_social)
+        )
+    )
 
 
 @router.post("", response_model=ClienteRead, status_code=201)
 def create_cliente(
-    body: ClienteCreate, db: Session = Depends(get_db), _: Usuario = Depends(get_current_user)
+    body: ClienteCreate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
 ) -> Cliente:
     _validar_cuenta_principal(db, body.cuenta_principal_id, None)
-    cliente = Cliente(**body.model_dump())
+    cliente = Cliente(**body.model_dump(), creado_por_id=current_user.id)
     db.add(cliente)
     db.commit()
     db.refresh(cliente)

@@ -14,6 +14,8 @@ class Cliente(Base, TimestampMixin):
     cuit: Mapped[str | None] = mapped_column(String(20), index=True)
     numero_cliente: Mapped[str | None] = mapped_column(String(40), index=True)  # "CL N°" en el ERP
     vendedor_asignado_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
+    # Quién creó la cuenta (para el filtro Mías/Todas). Null en las previas al cambio.
+    creado_por_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"), index=True)
     notas: Mapped[str | None] = mapped_column(Text)  # "Descripción" en la UI
     activo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
@@ -29,7 +31,10 @@ class Cliente(Base, TimestampMixin):
     direccion_facturacion: Mapped[str | None] = mapped_column(Text)
     direccion_envio: Mapped[str | None] = mapped_column(Text)
 
-    vendedor_asignado = relationship("Usuario", back_populates="clientes")
+    vendedor_asignado = relationship(
+        "Usuario", foreign_keys=[vendedor_asignado_id], back_populates="clientes"
+    )
+    creado_por = relationship("Usuario", foreign_keys=[creado_por_id])
     contactos = relationship("ContactoCliente", back_populates="cliente")
     dominios = relationship("DominioCliente", back_populates="cliente")
     oportunidades = relationship("Oportunidad", back_populates="cliente")

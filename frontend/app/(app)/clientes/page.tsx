@@ -1,6 +1,7 @@
 "use client";
 
 import { Building2, Plus, Search } from "lucide-react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -13,18 +14,25 @@ import { useClientes, useCreateCliente } from "@/lib/clientes";
 
 export default function CuentasPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const currentUserId = Number(session?.usuario?.id) || null;
   const [creating, setCreating] = useState(false);
   const [q, setQ] = useState("");
+  const [filtro, setFiltro] = useState<"mias" | "todas">("mias");
   const { data, isLoading, isError } = useClientes();
   const createMut = useCreateCliente();
 
   const termino = q.trim().toLowerCase();
-  const cuentas = (data ?? []).filter(
-    (c) =>
-      !termino ||
-      c.razon_social.toLowerCase().includes(termino) ||
-      (c.cuit ?? "").toLowerCase().includes(termino)
-  );
+  const cuentas = (data ?? []).filter((c) => {
+    if (filtro === "mias" && c.creado_por_id !== currentUserId) return false;
+    if (
+      termino &&
+      !c.razon_social.toLowerCase().includes(termino) &&
+      !(c.cuit ?? "").toLowerCase().includes(termino)
+    )
+      return false;
+    return true;
+  });
 
   return (
     <div>
@@ -49,10 +57,27 @@ export default function CuentasPage() {
 
       {data && (
         <>
-          <div className="mt-4 flex items-center justify-between gap-3">
-            <p className="text-sm text-ink-2">
-              {cuentas.length} {cuentas.length === 1 ? "elemento" : "elementos"}
-            </p>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex rounded-lg border border-line bg-surface2 p-0.5 text-sm">
+                {(["mias", "todas"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFiltro(f)}
+                    className={`rounded-md px-3 py-1 font-medium transition ${
+                      filtro === f
+                        ? "bg-navy text-white"
+                        : "text-ink-2 hover:bg-surface"
+                    }`}
+                  >
+                    {f === "mias" ? "Mías" : "Todas"}
+                  </button>
+                ))}
+              </div>
+              <p className="text-sm text-ink-2">
+                {cuentas.length} {cuentas.length === 1 ? "elemento" : "elementos"}
+              </p>
+            </div>
             <div className="relative w-64 max-w-full">
               <Search
                 size={15}
@@ -74,6 +99,7 @@ export default function CuentasPage() {
                   <th className="w-10 px-3 py-2 font-medium">#</th>
                   <th className="px-3 py-2 font-medium">Nombre de la cuenta</th>
                   <th className="px-3 py-2 font-medium">CUIT</th>
+                  <th className="px-3 py-2 font-medium">Creada por</th>
                   <th className="px-3 py-2 font-medium">Estado</th>
                 </tr>
               </thead>
@@ -91,6 +117,9 @@ export default function CuentasPage() {
                       </Link>
                     </td>
                     <td className="px-3 py-2 text-ink-2">{c.cuit ?? "—"}</td>
+                    <td className="px-3 py-2 text-ink-2">
+                      {c.creado_por?.nombre ?? "—"}
+                    </td>
                     <td className="px-3 py-2">
                       {c.activo ? (
                         <Badge className="bg-green-100 text-green-700">activo</Badge>
@@ -104,8 +133,12 @@ export default function CuentasPage() {
                 ))}
                 {cuentas.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-ink-3">
-                      {termino ? "Sin coincidencias." : "No hay cuentas todavía."}
+                    <td colSpan={5} className="px-4 py-6 text-center text-ink-3">
+                      {termino
+                        ? "Sin coincidencias."
+                        : filtro === "mias"
+                          ? "No tenés cuentas creadas. Cambiá a “Todas” para ver las del equipo."
+                          : "No hay cuentas todavía."}
                     </td>
                   </tr>
                 )}
