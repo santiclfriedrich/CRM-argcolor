@@ -22,6 +22,7 @@ from app.schemas.solicitud import (
     SolicitudRead,
     SolicitudUpdate,
 )
+from app.services.grupos_compras import resolver_destino
 from app.services.solicitudes import (
     build_email_preview,
     enviar_a_compras,
@@ -96,10 +97,16 @@ def create_solicitud(
 
     data = body.model_dump()
     _normalize_ccs(data)
+    # Destino de Compras: grupo elegido (o el default del usuario). Se snapshotea
+    # en la solicitud para no depender de que el grupo siga existiendo luego.
+    grupo_id = data.pop("grupo_compras_id", None)
+    destino_to, destino_cc = resolver_destino(db, user.id, grupo_id)
     now = datetime.now(timezone.utc)
     solicitud = SolicitudCompras(
         **data,
         solicitante_id=user.id,
+        destino_to=destino_to,
+        destino_cc=destino_cc or None,
         fecha_envio=now,
         estado=EstadoSolicitud.enviada,
     )

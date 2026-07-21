@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { Textarea } from "@/components/ui/textarea";
+import { useGruposCompras } from "@/lib/config";
 import { useOportunidades } from "@/lib/oportunidades";
 import { CONDICIONES_PAGO } from "@/lib/solicitudes";
 import type { CondicionPago, SolicitudCreate } from "@/lib/types";
@@ -43,6 +44,7 @@ export function SolicitudForm({
   pendingLabel = "Creando…",
 }: Props) {
   const { data: oportunidades } = useOportunidades();
+  const { data: grupos } = useGruposCompras();
 
   const [oportunidadId, setOportunidadId] = useState<number | null>(defaultOportunidadId);
   const [requerimiento, setRequerimiento] = useState(defaultRequerimiento);
@@ -53,6 +55,13 @@ export function SolicitudForm({
   const [refGbp, setRefGbp] = useState("");
   const [ccs, setCcs] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [grupoId, setGrupoId] = useState<number | null>(null);
+
+  // Preseleccionar el grupo default del usuario cuando cargan los grupos.
+  useEffect(() => {
+    if (grupoId != null || !grupos?.length) return;
+    setGrupoId((grupos.find((g) => g.es_default) ?? grupos[0]).id);
+  }, [grupos, grupoId]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -67,6 +76,7 @@ export function SolicitudForm({
         fecha_limite: fechaLimite || null,
         presupuesto_gbp_referencia: refGbp.trim() || null,
         ccs_extra: parseEmails(ccs),
+        grupo_compras_id: grupoId,
       },
       files
     );
@@ -158,6 +168,26 @@ export function SolicitudForm({
           <Label htmlFor="s-gbp">Referencia GBP (opcional)</Label>
           <Input id="s-gbp" value={refGbp} onChange={(e) => setRefGbp(e.target.value)} />
         </div>
+      </div>
+
+      <div>
+        <Label htmlFor="s-grupo">Enviar a (grupo de Compras)</Label>
+        {grupos && grupos.length > 0 ? (
+          <SelectMenu
+            id="s-grupo"
+            value={grupoId != null ? String(grupoId) : ""}
+            onChange={(v) => setGrupoId(v ? Number(v) : null)}
+            options={grupos.map((g) => ({
+              value: String(g.id),
+              label: `${g.nombre}${g.es_default ? " (por defecto)" : ""} — ${g.to}`,
+            }))}
+          />
+        ) : (
+          <p className="text-sm text-ink-3">
+            No tenés grupos de Compras. Se usará el destinatario general. Podés
+            crear grupos en Configuración.
+          </p>
+        )}
       </div>
 
       <div>

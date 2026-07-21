@@ -303,6 +303,7 @@ export type SolicitudCreate = {
   fecha_limite?: string | null;
   presupuesto_gbp_referencia?: string | null;
   ccs_extra?: string[] | null;
+  grupo_compras_id?: number | null;
 };
 export type SolicitudUpdate = Partial<Omit<SolicitudCreate, "oportunidad_id">> & {
   estado?: EstadoSolicitud;

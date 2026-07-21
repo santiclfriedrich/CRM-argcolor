@@ -51,3 +51,57 @@ export function useUpdateDestinatariosCompras() {
     onSuccess: (data) => qc.setQueryData(COMPRAS_KEY, data),
   });
 }
+
+// --- Grupos de destinatarios de Compras (por usuario) ---
+export interface GrupoCompras {
+  id: number;
+  nombre: string;
+  to: string;
+  cc: string[];
+  es_default: boolean;
+}
+
+export type GrupoComprasInput = {
+  nombre: string;
+  to: string;
+  cc: string[];
+  es_default: boolean;
+};
+
+const GRUPOS_KEY = ["configuracion", "compras", "grupos"] as const;
+const GRUPOS_URL = "/api/v1/configuracion/compras/grupos";
+
+export function useGruposCompras() {
+  return useQuery({
+    queryKey: GRUPOS_KEY,
+    queryFn: async () => (await api.get<GrupoCompras[]>(GRUPOS_URL)).data,
+  });
+}
+
+export function useCreateGrupoCompras() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: GrupoComprasInput) =>
+      (await api.post<GrupoCompras>(GRUPOS_URL, body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: GRUPOS_KEY }),
+  });
+}
+
+export function useUpdateGrupoCompras() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, body }: { id: number; body: Partial<GrupoComprasInput> }) =>
+      (await api.put<GrupoCompras>(`${GRUPOS_URL}/${id}`, body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: GRUPOS_KEY }),
+  });
+}
+
+export function useDeleteGrupoCompras() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`${GRUPOS_URL}/${id}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: GRUPOS_KEY }),
+  });
+}

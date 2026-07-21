@@ -126,9 +126,17 @@ def sugerir_requerimiento(db: Session, oportunidad_id: int) -> str:
 
 
 def build_email_preview(solicitud: SolicitudCompras, db: Session) -> dict:
-    """Construye {to, cc, subject, body} del mail a Compras."""
-    to, cc_default = _default_recipients(db)
-    cc = [*cc_default, *(solicitud.ccs_extra or [])]
+    """Construye {to, cc, subject, body} del mail a Compras.
+
+    Usa el destino guardado en la solicitud (el grupo que eligió el vendedor).
+    Si no tiene (solicitudes viejas o usuarios sin grupos), cae al destinatario
+    global de compatibilidad."""
+    if solicitud.destino_to:
+        to = solicitud.destino_to
+        cc_base = list(solicitud.destino_cc or [])
+    else:
+        to, cc_base = _default_recipients(db)
+    cc = [*cc_base, *(solicitud.ccs_extra or [])]
 
     op = solicitud.oportunidad
     cliente = op.cliente.razon_social if op and op.cliente else "Sin cliente"

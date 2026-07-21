@@ -1,16 +1,21 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { Star, Trash2 } from "lucide-react";
+import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
+  type GrupoCompras,
   useAutomatizacion,
-  useDestinatariosCompras,
+  useCreateGrupoCompras,
+  useDeleteGrupoCompras,
+  useGruposCompras,
   useUpdateAutomatizacion,
-  useUpdateDestinatariosCompras,
+  useUpdateGrupoCompras,
 } from "@/lib/config";
 
 export default function ConfiguracionPage() {
@@ -46,85 +51,171 @@ export default function ConfiguracionPage() {
         </div>
       )}
 
-      <DestinatariosCompras />
+      <GruposCompras />
     </div>
   );
 }
 
-// Destinatarios del mail que se envía a Compras al pedir una cotización.
-function DestinatariosCompras() {
-  const { data, isLoading } = useDestinatariosCompras();
-  const updateMut = useUpdateDestinatariosCompras();
+const parseCc = (s: string): string[] =>
+  s.split(",").map((x) => x.trim()).filter(Boolean);
 
+// Grupos de destinatarios de Compras, propios de cada usuario.
+function GruposCompras() {
+  const { data: grupos, isLoading } = useGruposCompras();
+  const createMut = useCreateGrupoCompras();
+  const updateMut = useUpdateGrupoCompras();
+  const deleteMut = useDeleteGrupoCompras();
+  const confirm = useConfirm();
+
+  const [nombre, setNombre] = useState("");
   const [to, setTo] = useState("");
   const [cc, setCc] = useState("");
-  const [cargado, setCargado] = useState(false);
 
-  useEffect(() => {
-    if (data && !cargado) {
-      setTo(data.to ?? "");
-      setCc(data.cc.join(", "));
-      setCargado(true);
-    }
-  }, [data, cargado]);
-
-  const guardar = (e: FormEvent) => {
+  const agregar = (e: FormEvent) => {
     e.preventDefault();
-    const ccList = cc
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    updateMut.mutate({ to: to.trim() || null, cc: ccList });
+    if (!nombre.trim() || !to.trim()) return;
+    createMut.mutate(
+      {
+        nombre: nombre.trim(),
+        to: to.trim(),
+        cc: parseCc(cc),
+        es_default: !grupos?.length, // el primero queda por defecto
+      },
+      {
+        onSuccess: () => {
+          setNombre("");
+          setTo("");
+          setCc("");
+        },
+      }
+    );
+  };
+
+  const eliminar = async (g: GrupoCompras) => {
+    if (
+      await confirm({
+        title: "Eliminar grupo",
+        message: `¿Eliminar el grupo "${g.nombre}"?`,
+        danger: true,
+      })
+    ) {
+      deleteMut.mutate(g.id);
+    }
   };
 
   return (
     <div className="mt-8">
-      <h2 className="text-lg font-semibold text-ink">
-        Destinatarios de Compras
-      </h2>
+      <h2 className="text-lg font-semibold text-ink">Destinatarios de Compras</h2>
       <p className="mt-1 text-sm text-ink-2">
-        A quién se le envía el mail al pedir una cotización a Compras.
+        Armá tus grupos de destinatarios (a qué mails enviar). Marcá uno por
+        defecto; al pedir a Compras podés elegir cuál usar.
       </p>
 
       {isLoading ? (
         <p className="mt-4 text-ink-2">Cargando…</p>
       ) : (
-        <form
-          onSubmit={guardar}
-          className="mt-4 space-y-4 rounded-lg border border-line p-4"
-        >
-          <div>
-            <Label htmlFor="c-to">Email de Compras (principal) *</Label>
-            <Input
-              id="c-to"
-              type="email"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              placeholder="compras@argentinacolor.com"
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="c-cc">CC (opcional, separados por coma)</Label>
-            <Input
-              id="c-cc"
-              value={cc}
-              onChange={(e) => setCc(e.target.value)}
-              placeholder="jefe@argentinacolor.com, otro@argentinacolor.com"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Button type="submit" disabled={updateMut.isPending || !to.trim()}>
-              {updateMut.isPending ? "Guardando…" : "Guardar"}
-            </Button>
-            {updateMut.isSuccess && <span className="text-xs text-green-600">Guardado ✓</span>}
-            {updateMut.isError && (
-              <span className="text-xs text-red-600">
-                No se pudo guardar. Revisá que los emails sean válidos.
-              </span>
-            )}
-          </div>
-        </form>
+        <div className="mt-4 space-y-3">
+          {(grupos ?? []).map((g) => (
+            <div
+              key={g.id}
+              className="flex items-start justify-between gap-3 rounded-lg border border-line p-4"
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-ink">{g.nombre}</span>
+                  {g.es_default && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-accent-dim px-2 py-0.5 text-[11px] font-semibold text-accent">
+                      <Star size={11} /> Por defecto
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 truncate text-sm text-ink-2">Para: {g.to}</p>
+                {g.cc.length > 0 && (
+                  <p className="truncate text-xs text-ink-3">CC: {g.cc.join(", ")}</p>
+                )}
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                {!g.es_default && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      updateMut.mutate({ id: g.id, body: { es_default: true } })
+                    }
+                    title="Marcar por defecto"
+                  >
+                    <Star size={14} /> Predeterminar
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => eliminar(g)}
+                  className="text-ink-3 hover:text-red-600"
+                  aria-label="Eliminar grupo"
+                >
+                  <Trash2 size={14} />
+                </Button>
+              </div>
+            </div>
+          ))}
+
+          {grupos && grupos.length === 0 && (
+            <p className="text-sm text-ink-3">
+              No tenés grupos todavía. Creá el primero abajo.
+            </p>
+          )}
+
+          <form
+            onSubmit={agregar}
+            className="space-y-3 rounded-lg border border-dashed border-line p-4"
+          >
+            <p className="text-sm font-semibold text-ink">Nuevo grupo</p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <Label htmlFor="g-nombre">Nombre del grupo *</Label>
+                <Input
+                  id="g-nombre"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  placeholder="Ej: Insumos"
+                />
+              </div>
+              <div>
+                <Label htmlFor="g-to">Email principal *</Label>
+                <Input
+                  id="g-to"
+                  type="email"
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  placeholder="compras@argentinacolor.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="g-cc">CC (separados por coma)</Label>
+                <Input
+                  id="g-cc"
+                  value={cc}
+                  onChange={(e) => setCc(e.target.value)}
+                  placeholder="jefe@…, otro@…"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="submit"
+                disabled={createMut.isPending || !nombre.trim() || !to.trim()}
+              >
+                {createMut.isPending ? "Agregando…" : "Agregar grupo"}
+              </Button>
+              {createMut.isError && (
+                <span className="text-xs text-red-600">
+                  No se pudo agregar. Revisá que los emails sean válidos.
+                </span>
+              )}
+            </div>
+          </form>
+        </div>
       )}
     </div>
   );

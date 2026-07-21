@@ -20,7 +20,9 @@ class SolicitudBase(BaseModel):
 
 
 class SolicitudCreate(SolicitudBase):
-    pass
+    # Grupo de destinatarios de Compras elegido (del usuario). Si es None, se
+    # usa el grupo default del usuario; si no tiene, el destinatario global.
+    grupo_compras_id: int | None = None
 
 
 class SolicitudUpdate(BaseModel):

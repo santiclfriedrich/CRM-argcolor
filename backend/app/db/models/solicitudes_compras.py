@@ -46,6 +46,10 @@ class SolicitudCompras(Base, TimestampMixin):
     ccs_extra: Mapped[list[str] | None] = mapped_column(
         ARRAY(String).with_variant(JSON(), "sqlite")
     )
+    # Snapshot del destino elegido al enviar (grupo de Compras del vendedor).
+    # Si quedan en null se usa el destinatario global (compatibilidad).
+    destino_to: Mapped[str | None] = mapped_column(String(255))
+    destino_cc: Mapped[list | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
     fecha_envio: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     fecha_respuesta: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     gmail_thread_id: Mapped[str | None] = mapped_column(String(255), index=True)
