@@ -13,11 +13,12 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
       // Pedimos también acceso a Gmail (leer + enviar) y offline para obtener un
-      // refresh token por usuario. prompt=consent garantiza que Google lo emita.
+      // refresh token por usuario. Google muestra el consentimiento la PRIMERA
+      // vez (o si cambian los scopes) y ahí emite el refresh token, que el backend
+      // guarda. No forzamos prompt=consent para no re-pedir permisos en cada login.
       authorization: {
         params: {
           access_type: "offline",
-          prompt: "consent",
           scope:
             "openid email profile " +
             "https://www.googleapis.com/auth/gmail.readonly " +
