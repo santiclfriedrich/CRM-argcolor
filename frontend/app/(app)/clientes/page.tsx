@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useClientes, useCreateCliente } from "@/lib/clientes";
+import { clearDraft, DRAFT_CLIENTE } from "@/lib/draft";
 
 export default function CuentasPage() {
   const router = useRouter();
@@ -152,10 +153,15 @@ export default function CuentasPage() {
         <ClienteForm
           submitLabel="Crear"
           isPending={createMut.isPending}
-          onCancel={() => setCreating(false)}
+          draftKey={DRAFT_CLIENTE}
+          onCancel={() => {
+            clearDraft(DRAFT_CLIENTE);
+            setCreating(false);
+          }}
           onSubmit={(values) =>
             createMut.mutate(values, {
               onSuccess: (cliente) => {
+                clearDraft(DRAFT_CLIENTE);
                 setCreating(false);
                 router.push(`/clientes/${cliente.id}`);
               },

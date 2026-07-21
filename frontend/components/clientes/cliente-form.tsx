@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { useClientes } from "@/lib/clientes";
+import { loadDraft, saveDraft } from "@/lib/draft";
 import type { Cliente, ClienteCreate } from "@/lib/types";
 import { useUsuarios } from "@/lib/usuarios";
 
@@ -51,6 +52,8 @@ interface ClienteFormProps {
   // Permiten disparar el submit desde un botón externo (ej. al final del detalle).
   formId?: string;
   hideSubmit?: boolean;
+  // Si se pasa (solo al crear), persiste un borrador en localStorage con esta clave.
+  draftKey?: string;
 }
 
 const TIPOS = [
@@ -89,14 +92,19 @@ export function ClienteForm({
   onCancel,
   formId,
   hideSubmit = false,
+  draftKey,
 }: ClienteFormProps) {
   const { data: clientes } = useClientes();
   const { data: usuarios } = useUsuarios();
+
+  // Borrador guardado (solo al crear): se carga una vez al montar.
+  const draft = draftKey && !initial ? loadDraft<Partial<FormValues>>(draftKey) : null;
 
   const {
     register,
     control,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(clienteSchema),
@@ -116,8 +124,17 @@ export function ClienteForm({
       direccion_facturacion: initial?.direccion_facturacion ?? "",
       direccion_envio: initial?.direccion_envio ?? "",
       activo: initial?.activo ?? true,
+      // El borrador pisa los defaults al crear.
+      ...(draft ?? {}),
     },
   });
+
+  // Guarda el borrador ante cada cambio (solo al crear con draftKey).
+  useEffect(() => {
+    if (!draftKey || initial) return;
+    const sub = watch((values) => saveDraft(draftKey, values));
+    return () => sub.unsubscribe();
+  }, [watch, draftKey, initial]);
 
   const cuentasOpts = [
     { value: "", label: "— Ninguna —" },

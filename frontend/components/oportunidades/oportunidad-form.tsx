@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { useCliente, useClientes } from "@/lib/clientes";
+import { loadDraft, saveDraft } from "@/lib/draft";
 import { ESTADOS } from "@/lib/oportunidades";
 import type { EstadoOportunidad, Oportunidad, OportunidadCreate } from "@/lib/types";
 import { useUsuarios } from "@/lib/usuarios";
@@ -18,7 +19,29 @@ interface Props {
   isPending: boolean;
   onSubmit: (values: OportunidadCreate) => void;
   onCancel: () => void;
+  // Si se pasa (solo al crear), persiste un borrador en localStorage con esta clave.
+  draftKey?: string;
 }
+
+type Snapshot = {
+  clienteId: number | null;
+  contactoId: number | null;
+  vendedorId: number | null;
+  estado: EstadoOportunidad;
+  fuente: string;
+  asunto: string;
+  producto: string;
+  numeroPedido: string;
+  ing: string;
+  observacion: string;
+  cargadaGbp: boolean;
+  valor: string;
+  fechaPedido: string;
+  fechaCompras: string;
+  fechaRespCompras: string;
+  fechaCliente: string;
+  fechaLimite: string;
+};
 
 // Convierte el value ("" = sin seleccionar) a number | null.
 const toId = (value: string): number | null => (value ? Number(value) : null);
@@ -29,30 +52,101 @@ export function OportunidadForm({
   isPending,
   onSubmit,
   onCancel,
+  draftKey,
 }: Props) {
-  const [clienteId, setClienteId] = useState<number | null>(initial?.cliente_id ?? null);
+  // Borrador guardado (solo al crear): se carga una vez al montar.
+  const draft = useMemo(
+    () => (initial || !draftKey ? null : loadDraft<Partial<Snapshot>>(draftKey)),
+    [initial, draftKey]
+  );
+
+  const [clienteId, setClienteId] = useState<number | null>(
+    draft?.clienteId ?? initial?.cliente_id ?? null
+  );
   const [contactoId, setContactoId] = useState<number | null>(
-    initial?.contacto_cliente_id ?? null
+    draft?.contactoId ?? initial?.contacto_cliente_id ?? null
   );
   const [vendedorId, setVendedorId] = useState<number | null>(
-    initial?.vendedor_id ?? defaultVendedorId ?? null
+    draft?.vendedorId ?? initial?.vendedor_id ?? defaultVendedorId ?? null
   );
-  const [estado, setEstado] = useState<EstadoOportunidad>(initial?.estado ?? "nueva");
-  const [fuente, setFuente] = useState(initial?.fuente ?? "manual");
-  const [asunto, setAsunto] = useState(initial?.asunto ?? "");
-  const [producto, setProducto] = useState(initial?.producto ?? "");
-  const [numeroPedido, setNumeroPedido] = useState(initial?.numero_pedido ?? "");
-  const [ing, setIng] = useState(initial?.ing ?? "");
-  const [observacion, setObservacion] = useState(initial?.observacion ?? "");
-  const [cargadaGbp, setCargadaGbp] = useState(initial?.cargada_en_gbp ?? false);
+  const [estado, setEstado] = useState<EstadoOportunidad>(
+    draft?.estado ?? initial?.estado ?? "nueva"
+  );
+  const [fuente, setFuente] = useState(draft?.fuente ?? initial?.fuente ?? "manual");
+  const [asunto, setAsunto] = useState(draft?.asunto ?? initial?.asunto ?? "");
+  const [producto, setProducto] = useState(draft?.producto ?? initial?.producto ?? "");
+  const [numeroPedido, setNumeroPedido] = useState(
+    draft?.numeroPedido ?? initial?.numero_pedido ?? ""
+  );
+  const [ing, setIng] = useState(draft?.ing ?? initial?.ing ?? "");
+  const [observacion, setObservacion] = useState(
+    draft?.observacion ?? initial?.observacion ?? ""
+  );
+  const [cargadaGbp, setCargadaGbp] = useState(
+    draft?.cargadaGbp ?? initial?.cargada_en_gbp ?? false
+  );
   const [valor, setValor] = useState(
-    initial?.valor_estimado != null ? String(initial.valor_estimado) : ""
+    draft?.valor ?? (initial?.valor_estimado != null ? String(initial.valor_estimado) : "")
   );
-  const [fechaPedido, setFechaPedido] = useState(initial?.fecha_pedido_cliente ?? "");
-  const [fechaCompras, setFechaCompras] = useState(initial?.fecha_enviado_compras ?? "");
-  const [fechaRespCompras, setFechaRespCompras] = useState(initial?.fecha_respuesta_compras ?? "");
-  const [fechaCliente, setFechaCliente] = useState(initial?.fecha_enviado_cliente ?? "");
-  const [fechaLimite, setFechaLimite] = useState(initial?.fecha_limite ?? "");
+  const [fechaPedido, setFechaPedido] = useState(
+    draft?.fechaPedido ?? initial?.fecha_pedido_cliente ?? ""
+  );
+  const [fechaCompras, setFechaCompras] = useState(
+    draft?.fechaCompras ?? initial?.fecha_enviado_compras ?? ""
+  );
+  const [fechaRespCompras, setFechaRespCompras] = useState(
+    draft?.fechaRespCompras ?? initial?.fecha_respuesta_compras ?? ""
+  );
+  const [fechaCliente, setFechaCliente] = useState(
+    draft?.fechaCliente ?? initial?.fecha_enviado_cliente ?? ""
+  );
+  const [fechaLimite, setFechaLimite] = useState(
+    draft?.fechaLimite ?? initial?.fecha_limite ?? ""
+  );
+
+  // Guarda el borrador ante cada cambio (solo al crear con draftKey).
+  useEffect(() => {
+    if (initial || !draftKey) return;
+    saveDraft(draftKey, {
+      clienteId,
+      contactoId,
+      vendedorId,
+      estado,
+      fuente,
+      asunto,
+      producto,
+      numeroPedido,
+      ing,
+      observacion,
+      cargadaGbp,
+      valor,
+      fechaPedido,
+      fechaCompras,
+      fechaRespCompras,
+      fechaCliente,
+      fechaLimite,
+    });
+  }, [
+    initial,
+    draftKey,
+    clienteId,
+    contactoId,
+    vendedorId,
+    estado,
+    fuente,
+    asunto,
+    producto,
+    numeroPedido,
+    ing,
+    observacion,
+    cargadaGbp,
+    valor,
+    fechaPedido,
+    fechaCompras,
+    fechaRespCompras,
+    fechaCliente,
+    fechaLimite,
+  ]);
 
   const { data: clientes } = useClientes();
   const { data: usuarios } = useUsuarios();

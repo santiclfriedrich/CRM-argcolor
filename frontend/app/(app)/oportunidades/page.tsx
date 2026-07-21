@@ -43,6 +43,7 @@ import {
   useToggleCargadaGbp,
   useUpdateOportunidad,
 } from "@/lib/oportunidades";
+import { clearDraft, DRAFT_OPORTUNIDAD } from "@/lib/draft";
 import { useCreatePresupuesto } from "@/lib/presupuestos";
 import { useCrearYEnviarSolicitud } from "@/lib/solicitudes";
 import type {
@@ -785,8 +786,19 @@ export default function OportunidadesPage() {
         <OportunidadForm
           defaultVendedorId={currentUserId}
           isPending={createMut.isPending}
-          onCancel={() => setCreating(false)}
-          onSubmit={(values) => createMut.mutate(values, { onSuccess: () => setCreating(false) })}
+          draftKey={DRAFT_OPORTUNIDAD}
+          onCancel={() => {
+            clearDraft(DRAFT_OPORTUNIDAD);
+            setCreating(false);
+          }}
+          onSubmit={(values) =>
+            createMut.mutate(values, {
+              onSuccess: () => {
+                clearDraft(DRAFT_OPORTUNIDAD);
+                setCreating(false);
+              },
+            })
+          }
         />
       </Modal>
 
