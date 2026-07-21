@@ -72,9 +72,6 @@ export default function LoginPage() {
         />
 
         <h1 className="mt-10 text-2xl font-bold text-white">CRM Comercial</h1>
-        <p className="mt-1.5 text-sm text-white/55">
-          Acceso interno del equipo comercial
-        </p>
 
         {error && (
           <p className="mt-6 w-full rounded-lg bg-red-500/15 px-4 py-2.5 text-sm text-red-100 ring-1 ring-red-400/30">
@@ -90,9 +87,7 @@ export default function LoginPage() {
           Ingresar con Google
         </button>
 
-        <p className="mt-12 text-xs text-white/40">
-          ARG COLOR S.R.L. — Uso interno
-        </p>
+        <p className="mt-12 text-xs text-white/40">ARG COLOR © 2026</p>
       </div>
     </div>
   );
