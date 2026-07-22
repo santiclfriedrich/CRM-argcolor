@@ -1,10 +1,11 @@
 "use client";
 
-import { Star, Trash2 } from "lucide-react";
+import { Pencil, Star, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { EmailChips } from "@/components/ui/email-chips";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -56,9 +57,6 @@ export default function ConfiguracionPage() {
   );
 }
 
-const parseCc = (s: string): string[] =>
-  s.split(",").map((x) => x.trim()).filter(Boolean);
-
 // Grupos de destinatarios de Compras, propios de cada usuario.
 function GruposCompras() {
   const { data: grupos, isLoading } = useGruposCompras();
@@ -67,9 +65,16 @@ function GruposCompras() {
   const deleteMut = useDeleteGrupoCompras();
   const confirm = useConfirm();
 
+  // Nuevo grupo
   const [nombre, setNombre] = useState("");
   const [to, setTo] = useState("");
-  const [cc, setCc] = useState("");
+  const [ccList, setCcList] = useState<string[]>([]);
+
+  // Edición en línea
+  const [editId, setEditId] = useState<number | null>(null);
+  const [eNombre, setENombre] = useState("");
+  const [eTo, setETo] = useState("");
+  const [eCc, setECc] = useState<string[]>([]);
 
   const agregar = (e: FormEvent) => {
     e.preventDefault();
@@ -78,16 +83,31 @@ function GruposCompras() {
       {
         nombre: nombre.trim(),
         to: to.trim(),
-        cc: parseCc(cc),
+        cc: ccList,
         es_default: !grupos?.length, // el primero queda por defecto
       },
       {
         onSuccess: () => {
           setNombre("");
           setTo("");
-          setCc("");
+          setCcList([]);
         },
       }
+    );
+  };
+
+  const empezarEdicion = (g: GrupoCompras) => {
+    setEditId(g.id);
+    setENombre(g.nombre);
+    setETo(g.to);
+    setECc(g.cc);
+  };
+
+  const guardarEdicion = (id: number) => {
+    if (!eNombre.trim() || !eTo.trim()) return;
+    updateMut.mutate(
+      { id, body: { nombre: eNombre.trim(), to: eTo.trim(), cc: eCc } },
+      { onSuccess: () => setEditId(null) }
     );
   };
 
@@ -115,50 +135,98 @@ function GruposCompras() {
         <p className="mt-4 text-ink-2">Cargando…</p>
       ) : (
         <div className="mt-4 space-y-3">
-          {(grupos ?? []).map((g) => (
-            <div
-              key={g.id}
-              className="flex items-start justify-between gap-3 rounded-lg border border-line p-4"
-            >
-              <div className="min-w-0">
+          {(grupos ?? []).map((g) =>
+            editId === g.id ? (
+              <div key={g.id} className="space-y-3 rounded-lg border border-accent/40 p-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="e-nombre">Nombre del grupo *</Label>
+                    <Input
+                      id="e-nombre"
+                      value={eNombre}
+                      onChange={(ev) => setENombre(ev.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="e-to">Email principal *</Label>
+                    <Input
+                      id="e-to"
+                      type="email"
+                      value={eTo}
+                      onChange={(ev) => setETo(ev.target.value)}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="e-cc">CC (agregá cada mail con Enter)</Label>
+                  <EmailChips id="e-cc" value={eCc} onChange={setECc} placeholder="jefe@… y Enter" />
+                </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-ink">{g.nombre}</span>
-                  {g.es_default && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-accent-dim px-2 py-0.5 text-[11px] font-semibold text-accent">
-                      <Star size={11} /> Por defecto
-                    </span>
+                  <Button
+                    size="sm"
+                    onClick={() => guardarEdicion(g.id)}
+                    disabled={updateMut.isPending || !eNombre.trim() || !eTo.trim()}
+                  >
+                    {updateMut.isPending ? "Guardando…" : "Guardar"}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setEditId(null)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div
+                key={g.id}
+                className="flex items-start justify-between gap-3 rounded-lg border border-line p-4"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-ink">{g.nombre}</span>
+                    {g.es_default && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-accent-dim px-2 py-0.5 text-[11px] font-semibold text-accent">
+                        <Star size={11} /> Por defecto
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 truncate text-sm text-ink-2">Para: {g.to}</p>
+                  {g.cc.length > 0 && (
+                    <p className="truncate text-xs text-ink-3">CC: {g.cc.join(", ")}</p>
                   )}
                 </div>
-                <p className="mt-1 truncate text-sm text-ink-2">Para: {g.to}</p>
-                {g.cc.length > 0 && (
-                  <p className="truncate text-xs text-ink-3">CC: {g.cc.join(", ")}</p>
-                )}
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                {!g.es_default && (
+                <div className="flex shrink-0 items-center gap-1">
+                  {!g.es_default && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => updateMut.mutate({ id: g.id, body: { es_default: true } })}
+                      title="Marcar por defecto"
+                    >
+                      <Star size={14} /> Predeterminar
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() =>
-                      updateMut.mutate({ id: g.id, body: { es_default: true } })
-                    }
-                    title="Marcar por defecto"
+                    onClick={() => empezarEdicion(g)}
+                    aria-label="Editar grupo"
+                    title="Editar"
                   >
-                    <Star size={14} /> Predeterminar
+                    <Pencil size={14} />
                   </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => eliminar(g)}
-                  className="text-ink-3 hover:text-red-600"
-                  aria-label="Eliminar grupo"
-                >
-                  <Trash2 size={14} />
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => eliminar(g)}
+                    className="text-ink-3 hover:text-red-600"
+                    aria-label="Eliminar grupo"
+                    title="Eliminar"
+                  >
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          )}
 
           {grupos && grupos.length === 0 && (
             <p className="text-sm text-ink-3">
@@ -171,7 +239,7 @@ function GruposCompras() {
             className="space-y-3 rounded-lg border border-dashed border-line p-4"
           >
             <p className="text-sm font-semibold text-ink">Nuevo grupo</p>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <Label htmlFor="g-nombre">Nombre del grupo *</Label>
                 <Input
@@ -191,15 +259,10 @@ function GruposCompras() {
                   placeholder="compras@argentinacolor.com"
                 />
               </div>
-              <div>
-                <Label htmlFor="g-cc">CC (separados por coma)</Label>
-                <Input
-                  id="g-cc"
-                  value={cc}
-                  onChange={(e) => setCc(e.target.value)}
-                  placeholder="jefe@…, otro@…"
-                />
-              </div>
+            </div>
+            <div>
+              <Label htmlFor="g-cc">CC (agregá cada mail con Enter)</Label>
+              <EmailChips id="g-cc" value={ccList} onChange={setCcList} placeholder="jefe@… y Enter" />
             </div>
             <div className="flex items-center gap-2">
               <Button
