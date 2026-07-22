@@ -81,16 +81,13 @@ def _ids(resp) -> list[int]:  # noqa: ANN001
     return sorted(r["id"] for r in resp.json())
 
 
-def test_vendedor_ve_solo_lo_suyo(client: TestClient) -> None:
-    _login(1)  # Ana
-    assert _ids(client.get("/api/v1/mails")) == [1]
-    assert _ids(client.get("/api/v1/presupuestos")) == [1]
-    assert _ids(client.get("/api/v1/solicitudes")) == [1]
-
-    _login(2)  # Beto ve lo de él, no lo de Ana
-    assert _ids(client.get("/api/v1/mails")) == [2]
-    assert _ids(client.get("/api/v1/presupuestos")) == [2]
-    assert _ids(client.get("/api/v1/solicitudes")) == [2]
+def test_todos_ven_todo(client: TestClient) -> None:
+    # Gestión compartida: sin filtro, cualquier usuario ve todo (propio y ajeno).
+    for uid in (1, 2):
+        _login(uid)
+        assert _ids(client.get("/api/v1/mails")) == [1, 2]
+        assert _ids(client.get("/api/v1/presupuestos")) == [1, 2]
+        assert _ids(client.get("/api/v1/solicitudes")) == [1, 2]
 
 
 def test_admin_ve_todo(client: TestClient) -> None:
@@ -108,14 +105,13 @@ def test_oportunidades_toggle_mias(client: TestClient) -> None:
     assert _ids(client.get("/api/v1/oportunidades", params={"solo_mias": True})) == [1]
 
 
-def test_vendedor_no_accede_a_lo_ajeno_por_id(client: TestClient) -> None:
-    _login(2)  # Beto intenta abrir por URL/id lo de Ana (id 1)
-    assert client.get("/api/v1/presupuestos/1").status_code == 403
-    assert client.patch("/api/v1/presupuestos/1", json={"estado": "aceptado"}).status_code == 403
-    assert client.get("/api/v1/mails/1").status_code == 403
-    assert client.get("/api/v1/mails/1/hilo").status_code == 403
-    assert client.get("/api/v1/solicitudes/1").status_code == 403
-    assert client.patch("/api/v1/solicitudes/1", json={"estado": "cerrada"}).status_code == 403
+def test_todos_acceden_por_id(client: TestClient) -> None:
+    _login(2)  # Beto abre por URL/id lo de Ana (id 1): ahora permitido (compartido)
+    assert client.get("/api/v1/presupuestos/1").status_code == 200
+    assert client.patch("/api/v1/presupuestos/1", json={"estado": "aceptado"}).status_code == 200
+    assert client.get("/api/v1/mails/1").status_code == 200
+    assert client.get("/api/v1/mails/1/hilo").status_code == 200
+    assert client.get("/api/v1/solicitudes/1").status_code == 200
 
 
 def test_admin_ve_perfil_de_un_usuario(client: TestClient) -> None:
@@ -126,13 +122,12 @@ def test_admin_ve_perfil_de_un_usuario(client: TestClient) -> None:
     assert _ids(client.get("/api/v1/mails", params={"usuario_id": 1})) == [1]
 
 
-def test_no_admin_no_filtra_gestion_ajena(client: TestClient) -> None:
-    _login(1)  # Ana (no admin) no puede ver la gestión personal de Beto (2)
-    assert client.get("/api/v1/presupuestos", params={"usuario_id": 2}).status_code == 403
-    assert client.get("/api/v1/solicitudes", params={"usuario_id": 2}).status_code == 403
-    assert client.get("/api/v1/mails", params={"usuario_id": 2}).status_code == 403
-    # Su propio id sí está permitido.
-    assert client.get("/api/v1/presupuestos", params={"usuario_id": 1}).status_code == 200
+def test_cualquiera_filtra_por_usuario(client: TestClient) -> None:
+    _login(1)  # Ana (no admin) puede filtrar por otro usuario: todo es compartido
+    assert _ids(client.get("/api/v1/presupuestos", params={"usuario_id": 2})) == [2]
+    assert _ids(client.get("/api/v1/solicitudes", params={"usuario_id": 2})) == [2]
+    assert _ids(client.get("/api/v1/mails", params={"usuario_id": 2})) == [2]
+    assert _ids(client.get("/api/v1/presupuestos", params={"usuario_id": 1})) == [1]
 
 
 def test_owner_y_admin_si_acceden_por_id(client: TestClient) -> None:

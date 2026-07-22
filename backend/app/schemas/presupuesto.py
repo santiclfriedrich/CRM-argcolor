@@ -72,6 +72,13 @@ class OportunidadMini(BaseModel):
     cliente: ClienteMini | None = None
 
 
+class UsuarioMini(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nombre: str
+
+
 class PresupuestoRead(PresupuestoBase):
     model_config = ConfigDict(from_attributes=True)
 
@@ -88,3 +95,6 @@ class PresupuestoRead(PresupuestoBase):
     created_at: datetime
     items: list[ItemRead] = []
     oportunidad: OportunidadMini | None = None
+    creado_por: UsuarioMini | None = None
+    editado_por: UsuarioMini | None = None
+    editado_en: datetime | None = None

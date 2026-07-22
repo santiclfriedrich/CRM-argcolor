@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import es_admin, get_ai, get_current_user, get_user_gmail, resolver_duenio
+from app.api.deps import get_ai, get_current_user, get_user_gmail, resolver_duenio
 from app.core.exceptions import NotFoundError
 from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
 from app.db.models.respuestas_compras import RespuestaCompras
@@ -47,15 +47,9 @@ def _get_loaded(db: Session, solicitud_id: int) -> SolicitudCompras:
 
 
 def _assert_owner(solicitud: SolicitudCompras, user: Usuario) -> None:
-    """Un usuario solo puede tocar las solicitudes que él pidió a Compras.
-    Los admin acceden a todas. Evita el acceso ajeno por id/URL directa."""
-    if es_admin(user):
-        return
-    if solicitud.solicitante_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tenés acceso a esta solicitud.",
-        )
+    """Acceso compartido: cualquier usuario puede ver/actuar sobre cualquier
+    solicitud. Se mantiene (no-op) para no tocar los call sites."""
+    return
 
 
 def _normalize_ccs(data: dict) -> None:

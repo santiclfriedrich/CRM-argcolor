@@ -98,6 +98,7 @@ class OportunidadRead(OportunidadBase):
     cliente: ClienteMini | None = None
     contacto: ContactoMini | None = None
     vendedor: VendedorMini | None = None
+    creado_por: VendedorMini | None = None
 
     @field_validator("comentarios", mode="before")
     @classmethod

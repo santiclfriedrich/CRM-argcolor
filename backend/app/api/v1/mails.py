@@ -5,7 +5,6 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import (
-    es_admin,
     get_ai,
     get_current_user,
     get_gmail,
@@ -71,16 +70,9 @@ def _get_loaded(db: Session, mail_id: int) -> Mail:
 
 
 def _assert_owner(mail: Mail, user: Usuario) -> None:
-    """Un vendedor solo accede a los mails de sus propias oportunidades.
-    Los admin acceden a todos. Evita el acceso ajeno por id/URL directa."""
-    if es_admin(user):
-        return
-    op = mail.oportunidad
-    if op is None or op.vendedor_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tenés acceso a este mail.",
-        )
+    """Acceso compartido: cualquier usuario puede ver/actuar sobre cualquier
+    mail. Se mantiene la función (no-op) para no tocar los call sites."""
+    return
 
 
 @router.post("/ingest", response_model=IngestResult, status_code=201)

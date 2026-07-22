@@ -87,6 +87,9 @@ export default function OportunidadDetallePage() {
               <span className="text-sm text-ink-2">{o.asunto}</span>
             )}
           </div>
+          <p className="mt-1 text-xs text-ink-3">
+            Creada por {o.creado_por?.nombre ?? "—"}
+          </p>
         </div>
         <Button variant="outline" size="sm" onClick={eliminar} disabled={deleteMut.isPending} className="shrink-0 text-red-600">
           <Trash2 size={14} /> {deleteMut.isPending ? "Eliminando…" : "Eliminar"}

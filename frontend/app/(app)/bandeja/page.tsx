@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,7 +51,19 @@ export default function BandejaPage() {
 
   const { data: session } = useSession();
   const currentUserId = Number(session?.usuario?.id) || null;
-  const [filtro, setFiltro] = useState<"todos" | "personal">("todos");
+  const rol = (session?.usuario as { rol?: string } | undefined)?.rol;
+  const [filtro, setFiltro] = useState<"todos" | "personal">(
+    rol === "vendedor" ? "personal" : "todos"
+  );
+  // Default por rol: "personal" para vendedor, "todos" para admin/compras.
+  // `rol` puede llegar undefined en el primer render; lo ajustamos una sola vez
+  // cuando la sesión carga, sin pisar un cambio manual del usuario.
+  const defaultToggleAplicado = useRef(false);
+  useEffect(() => {
+    if (!rol || defaultToggleAplicado.current) return;
+    defaultToggleAplicado.current = true;
+    setFiltro(rol === "vendedor" ? "personal" : "todos");
+  }, [rol]);
   const visibles = (mails ?? []).filter(
     (m) => filtro === "todos" || m.oportunidad?.vendedor_id === currentUserId
   );

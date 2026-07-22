@@ -36,7 +36,11 @@ class Usuario(Base, TimestampMixin):
         back_populates="vendedor_asignado",
         foreign_keys="Cliente.vendedor_asignado_id",
     )
-    oportunidades = relationship("Oportunidad", back_populates="vendedor")
+    oportunidades = relationship(
+        "Oportunidad",
+        back_populates="vendedor",
+        foreign_keys="Oportunidad.vendedor_id",
+    )
 
     @property
     def gmail_conectado(self) -> bool:

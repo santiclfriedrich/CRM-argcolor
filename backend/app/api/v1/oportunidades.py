@@ -34,6 +34,7 @@ _RELATIONS = (
     selectinload(Oportunidad.cliente),
     selectinload(Oportunidad.contacto),
     selectinload(Oportunidad.vendedor),
+    selectinload(Oportunidad.creado_por),
 )
 
 
@@ -71,9 +72,11 @@ def list_oportunidades(
 
 @router.post("", response_model=OportunidadRead, status_code=201)
 def create_oportunidad(
-    body: OportunidadCreate, db: Session = Depends(get_db), _: Usuario = Depends(get_current_user)
+    body: OportunidadCreate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
 ) -> Oportunidad:
-    oportunidad = Oportunidad(**body.model_dump())
+    oportunidad = Oportunidad(**body.model_dump(), creado_por_id=current_user.id)
     db.add(oportunidad)
     db.commit()
     db.refresh(oportunidad)

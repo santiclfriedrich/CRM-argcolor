@@ -172,6 +172,17 @@ export default function ArmadorPresupuestoPage() {
               Oportunidad #{presupuesto.oportunidad_id}
             </Link>
           </p>
+          <p className="mt-1 text-xs text-ink-3">
+            Creado por {presupuesto.creado_por?.nombre ?? "—"}
+            {presupuesto.editado_por && (
+              <>
+                {" · Última edición: "}
+                {presupuesto.editado_por.nombre}
+                {presupuesto.editado_en &&
+                  ` (${new Date(presupuesto.editado_en).toLocaleString("es-AR")})`}
+              </>
+            )}
+          </p>
         </div>
         <Badge className={ESTADO_PRESUPUESTO[estado].color}>
           {ESTADO_PRESUPUESTO[estado].label}

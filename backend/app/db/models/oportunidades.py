@@ -52,6 +52,9 @@ class Oportunidad(Base, TimestampMixin):
     cliente_id: Mapped[int | None] = mapped_column(ForeignKey("clientes.id"))
     contacto_cliente_id: Mapped[int | None] = mapped_column(ForeignKey("contactos_cliente.id"))
     vendedor_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
+    # Quién creó la oportunidad (registro): manual = quien la carga; mail = dueño
+    # de la casilla. No cambia aunque se reasigne el vendedor.
+    creado_por_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
     estado: Mapped[EstadoOportunidad] = mapped_column(
         Enum(EstadoOportunidad, name="estado_oportunidad"),
         default=EstadoOportunidad.nueva,
@@ -90,7 +93,10 @@ class Oportunidad(Base, TimestampMixin):
 
     cliente = relationship("Cliente", back_populates="oportunidades")
     contacto = relationship("ContactoCliente")
-    vendedor = relationship("Usuario", back_populates="oportunidades")
+    vendedor = relationship(
+        "Usuario", foreign_keys=[vendedor_id], back_populates="oportunidades"
+    )
+    creado_por = relationship("Usuario", foreign_keys=[creado_por_id])
     solicitudes_compras = relationship("SolicitudCompras", back_populates="oportunidad")
     presupuestos = relationship("Presupuesto", back_populates="oportunidad")
     mails = relationship("Mail", back_populates="oportunidad")

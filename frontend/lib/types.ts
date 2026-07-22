@@ -181,6 +181,7 @@ export interface Oportunidad {
   cliente: ClienteMini | null;
   contacto: PersonaMini | null;
   vendedor: PersonaMini | null;
+  creado_por: { id: number; nombre: string } | null;
 }
 
 export type OportunidadCreate = {
@@ -429,6 +430,9 @@ export interface Presupuesto {
   created_at: string;
   items: PresupuestoItem[];
   oportunidad: MailOportunidadMini | null;
+  creado_por: { id: number; nombre: string } | null;
+  editado_por: { id: number; nombre: string } | null;
+  editado_en: string | null;
 }
 
 // Payloads de escritura. Los ítems del armador se mandan sin id (los crea el back).

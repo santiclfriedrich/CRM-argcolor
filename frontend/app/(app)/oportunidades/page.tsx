@@ -377,6 +377,7 @@ function RowMenu({
 export default function OportunidadesPage() {
   const { data: session } = useSession();
   const currentUserId = Number(session?.usuario?.id) || null;
+  const rol = (session?.usuario as { rol?: string } | undefined)?.rol;
 
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Oportunidad | null>(null);
@@ -386,8 +387,17 @@ export default function OportunidadesPage() {
   const [filtros, setFiltros] = useState<OportunidadFiltros>({
     estado: "",
     cliente_id: null,
-    solo_mias: true,
+    solo_mias: rol === "vendedor",
   });
+  // Default por rol: el toggle arranca en "Mías" para vendedor y "Todas" para
+  // admin/compras. Como `rol` puede llegar undefined en el primer render, lo
+  // ajustamos una sola vez cuando la sesión carga, sin pisar un cambio manual.
+  const defaultToggleAplicado = useRef(false);
+  useEffect(() => {
+    if (!rol || defaultToggleAplicado.current) return;
+    defaultToggleAplicado.current = true;
+    setFiltros((f) => ({ ...f, solo_mias: rol === "vendedor" }));
+  }, [rol]);
   // Buscador global + orden/filtro por columna (estilo planilla).
   const [busqueda, setBusqueda] = useState("");
   const [sort, setSort] = useState<SortState>(null);

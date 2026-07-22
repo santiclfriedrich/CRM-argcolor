@@ -1,9 +1,10 @@
 "use client";
 
 import { Copy, FileText, Mail, Paperclip, Plus, Send, Sparkles } from "lucide-react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { SolicitudForm } from "@/components/solicitudes/solicitud-form";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,26 @@ export default function SolicitudesPage() {
   const { data, isLoading, isError } = useSolicitudes();
   const createMut = useCreateSolicitud();
 
+  const { data: session } = useSession();
+  const currentUserId = Number(session?.usuario?.id) || null;
+  const rol = (session?.usuario as { rol?: string } | undefined)?.rol;
+  const [filtro, setFiltro] = useState<"mias" | "todas">(
+    rol === "vendedor" ? "mias" : "todas"
+  );
+  // Default por rol: "mias" para vendedor, "todas" para admin/compras. Como `rol`
+  // puede llegar undefined en el primer render, lo ajustamos una sola vez cuando
+  // la sesión carga, sin pisar un cambio manual del usuario.
+  const defaultToggleAplicado = useRef(false);
+  useEffect(() => {
+    if (!rol || defaultToggleAplicado.current) return;
+    defaultToggleAplicado.current = true;
+    setFiltro(rol === "vendedor" ? "mias" : "todas");
+  }, [rol]);
+
+  const visibles = (data ?? []).filter(
+    (s) => filtro === "todas" || s.solicitante?.id === currentUserId
+  );
+
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -39,6 +60,29 @@ export default function SolicitudesPage() {
           <Plus size={16} /> Nueva solicitud
         </Button>
       </div>
+
+      {data && (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className="inline-flex rounded-lg border border-line bg-surface2 p-0.5 text-sm">
+            {(["todas", "mias"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFiltro(f)}
+                className={`rounded-md px-3 py-1 font-medium transition ${
+                  filtro === f
+                    ? "bg-navy text-white"
+                    : "text-ink-2 hover:bg-surface"
+                }`}
+              >
+                {f === "mias" ? "Mías" : "Todas"}
+              </button>
+            ))}
+          </div>
+          <p className="text-sm text-ink-2">
+            {visibles.length} {visibles.length === 1 ? "solicitud" : "solicitudes"}
+          </p>
+        </div>
+      )}
 
       {isLoading && <p className="mt-4 text-ink-2">Cargando…</p>}
       {isError && (
@@ -62,7 +106,7 @@ export default function SolicitudesPage() {
               </tr>
             </thead>
             <tbody>
-              {data.map((s) => {
+              {visibles.map((s) => {
                 const meta = ESTADO_SOLICITUD_META[s.estado];
                 return (
                   <tr
@@ -103,10 +147,12 @@ export default function SolicitudesPage() {
                   </tr>
                 );
               })}
-              {data.length === 0 && (
+              {visibles.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-6 text-center text-ink-3">
-                    No hay solicitudes todavía.
+                    {data.length > 0 && filtro === "mias"
+                      ? "No tenés solicitudes propias. Cambiá a “Todas” para ver las del equipo."
+                      : "No hay solicitudes todavía."}
                   </td>
                 </tr>
               )}

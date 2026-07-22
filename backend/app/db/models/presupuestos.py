@@ -44,7 +44,14 @@ class Presupuesto(Base, TimestampMixin):
     fecha_validez: Mapped[date | None] = mapped_column(Date)
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
+    # Auditoría: quién lo creó y quién lo editó por última vez.
+    creado_por_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
+    editado_por_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
+    editado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     oportunidad = relationship("Oportunidad", back_populates="presupuestos")
+    creado_por = relationship("Usuario", foreign_keys=[creado_por_id])
+    editado_por = relationship("Usuario", foreign_keys=[editado_por_id])
     items = relationship(
         "PresupuestoItem", back_populates="presupuesto", order_by="PresupuestoItem.orden"
     )

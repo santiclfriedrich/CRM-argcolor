@@ -1,10 +1,12 @@
 """Presupuestos: armador de cotizaciones y generación del PDF."""
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import es_admin, get_current_user, get_user_gmail, resolver_duenio
+from app.api.deps import get_current_user, get_user_gmail, resolver_duenio
 from app.core.exceptions import NotFoundError
 from app.db.models.oportunidades import Oportunidad
 from app.db.models.presupuestos import Presupuesto
@@ -31,6 +33,8 @@ _RELATIONS = (
     selectinload(Presupuesto.items),
     selectinload(Presupuesto.oportunidad).selectinload(Oportunidad.cliente),
     selectinload(Presupuesto.oportunidad).selectinload(Oportunidad.contacto),
+    selectinload(Presupuesto.creado_por),
+    selectinload(Presupuesto.editado_por),
 )
 
 
@@ -42,16 +46,9 @@ def _get_loaded(db: Session, presupuesto_id: int) -> Presupuesto:
 
 
 def _assert_owner(presupuesto: Presupuesto, user: Usuario) -> None:
-    """Un vendedor solo puede tocar presupuestos de sus propias oportunidades.
-    Los admin acceden a todos. Evita el acceso ajeno por id/URL directa."""
-    if es_admin(user):
-        return
-    op = presupuesto.oportunidad
-    if op is None or op.vendedor_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tenés acceso a este presupuesto.",
-        )
+    """Acceso compartido: cualquier usuario puede ver/editar cualquier
+    presupuesto. Se mantiene (no-op) para no tocar los call sites."""
+    return
 
 
 @router.get("", response_model=list[PresupuestoRead])
@@ -78,12 +75,14 @@ def list_presupuestos(
 def create_presupuesto(
     body: PresupuestoCreate,
     db: Session = Depends(get_db),
-    _: Usuario = Depends(get_current_user),
+    current_user: Usuario = Depends(get_current_user),
 ) -> Presupuesto:
     """Crea un presupuesto (borrador) y avanza la oportunidad a 'presupuestada'."""
     if db.get(Oportunidad, body.oportunidad_id) is None:
         raise HTTPException(status_code=404, detail="La oportunidad no existe")
     presupuesto = crear_presupuesto(db, body)
+    presupuesto.creado_por_id = current_user.id
+    db.commit()
     return _get_loaded(db, presupuesto.id)
 
 
@@ -101,15 +100,12 @@ def create_desde_solicitud(
     )
     if solicitud is None:
         raise HTTPException(status_code=404, detail="La solicitud no existe")
-    if not es_admin(current_user) and solicitud.solicitante_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tenés acceso a esta solicitud.",
-        )
     try:
         presupuesto = crear_desde_solicitud(db, solicitud)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    presupuesto.creado_por_id = current_user.id
+    db.commit()
     return _get_loaded(db, presupuesto.id)
 
 
@@ -134,6 +130,9 @@ def update_presupuesto(
     presupuesto = _get_loaded(db, presupuesto_id)
     _assert_owner(presupuesto, current_user)
     actualizar_presupuesto(db, presupuesto, body)
+    presupuesto.editado_por_id = current_user.id
+    presupuesto.editado_en = datetime.now(timezone.utc)
+    db.commit()
     return _get_loaded(db, presupuesto_id)
 
 

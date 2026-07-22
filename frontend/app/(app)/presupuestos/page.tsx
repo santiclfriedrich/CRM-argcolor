@@ -1,7 +1,9 @@
 "use client";
 
 import { FileText, Trash2 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +22,26 @@ export default function PresupuestosPage() {
   const { data, isLoading, isError } = usePresupuestos();
   const deleteMut = useDeletePresupuesto();
   const confirm = useConfirm();
+
+  const { data: session } = useSession();
+  const currentUserId = Number(session?.usuario?.id) || null;
+  const rol = (session?.usuario as { rol?: string } | undefined)?.rol;
+  const [filtro, setFiltro] = useState<"mias" | "todas">(
+    rol === "vendedor" ? "mias" : "todas"
+  );
+  // Default por rol: "mias" para vendedor, "todas" para admin/compras. Como `rol`
+  // puede llegar undefined en el primer render, lo ajustamos una sola vez cuando
+  // la sesión carga, sin pisar un cambio manual del usuario.
+  const defaultToggleAplicado = useRef(false);
+  useEffect(() => {
+    if (!rol || defaultToggleAplicado.current) return;
+    defaultToggleAplicado.current = true;
+    setFiltro(rol === "vendedor" ? "mias" : "todas");
+  }, [rol]);
+
+  const visibles = (data ?? []).filter(
+    (p) => filtro === "todas" || p.creado_por?.id === currentUserId
+  );
 
   const eliminar = async (p: Presupuesto) => {
     if (
@@ -41,6 +63,29 @@ export default function PresupuestosPage() {
         “Armar presupuesto”.
       </p>
 
+      {data && (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className="inline-flex rounded-lg border border-line bg-surface2 p-0.5 text-sm">
+            {(["todas", "mias"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFiltro(f)}
+                className={`rounded-md px-3 py-1 font-medium transition ${
+                  filtro === f
+                    ? "bg-navy text-white"
+                    : "text-ink-2 hover:bg-surface"
+                }`}
+              >
+                {f === "mias" ? "Mías" : "Todas"}
+              </button>
+            ))}
+          </div>
+          <p className="text-sm text-ink-2">
+            {visibles.length} {visibles.length === 1 ? "presupuesto" : "presupuestos"}
+          </p>
+        </div>
+      )}
+
       {isLoading && <p className="mt-4 text-ink-2">Cargando…</p>}
       {isError && <p className="mt-4 text-red-600">No se pudo cargar.</p>}
 
@@ -54,11 +99,12 @@ export default function PresupuestosPage() {
                 <th className="px-4 py-2 font-medium">Cliente</th>
                 <th className="px-4 py-2 font-medium">Total</th>
                 <th className="px-4 py-2 font-medium">Estado</th>
+                <th className="px-4 py-2 font-medium">Creado por</th>
                 <th className="px-4 py-2" />
               </tr>
             </thead>
             <tbody>
-              {data.map((p) => (
+              {visibles.map((p) => (
                 <tr
                   key={p.id}
                   className="border-t border-line"
@@ -97,6 +143,9 @@ export default function PresupuestosPage() {
                       {ESTADO_PRESUPUESTO[p.estado].label}
                     </Badge>
                   </td>
+                  <td className="px-4 py-2 text-ink-2">
+                    {p.creado_por?.nombre ?? "—"}
+                  </td>
                   <td className="px-4 py-2">
                     <div className="flex items-center justify-end gap-1">
                       <Button size="sm" variant="ghost" onClick={() => abrirPdf(p.id)}>
@@ -118,10 +167,12 @@ export default function PresupuestosPage() {
                   </td>
                 </tr>
               ))}
-              {data.length === 0 && (
+              {visibles.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-ink-3">
-                    Todavía no hay presupuestos.
+                  <td colSpan={7} className="px-4 py-8 text-center text-ink-3">
+                    {data.length > 0 && filtro === "mias"
+                      ? "No tenés presupuestos creados. Cambiá a “Todas” para ver los del equipo."
+                      : "Todavía no hay presupuestos."}
                   </td>
                 </tr>
               )}

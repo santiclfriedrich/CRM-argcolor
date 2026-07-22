@@ -215,6 +215,7 @@ def process_incoming_email(
         cliente_id=cliente_id,
         contacto_cliente_id=contacto_id,
         vendedor_id=vendedor_id,
+        creado_por_id=vendedor_id,  # registro: de quién es la casilla que la generó
         estado=estado,
         fuente="mail",
         fecha_ultimo_movimiento=now,
