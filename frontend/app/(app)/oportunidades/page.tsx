@@ -35,6 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import {
   ESTADO_META,
+  subirAdjuntosOportunidad,
   useCreateOportunidad,
   useDeleteOportunidad,
   useOportunidades,
@@ -801,9 +802,15 @@ export default function OportunidadesPage() {
             clearDraft(DRAFT_OPORTUNIDAD);
             setCreating(false);
           }}
-          onSubmit={(values) =>
+          onSubmit={(values, files) =>
             createMut.mutate(values, {
-              onSuccess: () => {
+              onSuccess: async (nueva) => {
+                try {
+                  await subirAdjuntosOportunidad(nueva.id, files);
+                } catch {
+                  /* la oportunidad se creó igual; los adjuntos se pueden
+                     reintentar desde el detalle */
+                }
                 clearDraft(DRAFT_OPORTUNIDAD);
                 setCreating(false);
               },
@@ -881,7 +888,17 @@ function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad;
 
 function EditOportunidadModal({ oportunidad, onClose }: { oportunidad: Oportunidad; onClose: () => void }) {
   const updateMut = useUpdateOportunidad(oportunidad.id);
-  const handleSubmit = (values: OportunidadCreate) => updateMut.mutate(values, { onSuccess: onClose });
+  const handleSubmit = (values: OportunidadCreate, files: File[]) =>
+    updateMut.mutate(values, {
+      onSuccess: async () => {
+        try {
+          await subirAdjuntosOportunidad(oportunidad.id, files);
+        } catch {
+          /* los adjuntos se pueden reintentar desde el detalle */
+        }
+        onClose();
+      },
+    });
 
   return (
     <Modal open onClose={onClose} title={`Editar oportunidad #${oportunidad.id}`}>

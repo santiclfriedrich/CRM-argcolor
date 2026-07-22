@@ -17,7 +17,7 @@ interface Props {
   initial?: Oportunidad;
   defaultVendedorId?: number | null;
   isPending: boolean;
-  onSubmit: (values: OportunidadCreate) => void;
+  onSubmit: (values: OportunidadCreate, files: File[]) => void;
   onCancel: () => void;
   // Si se pasa (solo al crear), persiste un borrador en localStorage con esta clave.
   draftKey?: string;
@@ -103,6 +103,7 @@ export function OportunidadForm({
   const [fechaLimite, setFechaLimite] = useState(
     draft?.fechaLimite ?? initial?.fecha_limite ?? ""
   );
+  const [files, setFiles] = useState<File[]>([]);
 
   // Guarda el borrador ante cada cambio (solo al crear con draftKey).
   useEffect(() => {
@@ -174,7 +175,7 @@ export function OportunidadForm({
       fecha_respuesta_compras: fechaRespCompras || null,
       fecha_enviado_cliente: fechaCliente || null,
       fecha_limite: fechaLimite || null,
-    });
+    }, files);
   };
 
   return (
@@ -372,6 +373,23 @@ export function OportunidadForm({
           onChange={(e) => setFuente(e.target.value)}
           placeholder="manual / mail"
         />
+      </div>
+
+      <div>
+        <Label htmlFor="o-files">Adjuntos (PDF o imágenes)</Label>
+        <input
+          id="o-files"
+          type="file"
+          multiple
+          accept=".pdf,image/*"
+          onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+          className="block w-full text-sm text-ink-2 file:mr-3 file:rounded-md file:border-0 file:bg-surface2 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink hover:file:bg-surface3"
+        />
+        {files.length > 0 && (
+          <p className="mt-1 text-xs text-ink-3">
+            {files.length} archivo(s) seleccionado(s)
+          </p>
+        )}
       </div>
 
       <div className="flex justify-end gap-2 pt-2">

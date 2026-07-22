@@ -127,6 +127,15 @@ export function useSubirAdjuntosOportunidad(id: number) {
   });
 }
 
+// Subida directa (sin hook) para usar tras crear una oportunidad, cuando el id
+// recién existe. Sube al mismo endpoint que useSubirAdjuntosOportunidad.
+export async function subirAdjuntosOportunidad(id: number, files: File[]): Promise<void> {
+  if (!files.length) return;
+  const fd = new FormData();
+  files.forEach((f) => fd.append("files", f));
+  await api.post(`${BASE}/${id}/adjuntos`, fd);
+}
+
 export function useEliminarAdjuntoOportunidad(id: number) {
   const qc = useQueryClient();
   return useMutation({
