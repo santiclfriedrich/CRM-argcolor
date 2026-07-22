@@ -1,13 +1,14 @@
 "use client";
 
-import { Plus, Star, Trash2 } from "lucide-react";
+import { Pencil, Plus, Star, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tooltip } from "@/components/ui/tooltip";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
-import { useCreateDominio, useDeleteDominio } from "@/lib/clientes";
+import { Tooltip } from "@/components/ui/tooltip";
+import { useCreateDominio, useDeleteDominio, useUpdateDominio } from "@/lib/clientes";
 import type { Dominio } from "@/lib/types";
 
 interface Props {
@@ -19,7 +20,14 @@ export function DominiosSection({ clienteId, dominios }: Props) {
   const [nuevo, setNuevo] = useState("");
   const [principal, setPrincipal] = useState(false);
   const createMut = useCreateDominio(clienteId);
+  const updateMut = useUpdateDominio(clienteId);
   const deleteMut = useDeleteDominio(clienteId);
+  const confirm = useConfirm();
+
+  // Edición en línea de un dominio ya cargado.
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editDominio, setEditDominio] = useState("");
+  const [editPrincipal, setEditPrincipal] = useState(false);
 
   const agregar = (e: FormEvent) => {
     e.preventDefault();
@@ -36,9 +44,36 @@ export function DominiosSection({ clienteId, dominios }: Props) {
     );
   };
 
+  const empezarEdicion = (d: Dominio) => {
+    setEditId(d.id);
+    setEditDominio(d.dominio);
+    setEditPrincipal(d.es_principal_dominio);
+  };
+
+  const guardarEdicion = (id: number) => {
+    const dominio = editDominio.trim();
+    if (!dominio) return;
+    updateMut.mutate(
+      { id, body: { dominio, es_principal_dominio: editPrincipal } },
+      { onSuccess: () => setEditId(null) }
+    );
+  };
+
+  const eliminar = async (d: Dominio) => {
+    if (
+      await confirm({
+        title: "Eliminar dominio",
+        message: `¿Eliminar el dominio "${d.dominio}"?`,
+        danger: true,
+      })
+    ) {
+      deleteMut.mutate(d.id);
+    }
+  };
+
   return (
     <section>
-      <h2 className="mb-3 text-lg font-semibold text-ink">Dominios de mail</h2>
+      <h2 className="mb-3 text-lg font-semibold text-ink">Dominios (sin @)</h2>
 
       <form onSubmit={agregar} className="mb-3 flex items-center gap-2">
         <Input
@@ -52,7 +87,7 @@ export function DominiosSection({ clienteId, dominios }: Props) {
             type="checkbox"
             checked={principal}
             onChange={(e) => setPrincipal(e.target.checked)}
-            className="h-4 w-4 rounded border-line"
+            className="h-4 w-4 rounded border-line accent-navy"
           />
           Principal
         </label>
@@ -62,30 +97,72 @@ export function DominiosSection({ clienteId, dominios }: Props) {
       </form>
 
       <ul className="divide-y divide-line rounded-lg border border-line">
-        {dominios.map((d) => (
-          <li key={d.id} className="flex items-center justify-between px-3 py-2 text-sm">
-            <span className="inline-flex items-center gap-2 font-mono text-ink">
-              {d.dominio}
-              {d.es_principal_dominio && (
-                <Badge className="bg-amber-100 text-amber-700">
-                  <Star size={11} className="mr-1" fill="currentColor" /> principal
-                </Badge>
-              )}
-            </span>
-            <Tooltip label="Eliminar">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  if (confirm(`¿Eliminar el dominio "${d.dominio}"?`)) deleteMut.mutate(d.id);
-                }}
-                aria-label="Eliminar"
-              >
-                <Trash2 size={15} className="text-red-500" />
-              </Button>
-            </Tooltip>
-          </li>
-        ))}
+        {dominios.map((d) =>
+          editId === d.id ? (
+            <li key={d.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
+              <Input
+                value={editDominio}
+                onChange={(e) => setEditDominio(e.target.value)}
+                className="max-w-xs"
+                autoFocus
+              />
+              <label className="flex items-center gap-1.5 whitespace-nowrap text-sm text-ink-2">
+                <input
+                  type="checkbox"
+                  checked={editPrincipal}
+                  onChange={(e) => setEditPrincipal(e.target.checked)}
+                  className="h-4 w-4 rounded border-line accent-navy"
+                />
+                Principal
+              </label>
+              <div className="ml-auto flex items-center gap-1">
+                <Button
+                  size="sm"
+                  onClick={() => guardarEdicion(d.id)}
+                  disabled={updateMut.isPending || !editDominio.trim()}
+                >
+                  {updateMut.isPending ? "Guardando…" : "Guardar"}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setEditId(null)}>
+                  Cancelar
+                </Button>
+              </div>
+            </li>
+          ) : (
+            <li key={d.id} className="flex items-center justify-between px-3 py-2 text-sm">
+              <span className="inline-flex items-center gap-2 font-mono text-ink">
+                {d.dominio}
+                {d.es_principal_dominio && (
+                  <Badge className="bg-amber-100 text-amber-700">
+                    <Star size={11} className="mr-1" fill="currentColor" /> principal
+                  </Badge>
+                )}
+              </span>
+              <div className="flex items-center gap-1">
+                <Tooltip label="Editar">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => empezarEdicion(d)}
+                    aria-label="Editar"
+                  >
+                    <Pencil size={15} className="text-ink-3" />
+                  </Button>
+                </Tooltip>
+                <Tooltip label="Eliminar">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => eliminar(d)}
+                    aria-label="Eliminar"
+                  >
+                    <Trash2 size={15} className="text-red-500" />
+                  </Button>
+                </Tooltip>
+              </div>
+            </li>
+          )
+        )}
         {dominios.length === 0 && (
           <li className="px-3 py-6 text-center text-ink-3">Sin dominios asociados.</li>
         )}
