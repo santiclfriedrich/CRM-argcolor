@@ -793,7 +793,7 @@ export default function OportunidadesPage() {
         </div>
       )}
 
-      <Modal open={creating} onClose={() => setCreating(false)} title="Nueva oportunidad">
+      <Modal open={creating} onClose={() => setCreating(false)} title="Nueva oportunidad" size="4xl">
         <OportunidadForm
           defaultVendedorId={currentUserId}
           isPending={createMut.isPending}
@@ -901,7 +901,7 @@ function EditOportunidadModal({ oportunidad, onClose }: { oportunidad: Oportunid
     });
 
   return (
-    <Modal open onClose={onClose} title={`Editar oportunidad #${oportunidad.id}`}>
+    <Modal open onClose={onClose} title={`Editar oportunidad #${oportunidad.id}`} size="4xl">
       <OportunidadForm
         initial={oportunidad}
         isPending={updateMut.isPending}

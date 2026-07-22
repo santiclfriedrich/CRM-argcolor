@@ -180,39 +180,41 @@ export function OportunidadForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <div>
-        <Label htmlFor="o-cliente">Cliente</Label>
-        <SelectMenu
-          id="o-cliente"
-          value={clienteId != null ? String(clienteId) : ""}
-          onChange={(v) => {
-            setClienteId(toId(v));
-            setContactoId(null); // el contacto depende del cliente
-          }}
-          placeholder="— Sin asignar —"
-          options={[
-            { value: "", label: "— Sin asignar —" },
-            ...(clientes ?? []).map((c) => ({ value: String(c.id), label: c.razon_social })),
-          ]}
-        />
-      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="o-cliente">Cliente</Label>
+          <SelectMenu
+            id="o-cliente"
+            value={clienteId != null ? String(clienteId) : ""}
+            onChange={(v) => {
+              setClienteId(toId(v));
+              setContactoId(null); // el contacto depende del cliente
+            }}
+            placeholder="— Sin asignar —"
+            options={[
+              { value: "", label: "— Sin asignar —" },
+              ...(clientes ?? []).map((c) => ({ value: String(c.id), label: c.razon_social })),
+            ]}
+          />
+        </div>
 
-      <div>
-        <Label htmlFor="o-contacto">Contacto</Label>
-        <SelectMenu
-          id="o-contacto"
-          value={contactoId != null ? String(contactoId) : ""}
-          onChange={(v) => setContactoId(toId(v))}
-          disabled={!clienteId}
-          placeholder={clienteId ? "— Sin contacto —" : "Elegí un cliente primero"}
-          options={[
-            { value: "", label: "— Sin contacto —" },
-            ...contactos.map((c) => ({
-              value: String(c.id),
-              label: `${c.nombre}${c.cargo ? ` (${c.cargo})` : ""}`,
-            })),
-          ]}
-        />
+        <div>
+          <Label htmlFor="o-contacto">Contacto</Label>
+          <SelectMenu
+            id="o-contacto"
+            value={contactoId != null ? String(contactoId) : ""}
+            onChange={(v) => setContactoId(toId(v))}
+            disabled={!clienteId}
+            placeholder={clienteId ? "— Sin contacto —" : "Elegí un cliente primero"}
+            options={[
+              { value: "", label: "— Sin contacto —" },
+              ...contactos.map((c) => ({
+                value: String(c.id),
+                label: `${c.nombre}${c.cargo ? ` (${c.cargo})` : ""}`,
+              })),
+            ]}
+          />
+        </div>
       </div>
 
       <div>
