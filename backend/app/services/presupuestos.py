@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -58,10 +58,23 @@ def recalcular_totales(presupuesto: Presupuesto) -> None:
 
 
 def generar_codigo(db: Session) -> str:
-    """Código correlativo tipo ``P-2026-0001`` (por año)."""
+    """Código correlativo tipo ``P-2026-0001`` (por año).
+
+    Usa el MAYOR correlativo ya usado en el año + 1 (no ``count(*)``): si se
+    borró algún presupuesto, contar daría un número ya existente y chocaría con
+    el índice único ``ix_presupuestos_codigo``.
+    """
     anio = now_utc().year
-    n = (db.scalar(select(func.count()).select_from(Presupuesto)) or 0) + 1
-    return f"P-{anio}-{n:04d}"
+    prefijo = f"P-{anio}-"
+    codigos = db.scalars(
+        select(Presupuesto.codigo).where(Presupuesto.codigo.like(f"{prefijo}%"))
+    ).all()
+    max_n = 0
+    for c in codigos:
+        sufijo = (c or "")[len(prefijo):]
+        if sufijo.isdigit():
+            max_n = max(max_n, int(sufijo))
+    return f"{prefijo}{max_n + 1:04d}"
 
 
 def _items_desde_schema(items: list[ItemBase]) -> list[PresupuestoItem]:

@@ -91,6 +91,22 @@ def _payload() -> dict:
     }
 
 
+def test_codigo_no_colisiona_tras_borrar(client: TestClient) -> None:
+    # Crear dos, borrar el primero y crear un tercero: el código debe seguir el
+    # MÁXIMO usado (no count(*)+1, que reusaría un código existente -> 409/500).
+    p1 = client.post("/api/v1/presupuestos", json=_payload()).json()
+    p2 = client.post("/api/v1/presupuestos", json=_payload()).json()
+    assert p1["codigo"].endswith("0001")
+    assert p2["codigo"].endswith("0002")
+
+    assert client.delete(f"/api/v1/presupuestos/{p1['id']}").status_code == 204
+
+    resp = client.post("/api/v1/presupuestos", json=_payload())
+    assert resp.status_code == 201
+    # Con count(*)+1 daría 0002 (colisión con p2); con máx+1 da 0003.
+    assert resp.json()["codigo"].endswith("0003")
+
+
 def test_crear_presupuesto_calcula_totales_y_avanza_oportunidad(client: TestClient) -> None:
     resp = client.post("/api/v1/presupuestos", json=_payload())
     assert resp.status_code == 201
