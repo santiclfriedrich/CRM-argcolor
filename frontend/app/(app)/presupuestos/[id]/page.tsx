@@ -150,7 +150,7 @@ export default function ArmadorPresupuestoPage() {
   const cliente = presupuesto.oportunidad?.cliente?.razon_social ?? "Sin cliente";
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-6xl">
       <Link
         href="/presupuestos"
         className="mb-3 inline-flex items-center gap-1 text-sm text-ink-2 hover:text-ink"
