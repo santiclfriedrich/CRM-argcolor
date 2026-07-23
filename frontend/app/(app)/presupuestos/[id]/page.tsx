@@ -68,7 +68,9 @@ function toRows(p: Presupuesto): Row[] {
     cantidad: String(it.cantidad),
     precio_unitario: String(it.precio_unitario),
     descuento_pct: String(it.descuento_pct),
-    iva: it.iva != null ? String(it.iva) : "",
+    // Normalizamos (Number) para que "10.50", "10.5" y 10 caigan en la misma
+    // opción del selector y no aparezcan duplicadas por coma/punto o ceros.
+    iva: it.iva != null ? String(Number(it.iva)) : "",
     observaciones: it.observaciones ?? "",
   }));
 }
@@ -278,7 +280,7 @@ export default function ArmadorPresupuestoPage() {
                   >
                     <option value="">—</option>
                     <option value="21">21%</option>
-                    <option value="10.5">10,50%</option>
+                    <option value="10.5">10.50%</option>
                     {!["", "21", "10.5"].includes(r.iva) && (
                       <option value={r.iva}>{r.iva}%</option>
                     )}
