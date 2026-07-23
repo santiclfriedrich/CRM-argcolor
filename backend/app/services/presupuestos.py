@@ -104,8 +104,8 @@ def crear_presupuesto(db: Session, data: PresupuestoCreate) -> Presupuesto:
 
         op = db.get(Oportunidad, data.oportunidad_id)
     if op is not None and op.estado not in (
+        EstadoOportunidad.confirmada,
         EstadoOportunidad.ganada,
-        EstadoOportunidad.facturada,
         EstadoOportunidad.perdida,
     ):
         op.estado = EstadoOportunidad.presupuestada
@@ -182,10 +182,12 @@ def actualizar_presupuesto(
         if estado in respuestas:
             if presupuesto.fecha_respuesta_cliente is None:
                 presupuesto.fecha_respuesta_cliente = now_utc()
-            post_venta = (EstadoOportunidad.facturada,)
-            if op.estado not in post_venta:
+            # No pisamos estados terminales (ya cobrado / no avanzó).
+            if op.estado not in (EstadoOportunidad.ganada, EstadoOportunidad.perdida):
+                # Aceptado = el cliente confirmó, pero el pago queda pendiente:
+                # pasa a "Confirmada / Pendiente", no directo a "Pago".
                 if estado == EstadoPresupuesto.aceptado:
-                    op.estado = EstadoOportunidad.ganada
+                    op.estado = EstadoOportunidad.confirmada
                 elif estado == EstadoPresupuesto.rechazado:
                     op.estado = EstadoOportunidad.perdida
             op.fecha_ultimo_movimiento = now_utc()

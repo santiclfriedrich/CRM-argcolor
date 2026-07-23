@@ -93,8 +93,8 @@ function IngInput({ o }: { o: Oportunidad }) {
 // "Cotizado" = ya se armó/envió la cotización al cliente.
 const ESTADOS_COTIZADOS: EstadoOportunidad[] = [
   "presupuestada",
+  "confirmada",
   "ganada",
-  "facturada",
 ];
 function estaCotizada(o: Oportunidad): boolean {
   return Boolean(o.fecha_enviado_cliente) || ESTADOS_COTIZADOS.includes(o.estado);
@@ -269,7 +269,7 @@ function FiltroColumna({
   );
 }
 
-const CERRADOS: EstadoOportunidad[] = ["ganada", "facturada", "perdida", "cerrada"];
+const CERRADOS: EstadoOportunidad[] = ["ganada", "perdida"];
 
 // Índice de mes absoluto (año*12+mes) para comparar meses fácilmente.
 const idxMes = (d: Date): number => d.getFullYear() * 12 + d.getMonth();

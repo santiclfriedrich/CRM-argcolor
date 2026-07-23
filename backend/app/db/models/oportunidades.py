@@ -26,21 +26,30 @@ from app.db.base import Base, TimestampMixin
 class EstadoOportunidad(str, enum.Enum):
     nueva = "nueva"
     requiere_aclaracion = "requiere_aclaracion"
-    en_compras = "en_compras"
-    presupuestada = "presupuestada"
-    ganada = "ganada"
-    facturada = "facturada"
-    perdida = "perdida"
-    cerrada = "cerrada"
+    en_compras = "en_compras"  # etiqueta UI: "Enviado a compras"
+    cotizado_compras = "cotizado_compras"  # Compras respondió con la cotización
+    presupuestada = "presupuestada"  # etiqueta UI: "Enviada al cliente"
+    confirmada = "confirmada"  # el cliente confirmó; pago pendiente
+    ganada = "ganada"  # etiqueta UI: "Pago"
+    perdida = "perdida"  # etiqueta UI: "No avanzó"
 
 
 # Estados terminales: la gestión terminó y deja de "arrastrarse" a meses nuevos.
+# "Confirmada" NO es terminal (falta el pago), así que se sigue arrastrando.
 ESTADOS_CERRADOS: frozenset["EstadoOportunidad"] = frozenset(
     {
         EstadoOportunidad.ganada,
-        EstadoOportunidad.facturada,
         EstadoOportunidad.perdida,
-        EstadoOportunidad.cerrada,
+    }
+)
+
+# Estados previos a que Compras cotice: al recibir la respuesta de Compras la
+# oportunidad avanza a "cotizado_compras" (sin pisar estados posteriores).
+_PREVIOS_A_COTIZAR: frozenset["EstadoOportunidad"] = frozenset(
+    {
+        EstadoOportunidad.nueva,
+        EstadoOportunidad.requiere_aclaracion,
+        EstadoOportunidad.en_compras,
     }
 )
 

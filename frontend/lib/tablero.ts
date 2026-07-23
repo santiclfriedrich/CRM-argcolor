@@ -9,12 +9,8 @@ export type Semaforo = "verde" | "amarillo" | "rojo";
 export const DIAS_ALERTA = 7;
 
 // Estados cerrados: no entran al tablero de seguimiento activo.
-const TERMINALES: readonly EstadoOportunidad[] = [
-  "ganada",
-  "facturada",
-  "perdida",
-  "cerrada",
-];
+// "Confirmada / Pendiente" sigue activa (falta el pago).
+const TERMINALES: readonly EstadoOportunidad[] = ["ganada", "perdida"];
 
 export function isTerminal(estado: EstadoOportunidad): boolean {
   return TERMINALES.includes(estado);

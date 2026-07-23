@@ -122,13 +122,14 @@ def test_actualizar_reemplaza_items_y_recalcula(client: TestClient) -> None:
     assert data["pdf_url"] is None  # el cambio invalida el PDF anterior
 
 
-def test_aceptado_gana_la_oportunidad(client: TestClient) -> None:
+def test_aceptado_confirma_la_oportunidad(client: TestClient) -> None:
     pid = client.post("/api/v1/presupuestos", json=_payload()).json()["id"]
 
     resp = client.patch(f"/api/v1/presupuestos/{pid}", json={"estado": "aceptado"})
     assert resp.status_code == 200
     assert resp.json()["fecha_respuesta_cliente"] is not None
-    assert client.get("/api/v1/oportunidades/1").json()["estado"] == "ganada"
+    # Aceptado = el cliente confirmó, pero el pago queda pendiente.
+    assert client.get("/api/v1/oportunidades/1").json()["estado"] == "confirmada"
 
 
 def test_rechazado_pierde_la_oportunidad(client: TestClient) -> None:
@@ -150,11 +151,12 @@ def test_negociando_registra_respuesta_sin_cerrar(client: TestClient) -> None:
     assert client.get("/api/v1/oportunidades/1").json()["estado"] == "presupuestada"
 
 
-def test_estado_cerrada_maneja_fecha_cierre(client: TestClient) -> None:
-    # Al cerrar, se fija la fecha de cierre (para "quedar" en ese mes).
-    resp = client.patch("/api/v1/oportunidades/1", json={"estado": "cerrada"})
+def test_estado_terminal_maneja_fecha_cierre(client: TestClient) -> None:
+    # Al pasar a un estado terminal, se fija la fecha de cierre (para "quedar"
+    # en ese mes).
+    resp = client.patch("/api/v1/oportunidades/1", json={"estado": "perdida"})
     assert resp.status_code == 200
-    assert resp.json()["estado"] == "cerrada"
+    assert resp.json()["estado"] == "perdida"
     assert client.get("/api/v1/oportunidades/1").json()["fecha_cierre"] is not None
     # Al reabrir, vuelve a quedar sin fecha de cierre (se arrastra de nuevo).
     client.patch("/api/v1/oportunidades/1", json={"estado": "nueva"})

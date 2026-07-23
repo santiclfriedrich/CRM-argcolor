@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_ai, get_current_user, get_user_gmail, resolver_duenio
 from app.core.exceptions import NotFoundError
-from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
+from app.db.models.oportunidades import _PREVIOS_A_COTIZAR, EstadoOportunidad, Oportunidad
 from app.db.models.respuestas_compras import RespuestaCompras
 from app.db.models.solicitudes_compras import EstadoSolicitud, SolicitudCompras
 from app.db.models.usuarios import Usuario
@@ -204,9 +204,15 @@ def cargar_respuesta(
     solicitud.estado = EstadoSolicitud.respondida
     if solicitud.fecha_respuesta is None:
         solicitud.fecha_respuesta = ahora
-    # Seguimiento: registrar en la oportunidad cuándo respondió Compras.
-    if solicitud.oportunidad is not None and solicitud.oportunidad.fecha_respuesta_compras is None:
-        solicitud.oportunidad.fecha_respuesta_compras = ahora.date()
+    # Seguimiento: registrar cuándo respondió Compras y avanzar la oportunidad
+    # a "Cotizado por compras" (sin pisar estados posteriores).
+    op = solicitud.oportunidad
+    if op is not None:
+        if op.fecha_respuesta_compras is None:
+            op.fecha_respuesta_compras = ahora.date()
+        if op.estado in _PREVIOS_A_COTIZAR:
+            op.estado = EstadoOportunidad.cotizado_compras
+            op.fecha_ultimo_movimiento = ahora
     db.commit()
     db.refresh(respuesta)
     return respuesta

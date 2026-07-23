@@ -126,11 +126,11 @@ export type EstadoOportunidad =
   | "nueva"
   | "requiere_aclaracion"
   | "en_compras"
+  | "cotizado_compras"
   | "presupuestada"
+  | "confirmada"
   | "ganada"
-  | "facturada"
-  | "perdida"
-  | "cerrada";
+  | "perdida";
 
 interface ClienteMini {
   id: number;

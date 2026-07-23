@@ -106,6 +106,8 @@ def test_ingiere_respuesta_de_compras_y_dedup(db: Session, monkeypatch) -> None:
 
     sol = db.get(SolicitudCompras, 1)
     assert sol.estado == EstadoSolicitud.respondida
+    # La oportunidad avanzó a "cotizado por compras".
+    assert db.get(Oportunidad, 1).estado == EstadoOportunidad.cotizado_compras
     assert db.scalar(select(func.count()).select_from(Notificacion)) == 1
 
     # Segunda corrida: dedup por gmail_message_id -> no crea otra.

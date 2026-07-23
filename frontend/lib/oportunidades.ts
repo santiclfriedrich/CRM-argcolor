@@ -21,12 +21,12 @@ export const oportunidadKeys = {
 export const ESTADOS: { value: EstadoOportunidad; label: string; color: string }[] = [
   { value: "nueva", label: "Nueva", color: "bg-blue-100 text-blue-700" },
   { value: "requiere_aclaracion", label: "Requiere aclaración", color: "bg-amber-100 text-amber-700" },
-  { value: "en_compras", label: "En Compras", color: "bg-purple-100 text-purple-700" },
-  { value: "presupuestada", label: "Presupuestada", color: "bg-cyan-100 text-cyan-700" },
-  { value: "ganada", label: "Ganada", color: "bg-green-100 text-green-700" },
-  { value: "facturada", label: "Facturada", color: "bg-emerald-100 text-emerald-700" },
-  { value: "perdida", label: "Perdida", color: "bg-red-100 text-red-700" },
-  { value: "cerrada", label: "Cerrada", color: "bg-slate-200 text-slate-700" },
+  { value: "en_compras", label: "Enviado a compras", color: "bg-purple-100 text-purple-700" },
+  { value: "cotizado_compras", label: "Cotizado por compras", color: "bg-cyan-100 text-cyan-700" },
+  { value: "presupuestada", label: "Enviada al cliente", color: "bg-indigo-100 text-indigo-700" },
+  { value: "confirmada", label: "Confirmada / Pendiente", color: "bg-yellow-100 text-yellow-700" },
+  { value: "ganada", label: "Pago", color: "bg-green-100 text-green-700" },
+  { value: "perdida", label: "No avanzó", color: "bg-red-100 text-red-700" },
 ];
 
 export const ESTADO_META: Record<EstadoOportunidad, { label: string; color: string }> =

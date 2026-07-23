@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.db.models.oportunidades import _PREVIOS_A_COTIZAR, EstadoOportunidad
 from app.db.models.respuestas_compras import RespuestaCompras
 from app.db.models.solicitudes_compras import EstadoSolicitud, SolicitudCompras
 from app.integrations.ai.base import AIProvider
@@ -96,8 +97,11 @@ def ingerir_respuestas_compras(db: Session, ai: AIProvider) -> int:
                 sol.estado = EstadoSolicitud.respondida
             if sol.fecha_respuesta is None:
                 sol.fecha_respuesta = datetime.now(timezone.utc)
-            if sol.oportunidad is not None and sol.oportunidad.fecha_respuesta_compras is None:
-                sol.oportunidad.fecha_respuesta_compras = datetime.now(timezone.utc).date()
+            if sol.oportunidad is not None:
+                if sol.oportunidad.fecha_respuesta_compras is None:
+                    sol.oportunidad.fecha_respuesta_compras = datetime.now(timezone.utc).date()
+                if sol.oportunidad.estado in _PREVIOS_A_COTIZAR:
+                    sol.oportunidad.estado = EstadoOportunidad.cotizado_compras
 
             cliente = (
                 sol.oportunidad.cliente.razon_social
