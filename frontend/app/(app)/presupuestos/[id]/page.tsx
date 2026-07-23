@@ -227,7 +227,6 @@ export default function ArmadorPresupuestoPage() {
               <th className="px-2 py-2 font-medium">Descripción</th>
               <th className="px-2 py-2 font-medium">Cant.</th>
               <th className="px-2 py-2 font-medium">P. unit.</th>
-              <th className="px-2 py-2 font-medium">Desc.%</th>
               <th className="px-2 py-2 font-medium">IVA%</th>
               <th className="px-2 py-2 text-right font-medium">Subtotal</th>
               <th className="px-2 py-2 font-medium">Observación</th>
@@ -242,7 +241,6 @@ export default function ArmadorPresupuestoPage() {
                 <td className="p-1 min-w-[180px]"><Input value={r.descripcion} onChange={(e) => setCampo(r.key, "descripcion", e.target.value)} placeholder="Producto / servicio" /></td>
                 <td className="p-1 w-20"><Input type="number" value={r.cantidad} onChange={(e) => setCampo(r.key, "cantidad", e.target.value)} className="text-right" /></td>
                 <td className="p-1 w-28"><Input type="number" value={r.precio_unitario} onChange={(e) => setCampo(r.key, "precio_unitario", e.target.value)} className="text-right" /></td>
-                <td className="p-1 w-20"><Input type="number" value={r.descuento_pct} onChange={(e) => setCampo(r.key, "descuento_pct", e.target.value)} className="text-right" /></td>
                 <td className="p-1 w-20"><Input type="number" value={r.iva} onChange={(e) => setCampo(r.key, "iva", e.target.value)} placeholder="21" className="text-right" /></td>
                 <td className="px-2 py-1 text-right tabular-nums text-ink">
                   {fmtMonto(subtotalRow(r), moneda)}
