@@ -56,13 +56,15 @@ interface ClienteFormProps {
   draftKey?: string;
 }
 
-const TIPOS = [
+// Clase de cliente (guardada en el campo `tipo`).
+const CLASES = [
   { value: "", label: "— Sin especificar —" },
-  { value: "cliente", label: "Cliente" },
-  { value: "prospecto", label: "Prospecto" },
-  { value: "competidor", label: "Competidor" },
-  { value: "proveedor", label: "Proveedor" },
-  { value: "otro", label: "Otro" },
+  { value: "Consumidor Final", label: "Consumidor Final" },
+  { value: "Corporativo", label: "Corporativo" },
+  { value: "Gubernamental", label: "Gubernamental" },
+  { value: "Gremio", label: "Gremio" },
+  { value: "Mercado Libre", label: "Mercado Libre" },
+  { value: "Otro", label: "Otro" },
 ];
 
 // Encabezado de sección estilo Salesforce: barra gris a lo ancho.
@@ -234,7 +236,7 @@ export function ClienteForm({
           <Input id="telefono" placeholder="011 4000-0000" {...register("telefono")} />
         </div>
         <div>
-          <Label htmlFor="tipo">Tipo</Label>
+          <Label htmlFor="tipo">Clase de cliente</Label>
           <Controller
             name="tipo"
             control={control}
@@ -243,7 +245,7 @@ export function ClienteForm({
                 id="tipo"
                 value={field.value}
                 onChange={field.onChange}
-                options={TIPOS}
+                options={CLASES}
                 placeholder="— Sin especificar —"
               />
             )}
