@@ -161,7 +161,12 @@ export default function SolicitudesPage() {
         </div>
       )}
 
-      <Modal open={creating} onClose={() => setCreating(false)} title="Nueva solicitud a Compras">
+      <Modal
+        open={creating}
+        onClose={() => setCreating(false)}
+        title="Nueva solicitud a Compras"
+        size="3xl"
+      >
         <SolicitudForm
           isPending={createMut.isPending}
           onCancel={() => setCreating(false)}
@@ -189,7 +194,7 @@ function SolicitudDetailModal({ id, onClose }: { id: number; onClose: () => void
   const setEstado = (estado: EstadoSolicitud) => updateMut.mutate({ estado });
 
   return (
-    <Modal open onClose={onClose} title={`Solicitud #${id}`}>
+    <Modal open onClose={onClose} title={`Solicitud #${id}`} size="3xl">
       {isLoading || !solicitud ? (
         <p className="text-ink-2">Cargando…</p>
       ) : (

@@ -2,11 +2,13 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 
+import { ClientePicker } from "@/components/clientes/cliente-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { Textarea } from "@/components/ui/textarea";
+import { useClientes } from "@/lib/clientes";
 import { useGruposCompras } from "@/lib/config";
 import { useOportunidades } from "@/lib/oportunidades";
 import { CONDICIONES_PAGO } from "@/lib/solicitudes";
@@ -44,9 +46,13 @@ export function SolicitudForm({
   pendingLabel = "Creando…",
 }: Props) {
   const { data: oportunidades } = useOportunidades();
+  const { data: clientes } = useClientes();
   const { data: grupos } = useGruposCompras();
 
   const [oportunidadId, setOportunidadId] = useState<number | null>(defaultOportunidadId);
+  // Búsqueda en 2 pasos (solo alta manual): primero el cliente, luego una de sus
+  // oportunidades. Si la oportunidad viene fijada, no se usa.
+  const [clienteId, setClienteId] = useState<number | null>(null);
   const [requerimiento, setRequerimiento] = useState(defaultRequerimiento);
   const [condicionPago, setCondicionPago] = useState<CondicionPago | "">("");
   const [importe, setImporte] = useState("");
@@ -61,6 +67,11 @@ export function SolicitudForm({
     if (grupoId != null || !grupos?.length) return;
     setGrupoId((grupos.find((g) => g.es_default) ?? grupos[0]).id);
   }, [grupos, grupoId]);
+
+  // Oportunidades del cliente elegido (para el segundo paso del buscador).
+  const opsDelCliente = (oportunidades ?? []).filter(
+    (o) => clienteId != null && o.cliente?.id === clienteId
+  );
 
   // El N° de cliente sale de la cuenta ya vinculada a la oportunidad; no se
   // vuelve a cargar a mano.
@@ -88,23 +99,62 @@ export function SolicitudForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <div>
-        <Label htmlFor="s-op">Oportunidad *</Label>
-        <SelectMenu
-          id="s-op"
-          value={oportunidadId != null ? String(oportunidadId) : ""}
-          onChange={(v) => setOportunidadId(v ? Number(v) : null)}
-          disabled={lockOportunidad}
-          placeholder="— Elegí una oportunidad —"
-          options={[
-            { value: "", label: "— Elegí una oportunidad —" },
-            ...(oportunidades ?? []).map((o) => ({
-              value: String(o.id),
-              label: `#${o.id} — ${o.cliente?.razon_social ?? "Sin cliente"}`,
-            })),
-          ]}
-        />
-      </div>
+      {lockOportunidad ? (
+        <div>
+          <Label htmlFor="s-op">Oportunidad *</Label>
+          <SelectMenu
+            id="s-op"
+            value={oportunidadId != null ? String(oportunidadId) : ""}
+            onChange={(v) => setOportunidadId(v ? Number(v) : null)}
+            disabled
+            placeholder="— Elegí una oportunidad —"
+            options={[
+              { value: "", label: "— Elegí una oportunidad —" },
+              ...(oportunidades ?? []).map((o) => ({
+                value: String(o.id),
+                label: `#${o.id} — ${o.cliente?.razon_social ?? "Sin cliente"}`,
+              })),
+            ]}
+          />
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="s-cli">Cliente *</Label>
+            <ClientePicker
+              clientes={clientes ?? []}
+              value={clienteId}
+              onChange={(id) => {
+                setClienteId(id);
+                setOportunidadId(null); // la oportunidad depende del cliente
+              }}
+            />
+          </div>
+          <div>
+            <Label htmlFor="s-op">Oportunidad *</Label>
+            <SelectMenu
+              id="s-op"
+              value={oportunidadId != null ? String(oportunidadId) : ""}
+              onChange={(v) => setOportunidadId(v ? Number(v) : null)}
+              disabled={clienteId == null}
+              placeholder={
+                clienteId == null
+                  ? "Elegí un cliente primero"
+                  : opsDelCliente.length === 0
+                    ? "Este cliente no tiene oportunidades"
+                    : "— Elegí una oportunidad —"
+              }
+              options={[
+                { value: "", label: "— Elegí una oportunidad —" },
+                ...opsDelCliente.map((o) => ({
+                  value: String(o.id),
+                  label: `#${o.id} — ${o.asunto ?? "Sin asunto"}`,
+                })),
+              ]}
+            />
+          </div>
+        </div>
+      )}
 
       <div>
         <Label htmlFor="s-numcli">Número de cliente</Label>

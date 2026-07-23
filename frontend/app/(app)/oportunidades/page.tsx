@@ -847,7 +847,7 @@ function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad;
   const cliente = oportunidad.cliente?.razon_social ?? `#${oportunidad.id}`;
 
   return (
-    <Modal open onClose={onClose} title={`Pedir a Compras — ${cliente}`}>
+    <Modal open onClose={onClose} title={`Pedir a Compras — ${cliente}`} size="3xl">
       {isLoading ? (
         <p className="text-ink-2">Cargando sugerencia…</p>
       ) : (
