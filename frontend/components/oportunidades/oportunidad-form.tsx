@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
+import { ClientePicker } from "@/components/clientes/cliente-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -183,18 +184,13 @@ export function OportunidadForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <Label htmlFor="o-cliente">Cliente</Label>
-          <SelectMenu
-            id="o-cliente"
-            value={clienteId != null ? String(clienteId) : ""}
-            onChange={(v) => {
-              setClienteId(toId(v));
+          <ClientePicker
+            clientes={clientes ?? []}
+            value={clienteId}
+            onChange={(id) => {
+              setClienteId(id);
               setContactoId(null); // el contacto depende del cliente
             }}
-            placeholder="— Sin asignar —"
-            options={[
-              { value: "", label: "— Sin asignar —" },
-              ...(clientes ?? []).map((c) => ({ value: String(c.id), label: c.razon_social })),
-            ]}
           />
         </div>
 

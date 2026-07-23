@@ -48,7 +48,6 @@ export function SolicitudForm({
 
   const [oportunidadId, setOportunidadId] = useState<number | null>(defaultOportunidadId);
   const [requerimiento, setRequerimiento] = useState(defaultRequerimiento);
-  const [numeroCliente, setNumeroCliente] = useState("");
   const [condicionPago, setCondicionPago] = useState<CondicionPago | "">("");
   const [importe, setImporte] = useState("");
   const [fechaLimite, setFechaLimite] = useState("");
@@ -62,6 +61,11 @@ export function SolicitudForm({
     if (grupoId != null || !grupos?.length) return;
     setGrupoId((grupos.find((g) => g.es_default) ?? grupos[0]).id);
   }, [grupos, grupoId]);
+
+  // El N° de cliente sale de la cuenta ya vinculada a la oportunidad; no se
+  // vuelve a cargar a mano.
+  const oportunidadSel = oportunidades?.find((o) => o.id === oportunidadId);
+  const numeroCliente = oportunidadSel?.cliente?.numero_cliente ?? "";
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -107,9 +111,18 @@ export function SolicitudForm({
         <Input
           id="s-numcli"
           value={numeroCliente}
-          onChange={(e) => setNumeroCliente(e.target.value)}
-          placeholder="Ej: 10432"
+          readOnly
+          disabled
+          placeholder="—"
+          className="font-mono"
         />
+        <p className="mt-1 text-xs text-ink-3">
+          {!oportunidadId
+            ? "Se toma de la cuenta al elegir la oportunidad."
+            : numeroCliente
+              ? "Tomado de la cuenta vinculada a la oportunidad."
+              : "La cuenta de esta oportunidad no tiene N° de cliente cargado."}
+        </p>
       </div>
 
       <div>
