@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -104,6 +105,16 @@ def create_desde_solicitud(
         presupuesto = crear_desde_solicitud(db, solicitud)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except ValidationError as exc:
+        # La respuesta de Compras guardada no coincide con el schema actual
+        # (datos viejos/incompletos): mensaje claro en vez de un 500 opaco.
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "La respuesta de Compras guardada está incompleta o desactualizada. "
+                "Abrí el detalle de la solicitud y volvé a parsear la respuesta."
+            ),
+        ) from exc
     presupuesto.creado_por_id = current_user.id
     db.commit()
     return _get_loaded(db, presupuesto.id)
