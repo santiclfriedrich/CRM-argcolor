@@ -36,6 +36,23 @@ import { ESTADO_META, useDeleteOportunidad } from "@/lib/oportunidades";
 import type { Adjunto, CategoriaMail, EmailData, Mail } from "@/lib/types";
 import { errorMessage } from "@/lib/utils";
 
+// "Nombre <mail@x.com>, otro@y.com" -> "mail@x.com" (primer email = la casilla
+// que recibió el mail).
+const emailDe = (raw: string): string => {
+  const m = raw.match(/<([^>]+)>/);
+  return (m ? m[1] : raw.split(",")[0]).trim();
+};
+
+// Fecha + hora legible (es-AR) de cuándo llegó el mail.
+const fmtFechaHora = (iso: string): string =>
+  new Date(iso).toLocaleString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
 // Etiquetas legibles de las categorías de descarte.
 const CATEGORIA_LABEL: Record<CategoriaMail, string> = {
   consulta_comercial: "Consulta comercial",
@@ -284,6 +301,15 @@ function MailCard({ mail }: { mail: Mail }) {
         <div>
           <span className="font-medium text-ink">{mail.de}</span>
           {mail.asunto && <span className="ml-2 text-sm text-ink-2">· {mail.asunto}</span>}
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-ink-3">
+            {mail.para && (
+              <span>
+                Recibido en{" "}
+                <span className="font-medium text-ink-2">{emailDe(mail.para)}</span>
+              </span>
+            )}
+            <span>{fmtFechaHora(mail.fecha ?? mail.created_at)}</span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {mail.oportunidad?.cliente ? (
