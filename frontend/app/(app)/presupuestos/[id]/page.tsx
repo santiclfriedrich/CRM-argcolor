@@ -3,7 +3,7 @@
 import { ArrowLeft, FileText, Plus, Save, Send, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,35 @@ function toRows(p: Presupuesto): Row[] {
     iva: it.iva != null ? String(it.iva) : "",
     observaciones: it.observaciones ?? "",
   }));
+}
+
+// Observación de la línea: textarea que envuelve el texto y crece en alto según
+// el contenido (en vez de un input de una sola línea que obliga a scrollear y
+// se vuelve ilegible).
+function ObservacionCell({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      rows={1}
+      placeholder="Nota de la línea"
+      className="block w-full resize-none overflow-hidden rounded-lg border border-line bg-surface px-2 py-1.5 text-sm leading-snug text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+    />
+  );
 }
 
 export default function ArmadorPresupuestoPage() {
@@ -245,7 +274,7 @@ export default function ArmadorPresupuestoPage() {
                 <td className="px-2 py-1 text-right tabular-nums text-ink">
                   {fmtMonto(subtotalRow(r), moneda)}
                 </td>
-                <td className="p-1 min-w-[160px]"><Input value={r.observaciones} onChange={(e) => setCampo(r.key, "observaciones", e.target.value)} placeholder="Nota de la línea" /></td>
+                <td className="p-1 min-w-[240px] align-top"><ObservacionCell value={r.observaciones} onChange={(v) => setCampo(r.key, "observaciones", v)} /></td>
                 <td className="px-1">
                   <Tooltip label="Quitar fila">
                     <button
