@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -170,7 +170,13 @@ export function ClienteForm({
   const invalido =
     "border-red-400 bg-red-50 focus:border-red-400 focus:ring-red-400/40 dark:bg-red-950/20";
 
-  const enviar = handleSubmit((v) =>
+  // El error de CUIT del backend (409) se oculta apenas el usuario edita el
+  // campo; se vuelve a mostrar en el próximo submit si sigue duplicado.
+  const [cuitDismissed, setCuitDismissed] = useState(false);
+  const mostrarCuitError = cuitError && !cuitDismissed;
+
+  const enviar = handleSubmit((v) => {
+    setCuitDismissed(false);
     onSubmit({
       razon_social: v.razon_social.trim(),
       cuit: nn(v.cuit),
@@ -186,8 +192,8 @@ export function ClienteForm({
       direccion_facturacion: nn(v.direccion_facturacion),
       direccion_envio: nn(v.direccion_envio),
       activo: v.activo,
-    })
-  );
+    });
+  });
 
   return (
     <form id={formId} onSubmit={enviar} className="space-y-6" noValidate>
@@ -222,14 +228,19 @@ export function ClienteForm({
                 id="cuit"
                 inputMode="numeric"
                 placeholder="30-58699951-2"
-                className={errors.cuit || cuitError ? invalido : ""}
+                className={errors.cuit || mostrarCuitError ? invalido : ""}
                 value={field.value}
-                onChange={(e) => field.onChange(formatCuit(e.target.value))}
+                onChange={(e) => {
+                  field.onChange(formatCuit(e.target.value));
+                  setCuitDismissed(true);
+                }}
               />
             )}
           />
           <FieldError msg={errors.cuit?.message} />
-          {cuitError && <p className="mt-1 text-xs font-medium text-red-600">{cuitError}</p>}
+          {mostrarCuitError && (
+            <p className="mt-1 text-xs font-medium text-red-600">{cuitError}</p>
+          )}
         </div>
         <div>
           <Label htmlFor="numero_cliente">N° de cliente (CL N°)</Label>
