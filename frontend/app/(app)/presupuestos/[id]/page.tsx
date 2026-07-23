@@ -179,7 +179,7 @@ export default function ArmadorPresupuestoPage() {
   const cliente = presupuesto.oportunidad?.cliente?.razon_social ?? "Sin cliente";
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="w-full">
       <Link
         href="/presupuestos"
         className="mb-3 inline-flex items-center gap-1 text-sm text-ink-2 hover:text-ink"
@@ -270,7 +270,20 @@ export default function ArmadorPresupuestoPage() {
                 <td className="p-1 min-w-[180px]"><Input value={r.descripcion} onChange={(e) => setCampo(r.key, "descripcion", e.target.value)} placeholder="Producto / servicio" /></td>
                 <td className="p-1 w-20"><Input type="number" value={r.cantidad} onChange={(e) => setCampo(r.key, "cantidad", e.target.value)} className="text-right" /></td>
                 <td className="p-1 w-28"><Input type="number" value={r.precio_unitario} onChange={(e) => setCampo(r.key, "precio_unitario", e.target.value)} className="text-right" /></td>
-                <td className="p-1 w-20"><Input type="number" value={r.iva} onChange={(e) => setCampo(r.key, "iva", e.target.value)} placeholder="21" className="text-right" /></td>
+                <td className="p-1 w-24">
+                  <select
+                    value={r.iva}
+                    onChange={(e) => setCampo(r.key, "iva", e.target.value)}
+                    className="h-11 w-full rounded-lg border border-line bg-surface px-1.5 text-sm text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                  >
+                    <option value="">—</option>
+                    <option value="21">21%</option>
+                    <option value="10.5">10,50%</option>
+                    {!["", "21", "10.5"].includes(r.iva) && (
+                      <option value={r.iva}>{r.iva}%</option>
+                    )}
+                  </select>
+                </td>
                 <td className="px-2 py-1 text-right tabular-nums text-ink">
                   {fmtMonto(subtotalRow(r), moneda)}
                 </td>
