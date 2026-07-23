@@ -15,6 +15,35 @@ from app.services.borrado import eliminar_cliente
 router = APIRouter(prefix="/clientes", tags=["clientes"])
 
 
+def _solo_digitos(cuit: str | None) -> str:
+    return "".join(ch for ch in (cuit or "") if ch.isdigit())
+
+
+def _normalizar_cuit(cuit: str | None) -> str:
+    """Valida (11 dígitos) y devuelve el CUIT en formato canónico XX-XXXXXXXX-X."""
+    digitos = _solo_digitos(cuit)
+    if len(digitos) != 11:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="El CUIT debe tener 11 dígitos (ej. 30-58699951-2).",
+        )
+    return f"{digitos[:2]}-{digitos[2:10]}-{digitos[10]}"
+
+
+def _validar_cuit_unico(db: Session, canonico: str, excluir_id: int | None = None) -> None:
+    """Rechaza (409) si ya existe otra cuenta con el mismo CUIT (comparando por
+    dígitos, sin importar el formato con que se haya guardado)."""
+    digitos = _solo_digitos(canonico)
+    for cid, cuit in db.execute(select(Cliente.id, Cliente.cuit)).all():
+        if cid == excluir_id or not cuit:
+            continue
+        if _solo_digitos(cuit) == digitos:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Ya existe una cuenta con el CUIT {canonico}.",
+            )
+
+
 def _validar_cuenta_principal(
     db: Session, cuenta_principal_id: int | None, propio_id: int | None
 ) -> None:
@@ -53,7 +82,11 @@ def create_cliente(
     current_user: Usuario = Depends(get_current_user),
 ) -> Cliente:
     _validar_cuenta_principal(db, body.cuenta_principal_id, None)
-    cliente = Cliente(**body.model_dump(), creado_por_id=current_user.id)
+    canonico = _normalizar_cuit(body.cuit)  # obligatorio al crear
+    _validar_cuit_unico(db, canonico)
+    data = body.model_dump()
+    data["cuit"] = canonico
+    cliente = Cliente(**data, creado_por_id=current_user.id)
     db.add(cliente)
     db.commit()
     db.refresh(cliente)
@@ -83,6 +116,10 @@ def update_cliente(
     data = body.model_dump(exclude_unset=True)
     if "cuenta_principal_id" in data:
         _validar_cuenta_principal(db, data["cuenta_principal_id"], cliente_id)
+    if "cuit" in data:
+        canonico = _normalizar_cuit(data["cuit"])
+        _validar_cuit_unico(db, canonico, excluir_id=cliente_id)
+        data["cuit"] = canonico
     for field, value in data.items():
         setattr(cliente, field, value)
     db.commit()

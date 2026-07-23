@@ -12,6 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useClientes, useCreateCliente } from "@/lib/clientes";
 import { clearDraft, DRAFT_CLIENTE } from "@/lib/draft";
+import { errorMessage } from "@/lib/utils";
+
+// Mensaje de error del backend a mostrar bajo el CUIT (solo si es un conflicto
+// de duplicado, HTTP 409).
+const cuitErrorDe = (err: unknown): string | null =>
+  (err as { response?: { status?: number } })?.response?.status === 409
+    ? errorMessage(err)
+    : null;
 
 export default function CuentasPage() {
   const router = useRouter();
@@ -153,6 +161,7 @@ export default function CuentasPage() {
         <ClienteForm
           submitLabel="Crear"
           isPending={createMut.isPending}
+          cuitError={cuitErrorDe(createMut.error)}
           draftKey={DRAFT_CLIENTE}
           onCancel={() => {
             clearDraft(DRAFT_CLIENTE);

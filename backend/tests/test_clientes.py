@@ -81,9 +81,13 @@ def client() -> Iterator[TestClient]:
 
 def test_cliente_crud_flow(client: TestClient) -> None:
     # Crear cliente.
-    resp = client.post("/api/v1/clientes", json={"razon_social": "BENCEN S.A.", "cuit": "30-111-2"})
+    # El CUIT se guarda normalizado a formato canónico XX-XXXXXXXX-X.
+    resp = client.post(
+        "/api/v1/clientes", json={"razon_social": "BENCEN S.A.", "cuit": "30586999512"}
+    )
     assert resp.status_code == 201
     cliente_id = resp.json()["id"]
+    assert resp.json()["cuit"] == "30-58699951-2"
 
     # Aparece en el listado.
     resp = client.get("/api/v1/clientes")
@@ -104,7 +108,9 @@ def test_cliente_crud_flow(client: TestClient) -> None:
 
 
 def test_contactos_nested(client: TestClient) -> None:
-    cliente_id = client.post("/api/v1/clientes", json={"razon_social": "ACME"}).json()["id"]
+    cliente_id = client.post(
+        "/api/v1/clientes", json={"razon_social": "ACME", "cuit": "20-11111111-1"}
+    ).json()["id"]
 
     # Crear contacto con email y rol.
     resp = client.post(
@@ -130,7 +136,9 @@ def test_contactos_nested(client: TestClient) -> None:
 
 
 def test_dominios_nested_and_normalization(client: TestClient) -> None:
-    cliente_id = client.post("/api/v1/clientes", json={"razon_social": "BENCEN"}).json()["id"]
+    cliente_id = client.post(
+        "/api/v1/clientes", json={"razon_social": "BENCEN", "cuit": "20-22222222-2"}
+    ).json()["id"]
 
     # El dominio se normaliza a minúsculas / sin espacios.
     resp = client.post(
@@ -148,8 +156,12 @@ def test_nested_404_on_unknown_cliente(client: TestClient) -> None:
 
 
 def test_contacto_de_otro_cliente_no_se_cruza(client: TestClient) -> None:
-    a = client.post("/api/v1/clientes", json={"razon_social": "A"}).json()["id"]
-    b = client.post("/api/v1/clientes", json={"razon_social": "B"}).json()["id"]
+    a = client.post(
+        "/api/v1/clientes", json={"razon_social": "A", "cuit": "20-33333333-3"}
+    ).json()["id"]
+    b = client.post(
+        "/api/v1/clientes", json={"razon_social": "B", "cuit": "20-44444444-4"}
+    ).json()["id"]
     contacto_id = client.post(
         f"/api/v1/clientes/{a}/contactos", json={"nombre": "Ana"}
     ).json()["id"]
@@ -166,7 +178,9 @@ def test_contacto_de_otro_cliente_no_se_cruza(client: TestClient) -> None:
 def test_delete_cliente_cascada(client: TestClient) -> None:
     from sqlalchemy import func, select
 
-    cid = client.post("/api/v1/clientes", json={"razon_social": "ACME"}).json()["id"]
+    cid = client.post(
+        "/api/v1/clientes", json={"razon_social": "ACME", "cuit": "20-55555555-5"}
+    ).json()["id"]
     with TestingSessionLocal() as db:
         db.add(ContactoCliente(cliente_id=cid, nombre="Juan"))
         db.add(DominioCliente(cliente_id=cid, dominio="acme.com"))
@@ -187,10 +201,17 @@ def test_delete_cliente_cascada(client: TestClient) -> None:
 
 
 def test_cuenta_principal_y_subcuentas(client: TestClient) -> None:
-    padre = client.post("/api/v1/clientes", json={"razon_social": "Grupo Madre"}).json()["id"]
+    padre = client.post(
+        "/api/v1/clientes", json={"razon_social": "Grupo Madre", "cuit": "20-66666666-6"}
+    ).json()["id"]
     hija = client.post(
         "/api/v1/clientes",
-        json={"razon_social": "Sucursal Norte", "cuenta_principal_id": padre, "tipo": "cliente"},
+        json={
+            "razon_social": "Sucursal Norte",
+            "cuit": "20-77777777-7",
+            "cuenta_principal_id": padre,
+            "tipo": "cliente",
+        },
     )
     assert hija.status_code == 201
     hija_id = hija.json()["id"]
@@ -206,6 +227,25 @@ def test_cuenta_principal_y_subcuentas(client: TestClient) -> None:
 
 
 def test_cuenta_no_puede_ser_su_propia_principal(client: TestClient) -> None:
-    cid = client.post("/api/v1/clientes", json={"razon_social": "Sola"}).json()["id"]
+    cid = client.post(
+        "/api/v1/clientes", json={"razon_social": "Sola", "cuit": "20-88888888-8"}
+    ).json()["id"]
     resp = client.patch(f"/api/v1/clientes/{cid}", json={"cuenta_principal_id": cid})
     assert resp.status_code == 400
+
+
+def test_cuit_obligatorio_formato_y_unico(client: TestClient) -> None:
+    # Obligatorio: sin CUIT -> 422.
+    assert client.post("/api/v1/clientes", json={"razon_social": "X"}).status_code == 422
+    # Formato: menos de 11 dígitos -> 422.
+    assert (
+        client.post("/api/v1/clientes", json={"razon_social": "X", "cuit": "30-111-2"}).status_code
+        == 422
+    )
+    # Alta válida.
+    r = client.post("/api/v1/clientes", json={"razon_social": "X", "cuit": "30-58699951-2"})
+    assert r.status_code == 201
+    # Duplicado (mismo número, distinto formato) -> 409.
+    dup = client.post("/api/v1/clientes", json={"razon_social": "Y", "cuit": "30586999512"})
+    assert dup.status_code == 409
+    assert "30-58699951-2" in dup.json()["detail"]

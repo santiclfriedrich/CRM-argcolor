@@ -16,6 +16,7 @@ import { useCliente, useDeleteCliente, useUpdateCliente } from "@/lib/clientes";
 import { ESTADO_META, useOportunidades } from "@/lib/oportunidades";
 import { fmtMonto } from "@/lib/presupuestos";
 import { type Tarea, useTareas } from "@/lib/tareas";
+import { errorMessage } from "@/lib/utils";
 
 const fmtDia = (d: string | null): string => (d ? d.split("-").reverse().join("/") : "—");
 
@@ -113,6 +114,11 @@ export default function ClienteDetailPage() {
               clienteId={clienteId}
               submitLabel="Guardar cambios"
               isPending={updateMut.isPending}
+              cuitError={
+                (updateMut.error as { response?: { status?: number } })?.response?.status === 409
+                  ? errorMessage(updateMut.error)
+                  : null
+              }
               onSubmit={(values) => updateMut.mutate(values)}
               formId="cuenta-datos-form"
               hideSubmit

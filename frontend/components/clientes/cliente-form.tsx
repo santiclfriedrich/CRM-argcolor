@@ -19,7 +19,12 @@ import { useUsuarios } from "@/lib/usuarios";
 //     API se hace en el submit (evita el choque de tipos input/output). ---
 const clienteSchema = z.object({
   razon_social: z.string().trim().min(1, "Ingresá el nombre de la cuenta"),
-  cuit: z.string(),
+  cuit: z
+    .string()
+    .refine(
+      (v) => v.replace(/\D/g, "").length === 11,
+      "El CUIT debe tener 11 dígitos (ej. 30-58699951-2)"
+    ),
   numero_cliente: z.string(),
   cuenta_principal_id: z.string(),
   vendedor_asignado_id: z.string(),
@@ -42,6 +47,16 @@ type FormValues = z.infer<typeof clienteSchema>;
 
 const nn = (s: string): string | null => s.trim() || null;
 
+// Formatea mientras se escribe: solo dígitos (máx. 11) con los 2 guiones del
+// CUIT en las posiciones correctas -> XX-XXXXXXXX-X.
+const formatCuit = (raw: string): string => {
+  const d = raw.replace(/\D/g, "").slice(0, 11);
+  let out = d.slice(0, 2);
+  if (d.length > 2) out += "-" + d.slice(2, 10);
+  if (d.length > 10) out += "-" + d.slice(10, 11);
+  return out;
+};
+
 interface ClienteFormProps {
   initial?: Partial<Cliente>;
   clienteId?: number;
@@ -54,6 +69,8 @@ interface ClienteFormProps {
   hideSubmit?: boolean;
   // Si se pasa (solo al crear), persiste un borrador en localStorage con esta clave.
   draftKey?: string;
+  // Error del backend a mostrar bajo el CUIT (ej. "Ya existe una cuenta con...").
+  cuitError?: string | null;
 }
 
 // Clase de cliente (guardada en el campo `tipo`).
@@ -95,6 +112,7 @@ export function ClienteForm({
   formId,
   hideSubmit = false,
   draftKey,
+  cuitError,
 }: ClienteFormProps) {
   const { data: clientes } = useClientes();
   const { data: usuarios } = useUsuarios();
@@ -192,8 +210,26 @@ export function ClienteForm({
           <FieldError msg={errors.razon_social?.message} />
         </div>
         <div>
-          <Label htmlFor="cuit">CUIT</Label>
-          <Input id="cuit" placeholder="30-12345678-9" {...register("cuit")} />
+          <Label htmlFor="cuit">
+            CUIT
+            <Req />
+          </Label>
+          <Controller
+            name="cuit"
+            control={control}
+            render={({ field }) => (
+              <Input
+                id="cuit"
+                inputMode="numeric"
+                placeholder="30-58699951-2"
+                className={errors.cuit || cuitError ? invalido : ""}
+                value={field.value}
+                onChange={(e) => field.onChange(formatCuit(e.target.value))}
+              />
+            )}
+          />
+          <FieldError msg={errors.cuit?.message} />
+          {cuitError && <p className="mt-1 text-xs font-medium text-red-600">{cuitError}</p>}
         </div>
         <div>
           <Label htmlFor="numero_cliente">N° de cliente (CL N°)</Label>
