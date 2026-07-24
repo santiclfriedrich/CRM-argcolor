@@ -97,6 +97,9 @@ class Settings(BaseSettings):
     GBP_COMPANY: str = "1"  # ARG COLOR S.R.L.
     GBP_WS: str = ""  # ID del Web Service (ej. 1011)
     GBP_VERIFY_SSL: bool = False  # el server usa certificado propio
+    # Token secreto para disparar la sync desde un endpoint (corre en el server).
+    # Si queda vacío, el endpoint está deshabilitado.
+    GBP_SYNC_TOKEN: str = ""
     # Solo se sincronizan estos tipos de cliente (ck_id) -> "Clase de cliente".
     # Mapa en app/services/gbp_sync.py (CK_ID_A_CLASE).
 

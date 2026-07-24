@@ -160,6 +160,7 @@ def sincronizar_clientes(
     *,
     dry_run: bool = False,
     limit: int | None = None,
+    batch_size: int = 200,
 ) -> ReporteSync:
     """Recorre los clientes del ERP, filtra por tipo y da de alta los nuevos."""
     rep = ReporteSync()
@@ -172,6 +173,7 @@ def sincronizar_clientes(
         d.lower() for d in db.scalars(select(DominioCliente.dominio)) if d
     }
     cuits_vistos: set[str] = set()
+    pendientes = 0  # clientes creados sin commitear todavía (para el commit por lotes)
 
     for row in erp.iter_customers():
         ck = (row.get("ck_id") or "").strip()
@@ -216,16 +218,24 @@ def sincronizar_clientes(
             rep.creados += 1
             continue
 
+        # Savepoint por cliente: si una fila falla, se revierte SOLO esa fila y la
+        # corrida sigue. El commit real (viaje a Neon) se hace por lotes -> mucho
+        # más rápido que commitear de a uno.
         try:
-            db.add(cliente)
-            db.flush()  # asigna cliente.id
-            _crear_emails(db, cliente, row, dominios_existentes, rep)
-            db.commit()
+            with db.begin_nested():
+                db.add(cliente)
+                db.flush()  # asigna cliente.id
+                _crear_emails(db, cliente, row, dominios_existentes, rep)
             rep.creados += 1
+            pendientes += 1
+            if pendientes >= batch_size:
+                db.commit()
+                pendientes = 0
         except Exception as exc:  # noqa: BLE001 - un cliente malo no corta la corrida
-            db.rollback()
             rep.errores += 1
             rep.detalle_errores.append(f"cust_id={row.get('cust_id')}: {exc}")
             logger.exception("GBP sync: error creando cust_id=%s", row.get("cust_id"))
 
+    if not dry_run:
+        db.commit()  # lo que quedó del último lote
     return rep
