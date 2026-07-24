@@ -86,6 +86,20 @@ class Settings(BaseSettings):
     EMPRESA_TELEFONO: str = ""
     EMPRESA_EMAIL: str = "ventas@argentinacolor.com"
 
+    # --- ERP GBP (GlobalBluePoint): sync one-way de clientes ERP -> CRM ---
+    # SOAP 1.1 sobre HTTPS. Credenciales SOLO por env var (nunca en el código).
+    GBP_WS_URL: str = (
+        "https://ws.globalbluepoint.com.ar/arg/app_webservices/wsBasicQuery.asmx"
+    )
+    GBP_NAMESPACE: str = "http://microsoft.com/webservices/"
+    GBP_USER: str = ""
+    GBP_PWD: str = ""
+    GBP_COMPANY: str = "1"  # ARG COLOR S.R.L.
+    GBP_WS: str = ""  # ID del Web Service (ej. 1011)
+    GBP_VERIFY_SSL: bool = False  # el server usa certificado propio
+    # Solo se sincronizan estos tipos de cliente (ck_id) -> "Clase de cliente".
+    # Mapa en app/services/gbp_sync.py (CK_ID_A_CLASE).
+
     # --- CORS ---
     ALLOWED_ORIGINS: str = "http://localhost:3000"
 
