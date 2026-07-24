@@ -202,13 +202,17 @@ def sincronizar_clientes(
         cuits_vistos.add(digitos)
 
         razon = (row.get("cust_name") or "").strip() or f"Cliente {row.get('cust_id')}"
+        telefono = (row.get("cust_phone1") or row.get("cust_phone2") or "").strip()
+        numero = (row.get("cust_id") or "").strip()
         cliente = Cliente(
-            razon_social=razon,
+            # Truncamos a los límites de cada columna: el ERP a veces trae datos
+            # más largos (ej. varios teléfonos juntos en cust_phone1) y el insert
+            # fallaría con "value too long".
+            razon_social=razon[:255],
             cuit=cuit,
-            numero_cliente=(row.get("cust_id") or "").strip() or None,
+            numero_cliente=numero[:40] or None,
             tipo=CK_ID_A_CLASE[ck],
-            telefono=(row.get("cust_phone1") or row.get("cust_phone2") or "").strip()
-            or None,
+            telefono=telefono[:50] or None,
             direccion_facturacion=armar_direccion(
                 row.get("cust_address"),
                 row.get("cust_city"),
