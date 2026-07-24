@@ -22,15 +22,24 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sync", tags=["sync-gbp"])
 
 _lock = threading.Lock()
-_estado: dict = {"corriendo": False, "iniciado": None, "ultimo_resultado": None}
+_estado: dict = {
+    "corriendo": False,
+    "iniciado": None,
+    "progreso": None,  # resumen parcial (se actualiza en cada lote)
+    "ultimo_resultado": None,
+}
 
 
 def _correr() -> None:
     from app.db.session import SessionLocal
 
     db = SessionLocal()
+
+    def _progreso(rep) -> None:  # noqa: ANN001
+        _estado["progreso"] = rep.resumen()
+
     try:
-        rep = sincronizar_clientes(db, GBPClient())
+        rep = sincronizar_clientes(db, GBPClient(), on_progress=_progreso)
         _estado["ultimo_resultado"] = rep.resumen()
         logger.info("Sync GBP terminada: %s", rep.resumen())
     except Exception as exc:  # noqa: BLE001 - frontera del job
@@ -48,19 +57,23 @@ def _verificar_token(token: str) -> None:
 
 
 @router.get("/gbp")
-def disparar_sync(token: str = "") -> dict:
+def disparar_sync(token: str = "", force: int = 0) -> dict:
     """Dispara la sync (una sola vez). GET para poder abrirlo desde el navegador.
-    Corre en segundo plano en el servidor; la respuesta vuelve al instante."""
+    Corre en segundo plano en el servidor; la respuesta vuelve al instante.
+
+    Si una corrida quedó trabada (corriendo=true pero sin avanzar), usar
+    `&force=1` para reiniciarla."""
     _verificar_token(token)
     with _lock:
-        if _estado["corriendo"]:
+        if _estado["corriendo"] and not force:
             return {"status": "ya_corriendo", **_estado}
         _estado["corriendo"] = True
         _estado["iniciado"] = datetime.now(timezone.utc).isoformat()
+        _estado["progreso"] = None
         _estado["ultimo_resultado"] = None
         threading.Thread(target=_correr, daemon=True).start()
     return {
-        "status": "iniciado",
+        "status": "reiniciado" if force else "iniciado",
         "detalle": "La migración corre en el servidor. Podés cerrar la Mac.",
     }
 

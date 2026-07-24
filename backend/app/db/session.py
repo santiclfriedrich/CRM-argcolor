@@ -8,10 +8,25 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import settings
 
+# Keepalives TCP: en corridas largas (ej. sync GBP) un commit sobre una conexión
+# muerta se colgaría para siempre; con keepalives el SO detecta el corte y la
+# operación tira error (que sí podemos manejar) en vez de quedar trabada.
+_connect_args: dict = {}
+if settings.DATABASE_URL.startswith("postgresql"):
+    _connect_args = {
+        "connect_timeout": 10,
+        "keepalives": 1,
+        "keepalives_idle": 30,
+        "keepalives_interval": 10,
+        "keepalives_count": 5,
+    }
+
 engine = create_engine(
     settings.DATABASE_URL,
-    pool_pre_ping=True,  # evita conexiones muertas (importante con pooler de Supabase)
+    pool_pre_ping=True,  # evita conexiones muertas al tomarlas del pool
+    pool_recycle=1800,  # recicla conexiones cada 30 min (antes de que el pooler las corte)
     echo=settings.DEBUG,
+    connect_args=_connect_args,
 )
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)

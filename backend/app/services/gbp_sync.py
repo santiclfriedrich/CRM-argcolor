@@ -161,6 +161,7 @@ def sincronizar_clientes(
     dry_run: bool = False,
     limit: int | None = None,
     batch_size: int = 200,
+    on_progress=None,  # noqa: ANN001 - callback(ReporteSync) tras cada lote
 ) -> ReporteSync:
     """Recorre los clientes del ERP, filtra por tipo y da de alta los nuevos."""
     rep = ReporteSync()
@@ -231,6 +232,8 @@ def sincronizar_clientes(
             if pendientes >= batch_size:
                 db.commit()
                 pendientes = 0
+                if on_progress is not None:
+                    on_progress(rep)
         except Exception as exc:  # noqa: BLE001 - un cliente malo no corta la corrida
             rep.errores += 1
             rep.detalle_errores.append(f"cust_id={row.get('cust_id')}: {exc}")
