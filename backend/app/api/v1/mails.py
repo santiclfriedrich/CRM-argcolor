@@ -35,6 +35,7 @@ router = APIRouter(prefix="/mails", tags=["bandeja"])
 
 _RELATIONS = (
     selectinload(Mail.oportunidad).selectinload(Oportunidad.cliente),
+    selectinload(Mail.oportunidad).selectinload(Oportunidad.vendedor),
     selectinload(Mail.archivos),
 )
 

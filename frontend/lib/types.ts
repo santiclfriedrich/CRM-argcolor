@@ -334,6 +334,7 @@ interface MailOportunidadMini {
   asunto: string | null;
   vendedor_id: number | null;
   cliente: ClienteMini | null;
+  vendedor: { id: number; nombre: string; email: string } | null;
 }
 
 export interface Adjunto {

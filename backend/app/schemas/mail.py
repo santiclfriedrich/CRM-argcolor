@@ -32,6 +32,14 @@ class ClienteMini(BaseModel):
     razon_social: str
 
 
+class VendedorMini(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nombre: str
+    email: str  # la casilla que recibió el mail
+
+
 class OportunidadMini(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -39,6 +47,7 @@ class OportunidadMini(BaseModel):
     estado: str
     vendedor_id: int | None = None
     cliente: ClienteMini | None = None
+    vendedor: VendedorMini | None = None
 
 
 class AdjuntoRead(BaseModel):

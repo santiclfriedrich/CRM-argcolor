@@ -43,6 +43,20 @@ const emailDe = (raw: string): string => {
   return (m ? m[1] : raw.split(",")[0]).trim();
 };
 
+// Casilla que recibió el mail. Fuente confiable: el dueño de la casilla que se
+// polleó (vendedor de la oportunidad). El header "Para" no sirve: a veces trae
+// listas, envelope/BCC o incluso el propio remitente. Por eso solo se usa como
+// fallback y descartándolo si coincide con quien lo mandó.
+const casillaReceptora = (mail: Mail): string | null => {
+  const owner = mail.oportunidad?.vendedor?.email;
+  if (owner) return owner;
+  if (mail.para) {
+    const dest = emailDe(mail.para);
+    if (dest && dest.toLowerCase() !== emailDe(mail.de ?? "").toLowerCase()) return dest;
+  }
+  return null;
+};
+
 // Fecha + hora legible (es-AR) de cuándo llegó el mail.
 const fmtFechaHora = (iso: string): string =>
   new Date(iso).toLocaleString("es-AR", {
@@ -302,10 +316,10 @@ function MailCard({ mail }: { mail: Mail }) {
           <span className="font-medium text-ink">{mail.de}</span>
           {mail.asunto && <span className="ml-2 text-sm text-ink-2">· {mail.asunto}</span>}
           <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-ink-3">
-            {mail.para && (
+            {casillaReceptora(mail) && (
               <span>
                 Recibido en{" "}
-                <span className="font-medium text-ink-2">{emailDe(mail.para)}</span>
+                <span className="font-medium text-ink-2">{casillaReceptora(mail)}</span>
               </span>
             )}
             <span>{fmtFechaHora(mail.fecha ?? mail.created_at)}</span>
