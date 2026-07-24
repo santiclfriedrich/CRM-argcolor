@@ -19,6 +19,15 @@ if settings.DATABASE_URL.startswith("postgresql"):
         "keepalives_idle": 30,
         "keepalives_interval": 10,
         "keepalives_count": 5,
+        # Ninguna operación queda colgada para siempre: si una query/insert tarda
+        # >90s o espera un lock >20s, aborta con error (manejable). Y una conexión
+        # que quede "idle in transaction" (proceso muerto) la mata el server a los
+        # 2 min, liberando locks -> se auto-cura.
+        "options": (
+            "-c statement_timeout=90000 "
+            "-c lock_timeout=20000 "
+            "-c idle_in_transaction_session_timeout=120000"
+        ),
     }
 
 engine = create_engine(

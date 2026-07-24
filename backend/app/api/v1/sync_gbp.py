@@ -80,6 +80,24 @@ def disparar_sync(token: str = "", force: int = 0) -> dict:
 
 @router.get("/gbp/estado")
 def estado_sync(token: str = "") -> dict:
-    """Estado de la última corrida (para ver si sigue corriendo o el resultado)."""
+    """Estado de la última corrida + conteo real en la base (ground truth)."""
     _verificar_token(token)
-    return dict(_estado)
+    out = dict(_estado)
+    try:
+        from sqlalchemy import func, select
+
+        from app.db.models.clientes import Cliente
+        from app.db.session import SessionLocal
+
+        db = SessionLocal()
+        try:
+            out["clientes_sincronizados_en_db"] = db.scalar(
+                select(func.count())
+                .select_from(Cliente)
+                .where(Cliente.tipo.in_(["Gubernamental", "Corporativo", "Gremio"]))
+            )
+        finally:
+            db.close()
+    except Exception as exc:  # noqa: BLE001 - el conteo no debe romper el estado
+        out["clientes_sincronizados_en_db"] = f"error: {exc}"
+    return out

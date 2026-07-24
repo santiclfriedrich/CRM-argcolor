@@ -181,6 +181,10 @@ def sincronizar_clientes(
         if ck not in CK_ID_A_CLASE:
             continue  # tipo de cliente que no nos interesa
         rep.procesados += 1
+        # Heartbeat: reporta avance aunque estemos salteando existentes (así se
+        # ve que sigue viva, no solo cuando crea un lote nuevo).
+        if on_progress is not None and rep.procesados % 200 == 0:
+            on_progress(rep)
         if limit is not None and rep.procesados > limit:
             rep.procesados -= 1
             break
