@@ -67,7 +67,10 @@ def list_oportunidades(
     if hasta is not None:
         # inclusive: hasta el final de ese día.
         query = query.where(Oportunidad.fecha_ultimo_movimiento < hasta + timedelta(days=1))
-    return list(db.scalars(query.order_by(Oportunidad.fecha_ultimo_movimiento.desc())))
+    # Orden estable por llegada (id desc = más nueva arriba). No usamos
+    # fecha_ultimo_movimiento porque editar una fila la actualizaría y la fila
+    # "saltaría" hacia arriba en la lista.
+    return list(db.scalars(query.order_by(Oportunidad.id.desc())))
 
 
 @router.post("", response_model=OportunidadRead, status_code=201)
