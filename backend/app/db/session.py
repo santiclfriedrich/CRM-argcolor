@@ -23,6 +23,11 @@ if settings.DATABASE_URL.startswith("postgresql"):
         "keepalives_idle": 30,
         "keepalives_interval": 10,
         "keepalives_count": 5,
+        # CLAVE con el pooler de Neon (pgbouncer, modo transacción): psycopg prepara
+        # statements server-side tras repetir una query, y el pooler no lo soporta
+        # -> la corrida se cuelga/rompe tras muchos inserts iguales (lo que pasaba
+        # en el sync). Desactivar prepared statements lo evita.
+        "prepare_threshold": None,
     }
 
 engine = create_engine(
