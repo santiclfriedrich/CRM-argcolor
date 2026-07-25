@@ -113,12 +113,15 @@ class ReporteSync:
     detalle_errores: list[str] = field(default_factory=list)
 
     def resumen(self) -> str:
-        return (
+        base = (
             f"procesados={self.procesados} creados={self.creados} "
             f"ya_existían={self.omitidos_existente} sin_cuit={self.omitidos_sin_cuit} "
             f"errores={self.errores} contactos={self.contactos_creados} "
             f"dominios={self.dominios_creados}"
         )
+        if self.detalle_errores:
+            base += f" | 1er_error: {self.detalle_errores[0]}"
+        return base
 
 
 def _crear_emails(
@@ -160,7 +163,7 @@ def sincronizar_clientes(
     *,
     dry_run: bool = False,
     limit: int | None = None,
-    batch_size: int = 200,
+    batch_size: int = 50,
     on_progress=None,  # noqa: ANN001 - callback(ReporteSync) tras cada lote
 ) -> ReporteSync:
     """Recorre los clientes del ERP, filtra por tipo y da de alta los nuevos."""
@@ -244,8 +247,16 @@ def sincronizar_clientes(
                     on_progress(rep)
         except Exception as exc:  # noqa: BLE001 - un cliente malo no corta la corrida
             rep.errores += 1
-            rep.detalle_errores.append(f"cust_id={row.get('cust_id')}: {exc}")
+            if len(rep.detalle_errores) < 20:
+                rep.detalle_errores.append(f"cust_id={row.get('cust_id')}: {str(exc)[:200]}")
             logger.exception("GBP sync: error creando cust_id=%s", row.get("cust_id"))
+            # Si la sesión quedó ROTA (ej. caída de conexión), un savepoint no
+            # alcanza: reseteamos para poder seguir (se pierde solo el lote sin
+            # commitear, que se recrea en la próxima pasada por dedup). Un error de
+            # dato puntual deja la sesión activa -> no tocamos el lote bueno.
+            if not db.is_active:
+                db.rollback()
+                pendientes = 0
 
     if not dry_run:
         db.commit()  # lo que quedó del último lote
