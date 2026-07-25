@@ -154,17 +154,25 @@ class GBPClient:
         )
         return parse_tables(self._call("Customers_funGetXMLData", body, autenticado=True))
 
-    def iter_customers(self) -> Iterator[dict[str, str]]:
-        """Itera TODOS los clientes del ERP, paginando hasta la última página."""
+    def iter_pages(self) -> Iterator[list[dict[str, str]]]:
+        """Itera las PÁGINAS de clientes del ERP (cada una es una lista de filas).
+
+        Útil para que el consumidor commitee entre páginas y NO mantenga una
+        transacción abierta durante el fetch (lento) de la siguiente página."""
         page = 0
         while True:
             filas = self.fetch_customers_page(page)
             if not filas:
                 break
-            yield from filas
+            yield filas
             if len(filas) < _PAGE_SIZE:
                 break  # última página
             page += 1
+
+    def iter_customers(self) -> Iterator[dict[str, str]]:
+        """Itera TODOS los clientes del ERP (aplana las páginas)."""
+        for filas in self.iter_pages():
+            yield from filas
 
 
 def _parece_guid(valor: str) -> bool:

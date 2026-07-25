@@ -163,8 +163,7 @@ def sincronizar_clientes(
     *,
     dry_run: bool = False,
     limit: int | None = None,
-    batch_size: int = 50,
-    on_progress=None,  # noqa: ANN001 - callback(ReporteSync) tras cada lote
+    on_progress=None,  # noqa: ANN001 - callback(ReporteSync) tras cada página
 ) -> ReporteSync:
     """Recorre los clientes del ERP, filtra por tipo y da de alta los nuevos."""
     rep = ReporteSync()
@@ -177,87 +176,85 @@ def sincronizar_clientes(
         d.lower() for d in db.scalars(select(DominioCliente.dominio)) if d
     }
     cuits_vistos: set[str] = set()
-    pendientes = 0  # clientes creados sin commitear todavía (para el commit por lotes)
+    cortar = False
 
-    for row in erp.iter_customers():
-        ck = (row.get("ck_id") or "").strip()
-        if ck not in CK_ID_A_CLASE:
-            continue  # tipo de cliente que no nos interesa
-        rep.procesados += 1
-        # Heartbeat: reporta avance aunque estemos salteando existentes (así se
-        # ve que sigue viva, no solo cuando crea un lote nuevo).
-        if on_progress is not None and rep.procesados % 200 == 0:
+    # Iteramos PÁGINA por página y commiteamos al final de cada una. Clave:
+    # entre página y página el ERP hace un fetch SOAP lento; si dejáramos la
+    # transacción abierta durante ese fetch, Neon la mata por "idle in
+    # transaction" y se rompe la conexión (era la causa de los cuelgues/cascadas).
+    # Commiteando por página, la transacción está CERRADA durante el fetch.
+    for filas in erp.iter_pages():
+        for row in filas:
+            ck = (row.get("ck_id") or "").strip()
+            if ck not in CK_ID_A_CLASE:
+                continue  # tipo de cliente que no nos interesa
+            rep.procesados += 1
+            if limit is not None and rep.procesados > limit:
+                rep.procesados -= 1
+                cortar = True
+                break
+
+            cuit = normalizar_cuit(row.get("cust_taxNumber"))
+            if cuit is None:
+                rep.omitidos_sin_cuit += 1
+                continue
+
+            digitos = solo_digitos(cuit)
+            if digitos in cuits_existentes or digitos in cuits_vistos:
+                rep.omitidos_existente += 1
+                continue
+            cuits_vistos.add(digitos)
+
+            razon = (row.get("cust_name") or "").strip() or f"Cliente {row.get('cust_id')}"
+            telefono = (row.get("cust_phone1") or row.get("cust_phone2") or "").strip()
+            numero = (row.get("cust_id") or "").strip()
+            cliente = Cliente(
+                # Truncamos a los límites de cada columna: el ERP a veces trae datos
+                # más largos (ej. varios teléfonos en cust_phone1) y fallaría el insert.
+                razon_social=razon[:255],
+                cuit=cuit,
+                numero_cliente=numero[:40] or None,
+                tipo=CK_ID_A_CLASE[ck],
+                telefono=telefono[:50] or None,
+                direccion_facturacion=armar_direccion(
+                    row.get("cust_address"),
+                    row.get("cust_city"),
+                    row.get("cust_zip"),
+                    row.get("provincia"),
+                ),
+                direccion_envio=(row.get("cust_address4Delivery") or "").strip() or None,
+                activo=True,
+            )
+
+            if dry_run:
+                rep.creados += 1
+                continue
+
+            # Savepoint por fila: si una falla, se revierte SOLO esa fila y sigue.
+            try:
+                with db.begin_nested():
+                    db.add(cliente)
+                    db.flush()
+                    _crear_emails(db, cliente, row, dominios_existentes, rep)
+                rep.creados += 1
+            except Exception as exc:  # noqa: BLE001 - un cliente malo no corta la corrida
+                rep.errores += 1
+                if len(rep.detalle_errores) < 20:
+                    rep.detalle_errores.append(f"cust_id={row.get('cust_id')}: {str(exc)[:200]}")
+                logger.exception("GBP sync: error creando cust_id=%s", row.get("cust_id"))
+                if not db.is_active:  # sesión rota -> resetear para poder seguir
+                    db.rollback()
+
+        # Fin de página: commit (cierra la transacción antes del próximo fetch).
+        if not dry_run:
+            try:
+                db.commit()
+            except Exception:  # noqa: BLE001 - si el commit falla, reset y seguimos
+                db.rollback()
+                logger.exception("GBP sync: error commiteando página")
+        if on_progress is not None:
             on_progress(rep)
-        if limit is not None and rep.procesados > limit:
-            rep.procesados -= 1
+        if cortar:
             break
 
-        cuit = normalizar_cuit(row.get("cust_taxNumber"))
-        if cuit is None:
-            rep.omitidos_sin_cuit += 1
-            logger.info("GBP sync: sin CUIT válido cust_id=%s", row.get("cust_id"))
-            continue
-
-        digitos = solo_digitos(cuit)
-        if digitos in cuits_existentes or digitos in cuits_vistos:
-            rep.omitidos_existente += 1
-            continue
-        cuits_vistos.add(digitos)
-
-        razon = (row.get("cust_name") or "").strip() or f"Cliente {row.get('cust_id')}"
-        telefono = (row.get("cust_phone1") or row.get("cust_phone2") or "").strip()
-        numero = (row.get("cust_id") or "").strip()
-        cliente = Cliente(
-            # Truncamos a los límites de cada columna: el ERP a veces trae datos
-            # más largos (ej. varios teléfonos juntos en cust_phone1) y el insert
-            # fallaría con "value too long".
-            razon_social=razon[:255],
-            cuit=cuit,
-            numero_cliente=numero[:40] or None,
-            tipo=CK_ID_A_CLASE[ck],
-            telefono=telefono[:50] or None,
-            direccion_facturacion=armar_direccion(
-                row.get("cust_address"),
-                row.get("cust_city"),
-                row.get("cust_zip"),
-                row.get("provincia"),  # nombre ya resuelto si se agregó; si no, None
-            ),
-            direccion_envio=(row.get("cust_address4Delivery") or "").strip() or None,
-            activo=True,
-        )
-
-        if dry_run:
-            rep.creados += 1
-            continue
-
-        # Savepoint por cliente: si una fila falla, se revierte SOLO esa fila y la
-        # corrida sigue. El commit real (viaje a Neon) se hace por lotes -> mucho
-        # más rápido que commitear de a uno.
-        try:
-            with db.begin_nested():
-                db.add(cliente)
-                db.flush()  # asigna cliente.id
-                _crear_emails(db, cliente, row, dominios_existentes, rep)
-            rep.creados += 1
-            pendientes += 1
-            if pendientes >= batch_size:
-                db.commit()
-                pendientes = 0
-                if on_progress is not None:
-                    on_progress(rep)
-        except Exception as exc:  # noqa: BLE001 - un cliente malo no corta la corrida
-            rep.errores += 1
-            if len(rep.detalle_errores) < 20:
-                rep.detalle_errores.append(f"cust_id={row.get('cust_id')}: {str(exc)[:200]}")
-            logger.exception("GBP sync: error creando cust_id=%s", row.get("cust_id"))
-            # Si la sesión quedó ROTA (ej. caída de conexión), un savepoint no
-            # alcanza: reseteamos para poder seguir (se pierde solo el lote sin
-            # commitear, que se recrea en la próxima pasada por dedup). Un error de
-            # dato puntual deja la sesión activa -> no tocamos el lote bueno.
-            if not db.is_active:
-                db.rollback()
-                pendientes = 0
-
-    if not dry_run:
-        db.commit()  # lo que quedó del último lote
     return rep

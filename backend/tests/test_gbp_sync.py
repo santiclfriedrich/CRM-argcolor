@@ -43,6 +43,9 @@ class FakeERP:
     def __init__(self, rows: list[dict]) -> None:
         self.rows = rows
 
+    def iter_pages(self) -> Iterator[list[dict]]:
+        return iter([self.rows])  # una sola página
+
     def iter_customers(self) -> Iterator[dict]:
         return iter(self.rows)
 
