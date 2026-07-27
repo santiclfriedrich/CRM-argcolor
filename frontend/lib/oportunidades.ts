@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type {
   EstadoOportunidad,
+  Mail,
   Oportunidad,
   OportunidadCreate,
   OportunidadFiltros,
@@ -206,16 +207,38 @@ export function useSetIng() {
 }
 
 // Elimina la oportunidad y todo lo que cuelga (mails, solicitudes, presupuestos…).
+// Borrado OPTIMISTA: saca la fila (y el mail en la bandeja) de la cache al
+// instante, sin esperar al backend; si falla, revierte. El refresco real va por
+// detrás (onSettled). Así no se siente el delay del borrado en cascada.
+const MAILS_KEY = ["mails"] as const;
+
 export function useDeleteOportunidad() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: number) => {
       await api.delete(`${BASE}/${id}`);
     },
-    onSuccess: () => {
+    onMutate: async (id: number) => {
+      await qc.cancelQueries({ queryKey: oportunidadKeys.all });
+      await qc.cancelQueries({ queryKey: MAILS_KEY });
+      const prevOps = qc.getQueriesData<Oportunidad[]>({ queryKey: oportunidadKeys.all });
+      const prevMails = qc.getQueriesData<Mail[]>({ queryKey: MAILS_KEY });
+      qc.setQueriesData<Oportunidad[]>({ queryKey: oportunidadKeys.all }, (old) =>
+        Array.isArray(old) ? old.filter((o) => o.id !== id) : old
+      );
+      qc.setQueriesData<Mail[]>({ queryKey: MAILS_KEY }, (old) =>
+        Array.isArray(old) ? old.filter((m) => m.oportunidad_id !== id) : old
+      );
+      return { prevOps, prevMails };
+    },
+    onError: (_err, _id, ctx) => {
+      // Revertir a lo que había antes del borrado optimista.
+      ctx?.prevOps?.forEach(([key, data]) => qc.setQueryData<Oportunidad[]>(key, data));
+      ctx?.prevMails?.forEach(([key, data]) => qc.setQueryData<Mail[]>(key, data));
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: oportunidadKeys.all });
-      // Se borran también los mails ligados: refrescar la bandeja.
-      qc.invalidateQueries({ queryKey: ["mails"] });
+      qc.invalidateQueries({ queryKey: MAILS_KEY });
     },
   });
 }
