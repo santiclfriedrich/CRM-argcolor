@@ -8,7 +8,8 @@ adelante, el polling/Pub-Sub de Gmail. Pasos:
   4. Crear la oportunidad (nueva o requiere_aclaracion) y registrar el mail.
 """
 
-from datetime import datetime, timezone
+import re
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -17,7 +18,7 @@ from app.db.models.contactos_cliente import ContactoCliente
 from app.db.models.dominios_cliente import DominioCliente
 from app.db.models.mails import DireccionMail, Mail
 from app.db.models.mails_descartados import MailDescartado
-from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
+from app.db.models.oportunidades import ESTADOS_CERRADOS, EstadoOportunidad, Oportunidad
 from app.integrations.ai.base import AIProvider, EmailData, ImagePart
 from app.services.attachments import save_attachments
 from app.services.notificaciones import crear_notificacion
@@ -28,6 +29,49 @@ def domain_of(email: str | None) -> str | None:
     if not email or "@" not in email:
         return None
     return email.rsplit("@", 1)[1].strip().lower()
+
+
+# Cuántos días atrás miramos para deduplicar por (cliente + asunto).
+_DIAS_DEDUP_ASUNTO = 30
+_PREFIJOS_ASUNTO = re.compile(r"^\s*(re|rv|rf|fwd|fw|rvf)\s*:\s*", re.IGNORECASE)
+
+
+def normalizar_asunto(asunto: str | None) -> str:
+    """Quita prefijos de respuesta/reenvío (Re:, Rv:, Fwd:…) repetidos y baja a
+    minúsculas, para comparar asuntos de una misma conversación."""
+    s = (asunto or "").strip()
+    while True:
+        m = _PREFIJOS_ASUNTO.match(s)
+        if not m:
+            break
+        s = s[m.end():]
+    return s.strip().lower()
+
+
+def _buscar_op_por_asunto(
+    db: Session, cliente_id: int, asunto: str | None, now: datetime
+) -> int | None:
+    """Oportunidad ABIERTA reciente del mismo cliente con el mismo asunto
+    normalizado. Ataja duplicados cuando la respuesta llega por otra casilla
+    (otro thread_id) o sin hilo. Devuelve el id o None."""
+    norm = normalizar_asunto(asunto)
+    if not norm:
+        return None  # sin asunto no deduplicamos (evita fusionar cualquier cosa)
+    limite = now - timedelta(days=_DIAS_DEDUP_ASUNTO)
+    candidatas = db.scalars(
+        select(Oportunidad)
+        .where(
+            Oportunidad.cliente_id == cliente_id,
+            Oportunidad.estado.notin_(list(ESTADOS_CERRADOS)),
+            Oportunidad.fecha_ultimo_movimiento >= limite,
+        )
+        .order_by(Oportunidad.id.desc())
+        .limit(50)
+    ).all()
+    for op in candidatas:
+        if normalizar_asunto(op.asunto) == norm:
+            return op.id
+    return None
 
 
 def _reevaluar_hilo(
@@ -126,10 +170,15 @@ def process_incoming_email(
     """
     now = datetime.now(timezone.utc)
 
-    # Thread-aware (Slice 5): si el hilo ya tiene una oportunidad, adjuntamos el
-    # mail a ELLA en vez de crear otra. Evita duplicar cuando el cliente responde
-    # o cuando el propio vendedor contesta dentro del mismo hilo. No llama a la IA
-    # ni manda acuse (queda como parte de la conversación en curso).
+    # Cliente por dominio del remitente: se usa para deduplicar y para crear la op.
+    cliente_id, contacto_id = _match_cliente_y_contacto(db, de)
+
+    # ¿Ya existe una oportunidad para esta conversación? 1) por hilo de Gmail;
+    # 2) si no, por (cliente + asunto normalizado) en una oportunidad ABIERTA
+    # reciente -> ataja duplicados cuando la respuesta llega por otra casilla
+    # (otro thread_id) o sin hilo. Si existe, adjuntamos el mail en vez de crear
+    # otra (no llama a la IA ni manda acuse).
+    op_existente_id: int | None = None
     if gmail_thread_id:
         op_existente_id = db.scalar(
             select(Mail.oportunidad_id)
@@ -139,48 +188,48 @@ def process_incoming_email(
             )
             .order_by(Mail.id.desc())
         )
-        if op_existente_id is not None:
-            op = db.get(Oportunidad, op_existente_id)
-            datos_reeval: EmailData | None = None
-            if op is not None:
-                op.fecha_ultimo_movimiento = now
-                # Slice 5 conversacional: si estábamos esperando una aclaración y
-                # el cliente respondió, re-evaluamos con el contexto del hilo. Si
-                # ya está completa, la oportunidad vuelve a "nueva" y avisamos al
-                # vendedor. Si sigue faltando, se queda en requiere_aclaracion.
-                if op.estado == EstadoOportunidad.requiere_aclaracion:
-                    reeval = _reevaluar_hilo(db, ai, gmail_thread_id, cuerpo, images)
-                    if reeval is not None and reeval.categoria == "consulta_comercial":
-                        datos_reeval = reeval
-                        if not reeval.requiere_aclaracion:
-                            op.estado = EstadoOportunidad.nueva
-                            _notificar_aclaracion_resuelta(db, op)
-            mail = Mail(
-                gmail_message_id=gmail_message_id,
-                gmail_thread_id=gmail_thread_id,
-                rfc_message_id=rfc_message_id,
-                oportunidad_id=op_existente_id,
-                direccion=DireccionMail.entrante,
-                de=de,
-                para=para,
-                asunto=asunto,
-                cuerpo=cuerpo,
-                fecha=fecha or now,
-                # Datos solo si la re-evaluación aportó algo; si no, es una
-                # respuesta más del hilo y no se re-analiza.
-                datos_extraidos_ia=datos_reeval.model_dump() if datos_reeval else None,
-                adjuntos=(
-                    {"items": [{"nombre": i["nombre"], "mime": i["mime"]} for i in images]}
-                    if images
-                    else None
-                ),
-            )
-            db.add(mail)
-            db.flush()
-            save_attachments(db, mail, images or [])
-            db.commit()
-            db.refresh(mail)
-            return mail
+    if op_existente_id is None and cliente_id is not None:
+        op_existente_id = _buscar_op_por_asunto(db, cliente_id, asunto, now)
+
+    if op_existente_id is not None:
+        op = db.get(Oportunidad, op_existente_id)
+        datos_reeval: EmailData | None = None
+        if op is not None:
+            op.fecha_ultimo_movimiento = now
+            # Si estábamos esperando una aclaración y el cliente respondió dentro
+            # del mismo hilo, re-evaluamos con el contexto del hilo: si ya está
+            # completa, vuelve a "nueva" y avisamos al vendedor.
+            if gmail_thread_id and op.estado == EstadoOportunidad.requiere_aclaracion:
+                reeval = _reevaluar_hilo(db, ai, gmail_thread_id, cuerpo, images)
+                if reeval is not None and reeval.categoria == "consulta_comercial":
+                    datos_reeval = reeval
+                    if not reeval.requiere_aclaracion:
+                        op.estado = EstadoOportunidad.nueva
+                        _notificar_aclaracion_resuelta(db, op)
+        mail = Mail(
+            gmail_message_id=gmail_message_id,
+            gmail_thread_id=gmail_thread_id,
+            rfc_message_id=rfc_message_id,
+            oportunidad_id=op_existente_id,
+            direccion=DireccionMail.entrante,
+            de=de,
+            para=para,
+            asunto=asunto,
+            cuerpo=cuerpo,
+            fecha=fecha or now,
+            datos_extraidos_ia=datos_reeval.model_dump() if datos_reeval else None,
+            adjuntos=(
+                {"items": [{"nombre": i["nombre"], "mime": i["mime"]} for i in images]}
+                if images
+                else None
+            ),
+        )
+        db.add(mail)
+        db.flush()
+        save_attachments(db, mail, images or [])
+        db.commit()
+        db.refresh(mail)
+        return mail
 
     image_parts = [ImagePart(data=img["data"], mime_type=img["mime"]) for img in (images or [])]
     extracted: EmailData = ai.extract_email_data(cuerpo, image_parts or None)
@@ -197,8 +246,6 @@ def process_incoming_email(
         db.add(descartado)
         db.commit()
         return None
-
-    cliente_id, contacto_id = _match_cliente_y_contacto(db, de)
 
     estado = (
         EstadoOportunidad.requiere_aclaracion

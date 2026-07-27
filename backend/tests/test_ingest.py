@@ -147,6 +147,41 @@ def test_bandeja_lista_entrantes(client: TestClient) -> None:
     assert items[0]["direccion"] == "entrante"
 
 
+def test_ingesta_deduplica_por_cliente_y_asunto(client: TestClient) -> None:
+    from sqlalchemy import func, select
+
+    # Primer mail: crea la oportunidad.
+    r1 = client.post(
+        "/api/v1/mails/ingest",
+        json={"de": "juan@bencen.com.ar", "asunto": "Cotización pigmento", "cuerpo": "100kg"},
+    )
+    op1 = r1.json()["mail"]["oportunidad_id"]
+
+    # Respuesta del cliente (mismo asunto con "Re:", sin hilo / otra casilla):
+    # se adjunta a la MISMA oportunidad en vez de duplicar.
+    r2 = client.post(
+        "/api/v1/mails/ingest",
+        json={
+            "de": "juan@bencen.com.ar",
+            "asunto": "Re: Cotización pigmento",
+            "cuerpo": "Confirmo",
+        },
+    )
+    assert r2.status_code == 201
+    assert r2.json()["mail"]["oportunidad_id"] == op1  # misma oportunidad
+
+    with TestingSessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(Oportunidad)) == 1  # no duplicó
+        assert db.scalar(select(func.count()).select_from(Mail)) == 2  # ambos mails quedaron
+
+    # Un asunto distinto del mismo cliente SÍ crea otra oportunidad.
+    r3 = client.post(
+        "/api/v1/mails/ingest",
+        json={"de": "juan@bencen.com.ar", "asunto": "Otro pedido distinto", "cuerpo": "x"},
+    )
+    assert r3.json()["mail"]["oportunidad_id"] != op1
+
+
 def test_ingesta_no_comercial_descarta_sin_crear_oportunidad(client: TestClient) -> None:
     # IA que clasifica el mail como orden de compra (no comercial).
     app.dependency_overrides[get_ai] = lambda: FakeAI(
