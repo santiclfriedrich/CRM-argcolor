@@ -222,6 +222,7 @@ def process_incoming_email(
     images: list[dict] | None = None,
     default_vendedor_id: int | None = None,
     es_automatico: bool = False,
+    referencias: list[str] | None = None,
 ) -> Mail | None:
     """Procesa un mail entrante y crea la oportunidad + el registro de mail.
 
@@ -277,7 +278,20 @@ def process_incoming_email(
     # (otro thread_id) o sin hilo. Si existe, adjuntamos el mail en vez de crear
     # otra (no llama a la IA ni manda acuse).
     op_existente_id: int | None = None
-    if gmail_thread_id:
+    # 1) Por References/In-Reply-To: el mail responde a otro que ya está en una
+    # oportunidad. Es lo más confiable (los Message-ID son globales -> funciona
+    # aunque el hilo entre por otra casilla, cambie el asunto o no haya cliente).
+    if referencias:
+        op_existente_id = db.scalar(
+            select(Mail.oportunidad_id)
+            .where(
+                Mail.rfc_message_id.in_(referencias),
+                Mail.oportunidad_id.is_not(None),
+            )
+            .order_by(Mail.id.desc())
+        )
+    # 2) Por hilo de Gmail (misma casilla).
+    if op_existente_id is None and gmail_thread_id:
         op_existente_id = db.scalar(
             select(Mail.oportunidad_id)
             .where(
@@ -286,6 +300,7 @@ def process_incoming_email(
             )
             .order_by(Mail.id.desc())
         )
+    # 3) Por (cliente + asunto normalizado).
     if op_existente_id is None and cliente_id is not None:
         op_existente_id = _buscar_op_por_asunto(db, cliente_id, asunto, now)
 

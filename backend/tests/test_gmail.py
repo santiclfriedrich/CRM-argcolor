@@ -104,6 +104,23 @@ def test_parse_gmail_message_detecta_automatico() -> None:
     assert parse_gmail_message(raw)["es_automatico"] is True
 
 
+def test_parse_extrae_referencias() -> None:
+    raw = {
+        "id": "m3",
+        "payload": {
+            "mimeType": "text/plain",
+            "headers": [
+                {"name": "From", "value": "a@x.com"},
+                {"name": "References", "value": "<id1@x>  <id2@x>"},
+                {"name": "In-Reply-To", "value": "<id2@x>"},
+            ],
+            "body": {"data": _b64("hola")},
+        },
+    }
+    refs = parse_gmail_message(raw)["referencias"]
+    assert "<id1@x>" in refs and "<id2@x>" in refs
+
+
 @pytest.fixture()
 def db() -> Iterator[Session]:
     Base.metadata.create_all(
@@ -505,3 +522,25 @@ def test_flujo_multimodal_pasa_imagen_a_ia_y_guarda_adjunto(
     from app.services.storage import get_storage
 
     assert get_storage().exists(adj.path_storage)
+
+
+def test_dedup_por_references_entre_casillas(db: Session) -> None:
+    from sqlalchemy import func
+
+    from app.services.ingest import process_incoming_email
+
+    ai = FakeAI()
+    # 1) Mail original: crea la oportunidad, con un Message-ID conocido.
+    m1 = process_incoming_email(
+        db, ai, de="rocio@maggiora.com.ar", asunto="PRESUPUESTO HP",
+        cuerpo="Necesito cartuchos", rfc_message_id="<orig@maggiora>", gmail_thread_id="tA",
+    )
+    op_id = m1.oportunidad_id
+    # 2) Respuesta que entra por OTRA casilla (otro thread_id) pero con References
+    # al original -> se adjunta a la MISMA oportunidad, no duplica.
+    m2 = process_incoming_email(
+        db, ai, de="rocio@maggiora.com.ar", asunto="Re: PRESUPUESTO HP",
+        cuerpo="3 o 4 de cada uno", gmail_thread_id="tB", referencias=["<orig@maggiora>"],
+    )
+    assert m2 is not None and m2.oportunidad_id == op_id
+    assert db.scalar(select(func.count()).select_from(Oportunidad)) == 1

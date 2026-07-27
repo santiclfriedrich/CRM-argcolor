@@ -6,6 +6,7 @@ recibo) se agrega en el Slice 4. El parsing de mensajes es una función pura
 """
 
 import base64
+import re
 from datetime import datetime, timezone
 from email.message import EmailMessage
 from email.utils import parseaddr
@@ -105,6 +106,16 @@ def _header(headers: list[dict[str, str]], name: str) -> str | None:
     return next((h["value"] for h in headers if h["name"].lower() == name.lower()), None)
 
 
+def _referencias(headers: list[dict[str, str]]) -> list[str]:
+    """Message-IDs a los que este mail responde/reenvía (References + In-Reply-To).
+    Son globales (no dependen de la casilla) -> sirven para enganchar una respuesta
+    con la oportunidad del hilo aunque entre por otra casilla."""
+    raw = " ".join(
+        v for v in (_header(headers, "References"), _header(headers, "In-Reply-To")) if v
+    )
+    return re.findall(r"<[^>]+>", raw)
+
+
 def _es_bulk(headers: list[dict[str, str]]) -> bool:
     """True si los headers son de un mail automático/masivo (newsletter,
     notificación de plataforma, respuesta automática): un mail humano 1:1 NO los
@@ -183,6 +194,7 @@ def parse_gmail_message(msg: dict[str, Any]) -> dict[str, Any]:
         "cuerpo": _extract_text(payload) or msg.get("snippet", ""),
         "fecha": fecha,
         "es_automatico": _es_bulk(headers),
+        "referencias": _referencias(headers),
         "attachments": _collect_image_attachments(payload),
     }
 
