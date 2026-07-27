@@ -30,16 +30,18 @@ def eliminar_oportunidades(db: Session, op_ids: list[int]) -> None:
     if not op_ids:
         return
 
-    mail_ids = list(db.scalars(select(Mail.id).where(Mail.oportunidad_id.in_(op_ids))))
-    if mail_ids:
-        storage = get_storage()
-        for key in db.scalars(select(Adjunto.path_storage).where(Adjunto.mail_id.in_(mail_ids))):
-            if key:
-                try:
-                    storage.delete(key)
-                except OSError:
-                    pass
-        db.execute(delete(Adjunto).where(Adjunto.mail_id.in_(mail_ids)))
+    mails_sub = select(Mail.id).where(Mail.oportunidad_id.in_(op_ids))
+
+    # Adjuntos: borrar del storage en LOTE (1 request a R2 en vez de N) y en la DB
+    # con subconsulta (sin traer los ids primero).
+    keys = [
+        k
+        for k in db.scalars(select(Adjunto.path_storage).where(Adjunto.mail_id.in_(mails_sub)))
+        if k
+    ]
+    if keys:
+        get_storage().delete_many(keys)
+    db.execute(delete(Adjunto).where(Adjunto.mail_id.in_(mails_sub)))
 
     # Mails de Gmail: marcarlos como eliminados para que el poller no los re-ingiera.
     gmail_ids = [
@@ -57,23 +59,17 @@ def eliminar_oportunidades(db: Session, op_ids: list[int]) -> None:
                 )
             )
         )
-        for gid in gmail_ids:
-            if gid not in ya:
-                db.add(MailDescartado(gmail_message_id=gid, categoria="eliminado_manual"))
-
-    sol_ids = list(
-        db.scalars(select(SolicitudCompras.id).where(SolicitudCompras.oportunidad_id.in_(op_ids)))
-    )
-    if sol_ids:
-        db.execute(
-            delete(RespuestaCompras).where(RespuestaCompras.solicitud_compras_id.in_(sol_ids))
+        db.add_all(
+            MailDescartado(gmail_message_id=gid, categoria="eliminado_manual")
+            for gid in gmail_ids
+            if gid not in ya
         )
 
-    pres_ids = list(
-        db.scalars(select(Presupuesto.id).where(Presupuesto.oportunidad_id.in_(op_ids)))
-    )
-    if pres_ids:
-        db.execute(delete(PresupuestoItem).where(PresupuestoItem.presupuesto_id.in_(pres_ids)))
+    # Hijos vía subconsulta (evita el SELECT de ids previo -> menos round-trips).
+    sol_sub = select(SolicitudCompras.id).where(SolicitudCompras.oportunidad_id.in_(op_ids))
+    db.execute(delete(RespuestaCompras).where(RespuestaCompras.solicitud_compras_id.in_(sol_sub)))
+    pres_sub = select(Presupuesto.id).where(Presupuesto.oportunidad_id.in_(op_ids))
+    db.execute(delete(PresupuestoItem).where(PresupuestoItem.presupuesto_id.in_(pres_sub)))
 
     # Desvincular tareas (no se borran; quedan sin la oportunidad).
     db.execute(update(Tarea).where(Tarea.oportunidad_id.in_(op_ids)).values(oportunidad_id=None))

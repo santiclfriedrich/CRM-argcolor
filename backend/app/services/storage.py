@@ -28,6 +28,16 @@ class Storage:
     def delete(self, key: str) -> None:
         raise NotImplementedError
 
+    def delete_many(self, keys: list[str]) -> None:
+        """Borra varias keys. Por defecto una por una; los backends que puedan
+        hacerlo en lote (R2) lo sobrescriben."""
+        for key in keys:
+            if key:
+                try:
+                    self.delete(key)
+                except OSError:
+                    pass
+
     def exists(self, key: str) -> bool:
         raise NotImplementedError
 
@@ -90,6 +100,15 @@ class R2Storage(Storage):
 
     def delete(self, key: str) -> None:
         self._client.delete_object(Bucket=self._bucket, Key=key)
+
+    def delete_many(self, keys: list[str]) -> None:
+        """R2/S3 borra hasta 1000 objetos por llamada -> 1 request en vez de N."""
+        limpias = [k for k in keys if k]
+        for i in range(0, len(limpias), 1000):
+            lote = limpias[i : i + 1000]
+            self._client.delete_objects(
+                Bucket=self._bucket, Delete={"Objects": [{"Key": k} for k in lote]}
+            )
 
     def exists(self, key: str) -> bool:
         from botocore.exceptions import ClientError
