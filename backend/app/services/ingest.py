@@ -144,7 +144,7 @@ def asunto_es_administrativo(asunto: str | None) -> bool:
 # Atribuciones citadas dentro del cuerpo ("De: X <mail>" de Outlook, o
 # "... (<mail>) escribió:" de Gmail). Sirven para saber quién ORIGINÓ el hilo.
 _RE_ATRIB_HEADER = re.compile(
-    r"(?:^|\n)\s*(?:de|from)\s*:[^\n<]*<?\s*([\w.\-+]+@[\w.\-]+)",
+    r"(?:^|\n)\s*(?:de|from)\s*:[^\n<]*?<?\s*([\w.\-+]+@[\w.\-]+)",
     re.IGNORECASE,
 )
 _RE_ATRIB_INLINE = re.compile(

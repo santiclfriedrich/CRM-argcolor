@@ -240,6 +240,22 @@ def test_ingesta_ignora_hilo_iniciado_por_nosotros(client: TestClient) -> None:
         assert db.scalar(select(func.count()).select_from(Oportunidad)) == 0
 
 
+def test_remitente_raiz_formato_bare_y_mailto() -> None:
+    # Formato real de Outlook: "De: mail  [mailto:mail]" sin <> en la raíz.
+    from app.services.ingest import _remitente_raiz, hilo_iniciado_por_nosotros
+
+    cuerpo = (
+        "El jue, Pablo (<ventas4@onlinebct.com <mailto:ventas4@onlinebct.com>>) escribió:\n"
+        "Te paso la cotización.\n\n"
+        "De: carlos.s@argentinacolor.com <mailto:carlos.s@argentinacolor.com> "
+        "[mailto:carlos.s@argentinacolor.com]\n"
+        "Asunto: Cotización Baterías Lenovo\n"
+        "Buen día, me puedes cotizar estas baterías?"
+    )
+    assert _remitente_raiz(cuerpo) == "carlos.s@argentinacolor.com"
+    assert hilo_iniciado_por_nosotros(cuerpo) is True
+
+
 def test_ingesta_hilo_iniciado_por_cliente_si_crea_oportunidad(client: TestClient) -> None:
     from sqlalchemy import func, select
 
