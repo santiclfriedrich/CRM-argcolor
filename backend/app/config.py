@@ -115,7 +115,7 @@ class Settings(BaseSettings):
 
     # Dominios PROPIOS de la empresa: nunca se registran como dominio de cliente
     # ni se usan para matchear (un mail interno NO es un cliente).
-    COMPANY_EMAIL_DOMAINS: str = "argentinacolor.com"
+    COMPANY_EMAIL_DOMAINS: str = "argentinacolor.com,argentinacolor.com.ar"
 
     @property
     def company_email_domains(self) -> list[str]:
