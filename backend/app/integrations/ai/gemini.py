@@ -29,8 +29,11 @@ Primero clasificá el mail en 'categoria':
 - "posventa": reclamos, quejas, garantías, devoluciones, cambios o soporte
   técnico sobre un producto YA COMPRADO o entregado. Señales típicas: "compré",
   "ya apliqué", "no funciona", "vino fallado", "se descascaró", "reclamo",
-  "garantía", "devolución". Aunque nombre un producto, marca, código o cantidad,
-  NO es una compra nueva: NO genera oportunidad.
+  "garantía", "RMA", "devolución", "nota de crédito", o un asunto tipo
+  "Re: Reclamo". Aunque nombre un producto, marca, código o cantidad, NO es una
+  compra nueva: NO genera oportunidad. IMPORTANTE: si el hilo es un reclamo/RMA
+  y en el último mensaje piden "una alternativa", "un reemplazo" o "algo
+  similar", SIGUE siendo posventa (es la resolución del reclamo), NO comercial.
 - "orden_compra": el cliente envía o confirma una orden de compra YA cerrada
   (adjunta una OC, da un número de OC), o da instrucciones de facturación/recepción.
 - "administrativo": facturación, pagos, cobranzas, remitos, datos fiscales o

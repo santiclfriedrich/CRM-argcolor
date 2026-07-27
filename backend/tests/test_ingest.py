@@ -174,6 +174,24 @@ def test_ingesta_ignora_notificacion_automatica(client: TestClient) -> None:
         assert db.scalar(select(func.count()).select_from(Mail)) == 0
 
 
+def test_ingesta_ignora_posventa_por_asunto(client: TestClient) -> None:
+    from sqlalchemy import func, select
+
+    # "Re: Reclamo" -> posventa, aunque el cuerpo pida una alternativa/reemplazo.
+    r = client.post(
+        "/api/v1/mails/ingest",
+        json={
+            "de": "juan@bencen.com.ar",
+            "asunto": "Re: Reclamo",
+            "cuerpo": "Podrían ofrecernos alguna alternativa con similares características?",
+        },
+    )
+    assert r.json()["descartado"] is True
+    assert r.json()["categoria"] == "posventa"
+    with TestingSessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(Oportunidad)) == 0
+
+
 def test_ingesta_deduplica_por_cliente_y_asunto(client: TestClient) -> None:
     from sqlalchemy import func, select
 

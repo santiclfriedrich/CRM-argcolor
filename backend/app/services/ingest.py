@@ -89,6 +89,26 @@ def normalizar_asunto(asunto: str | None) -> str:
     return s.strip().lower()
 
 
+# Palabras del asunto que indican POSVENTA (reclamo/garantía/RMA): no es una
+# compra nueva aunque en el último mensaje pidan un reemplazo o alternativa.
+_ASUNTO_POSVENTA = (
+    "reclamo",
+    "garantía",
+    "garantia",
+    "rma",
+    "posventa",
+    "post venta",
+    "post-venta",
+    "devolución",
+    "devolucion",
+)
+
+
+def asunto_es_posventa(asunto: str | None) -> bool:
+    norm = normalizar_asunto(asunto)
+    return any(k in norm for k in _ASUNTO_POSVENTA)
+
+
 def _buscar_op_por_asunto(
     db: Session, cliente_id: int, asunto: str | None, now: datetime
 ) -> int | None:
@@ -220,6 +240,21 @@ def process_incoming_email(
             MailDescartado(
                 gmail_message_id=gmail_message_id,
                 categoria="automatico",
+                de=de,
+                asunto=asunto,
+                fecha=fecha or now,
+            )
+        )
+        db.commit()
+        return None
+
+    # Reclamo/garantía/RMA (posventa): no genera oportunidad, aunque el último
+    # mensaje pida una alternativa/reemplazo (es parte de resolver el reclamo).
+    if asunto_es_posventa(asunto):
+        db.add(
+            MailDescartado(
+                gmail_message_id=gmail_message_id,
+                categoria="posventa",
                 de=de,
                 asunto=asunto,
                 fecha=fecha or now,
