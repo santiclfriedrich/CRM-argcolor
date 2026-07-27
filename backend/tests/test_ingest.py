@@ -174,6 +174,22 @@ def test_ingesta_ignora_notificacion_automatica(client: TestClient) -> None:
         assert db.scalar(select(func.count()).select_from(Mail)) == 0
 
 
+def test_ingesta_ignora_reaccion_de_gmail(client: TestClient) -> None:
+    from sqlalchemy import func, select
+
+    r = client.post(
+        "/api/v1/mails/ingest",
+        json={
+            "de": "mamangold@gruporandazzo.com.ar",
+            "asunto": "Re: Cotización toner 660",
+            "cuerpo": "María Pilar Mangold reaccionó a través de Gmail a tu mensaje",
+        },
+    )
+    assert r.json()["descartado"] is True
+    with TestingSessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(Oportunidad)) == 0
+
+
 def test_ingesta_remitente_interno_no_matchea_cliente(client: TestClient) -> None:
     # Aunque exista un DominioCliente 'argentinacolor.com' (dato malo), un mail
     # de un remitente interno NO debe matchear a ese cliente.

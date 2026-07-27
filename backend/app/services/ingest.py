@@ -54,6 +54,12 @@ _FRASES_AUTOMATICO = (
     "no respondas a este correo",
     "notificación automática",
     "notificacion automatica",
+    # Reacciones de Gmail (emoji): llegan como un mail aparte, no son contenido.
+    "reacted to your message",
+    "reaccionó a tu mensaje",
+    "reacciono a tu mensaje",
+    "reaccionó a través de gmail",
+    "reacciono a traves de gmail",
 )
 
 
