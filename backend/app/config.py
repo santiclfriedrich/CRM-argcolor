@@ -107,11 +107,19 @@ class Settings(BaseSettings):
     # Remitentes (dominios o direcciones) cuyas notificaciones automáticas NO
     # deben crear oportunidad. Coma-separado; editable por env sin tocar código.
     # Ej: "medox.ai,noreply@otraplataforma.com".
-    INGEST_SENDER_DENYLIST: str = "medox.ai"
+    INGEST_SENDER_DENYLIST: str = "medox.ai,eiffelsrl.com.ar"
 
     @property
     def ingest_sender_denylist(self) -> list[str]:
         return [s.strip().lower() for s in self.INGEST_SENDER_DENYLIST.split(",") if s.strip()]
+
+    # Dominios PROPIOS de la empresa: nunca se registran como dominio de cliente
+    # ni se usan para matchear (un mail interno NO es un cliente).
+    COMPANY_EMAIL_DOMAINS: str = "argentinacolor.com"
+
+    @property
+    def company_email_domains(self) -> list[str]:
+        return [d.strip().lower() for d in self.COMPANY_EMAIL_DOMAINS.split(",") if d.strip()]
 
     # --- CORS ---
     ALLOWED_ORIGINS: str = "http://localhost:3000"

@@ -156,6 +156,21 @@ def test_sync_no_pisa_existente_por_cuit(db: Session) -> None:
     assert conteo == 1
 
 
+def test_sync_ignora_email_del_dominio_propio(db: Session) -> None:
+    rows = [
+        {
+            "ck_id": "16", "cust_id": "700", "cust_name": "CON EMAIL INTERNO",
+            "cust_taxNumber": "30-70000000-7",
+            "cust_email": "vendedor@argentinacolor.com, compras@clientereal.com.ar",
+        },
+    ]
+    sincronizar_clientes(db, FakeERP(rows))
+    doms = {d.dominio for d in db.scalars(select(DominioCliente))}
+    # NO se registra el dominio propio; sí el del cliente real.
+    assert "argentinacolor.com" not in doms
+    assert "clientereal.com.ar" in doms
+
+
 def test_sync_dry_run_no_escribe(db: Session) -> None:
     rep = sincronizar_clientes(db, FakeERP(_rows()), dry_run=True)
     assert rep.creados == 2

@@ -131,9 +131,18 @@ def _crear_emails(
     dominios_existentes: set[str],
     rep: ReporteSync,
 ) -> None:
-    """Crea contactos por cada email y dominios (salvo públicos/duplicados)."""
+    """Crea contactos por cada email y dominios (salvo públicos/propios/dup)."""
+    from app.config import settings
+
+    propios = set(settings.company_email_domains)
     primer_dominio = True
     for email in split_emails(row.get("cust_email")):
+        dom_email = dominio_de(email)
+        # Un email del dominio propio (ej. un vendedor cargado como contacto en
+        # GBP) NO es del cliente: no crear contacto ni dominio (evita que
+        # argentinacolor.com quede como dominio de un cliente y matchee internos).
+        if dom_email and dom_email in propios:
+            continue
         db.add(
             ContactoCliente(
                 cliente_id=cliente.id,
@@ -142,7 +151,7 @@ def _crear_emails(
             )
         )
         rep.contactos_creados += 1
-        dom = dominio_de(email)
+        dom = dom_email
         if not dom or es_dominio_publico(dom) or dom in dominios_existentes:
             continue
         dominios_existentes.add(dom)

@@ -174,6 +174,19 @@ def test_ingesta_ignora_notificacion_automatica(client: TestClient) -> None:
         assert db.scalar(select(func.count()).select_from(Mail)) == 0
 
 
+def test_ingesta_remitente_interno_no_matchea_cliente(client: TestClient) -> None:
+    # Aunque exista un DominioCliente 'argentinacolor.com' (dato malo), un mail
+    # de un remitente interno NO debe matchear a ese cliente.
+    with TestingSessionLocal() as db:
+        db.add(DominioCliente(id=99, cliente_id=1, dominio="argentinacolor.com"))
+        db.commit()
+    r = client.post(
+        "/api/v1/mails/ingest",
+        json={"de": "matias@argentinacolor.com", "asunto": "Pedido", "cuerpo": "100kg"},
+    )
+    assert r.json()["mail"]["oportunidad"]["cliente"] is None  # no matcheó al cliente 1
+
+
 def test_ingesta_ignora_posventa_por_asunto(client: TestClient) -> None:
     from sqlalchemy import func, select
 

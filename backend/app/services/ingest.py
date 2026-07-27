@@ -184,7 +184,12 @@ def _match_cliente_y_contacto(
     db: Session, remitente: str | None
 ) -> tuple[int | None, int | None]:
     """Devuelve (cliente_id, contacto_cliente_id) según dominio y email."""
+    from app.config import settings
+
     dominio = domain_of(remitente)
+    # Un remitente del dominio propio (interno) NUNCA es un cliente: no matchear.
+    if dominio and dominio in settings.company_email_domains:
+        return None, None
     cliente_id: int | None = None
     if dominio:
         dom = db.scalar(select(DominioCliente).where(DominioCliente.dominio == dominio))
