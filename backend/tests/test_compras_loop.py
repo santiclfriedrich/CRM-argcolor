@@ -31,7 +31,7 @@ TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commi
 
 
 class FakeAI(AIProvider):
-    def extract_email_data(self, email_text, images=None):  # noqa: ANN001
+    def extract_email_data(self, email_text, images=None, documents=None):  # noqa: ANN001
         raise NotImplementedError
 
     def draft_quote(self, compras_response: str) -> QuoteDraft:

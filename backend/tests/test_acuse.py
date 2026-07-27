@@ -30,7 +30,7 @@ TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commi
 
 
 class FakeAI(AIProvider):
-    def extract_email_data(self, email_text, image_paths=None) -> EmailData:  # noqa: ANN001
+    def extract_email_data(self, email_text, image_paths=None, documents=None) -> EmailData:  # noqa: ANN001
         return EmailData(producto="Pigmento")
 
     def draft_quote(self, compras_response):  # noqa: ANN001
@@ -164,7 +164,7 @@ def test_enviar_aclaracion_usa_borrador_de_ia(client: TestClient) -> None:
 
 
 class _AclaracionAI(AIProvider):
-    def extract_email_data(self, email_text, image_paths=None) -> EmailData:  # noqa: ANN001
+    def extract_email_data(self, email_text, image_paths=None, documents=None) -> EmailData:  # noqa: ANN001
         return EmailData(requiere_aclaracion=True, borrador_aclaracion="¿Qué producto necesitás?")
 
     def draft_quote(self, compras_response):  # noqa: ANN001

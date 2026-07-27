@@ -37,7 +37,7 @@ class FakeAI(AIProvider):
     def __init__(self) -> None:
         self.images_recibidas: list = []
 
-    def extract_email_data(self, email_text, images=None) -> EmailData:  # noqa: ANN001
+    def extract_email_data(self, email_text, images=None, documents=None) -> EmailData:  # noqa: ANN001
         self.images_recibidas = images or []
         return EmailData(producto="Pigmento", requerimiento=email_text[:30])
 
@@ -177,7 +177,7 @@ def test_poll_procesa_nuevos_y_dedup(db: Session) -> None:
 
 
 class FakeAINoComercial(AIProvider):
-    def extract_email_data(self, email_text, images=None) -> EmailData:  # noqa: ANN001
+    def extract_email_data(self, email_text, images=None, documents=None) -> EmailData:  # noqa: ANN001
         return EmailData(categoria="orden_compra")
 
     def draft_quote(self, compras_response):  # noqa: ANN001
@@ -203,7 +203,7 @@ def test_poll_descarta_no_comercial_y_dedup(db: Session) -> None:
 
 
 class FakeAIQuota(AIProvider):
-    def extract_email_data(self, email_text, images=None) -> EmailData:  # noqa: ANN001
+    def extract_email_data(self, email_text, images=None, documents=None) -> EmailData:  # noqa: ANN001
         raise RuntimeError("429 RESOURCE_EXHAUSTED: quota exceeded")
 
     def draft_quote(self, compras_response):  # noqa: ANN001
@@ -347,7 +347,7 @@ def test_send_respuesta_registra_saliente_en_el_hilo(db: Session) -> None:
 class FakeAIAclaracion(AIProvider):
     """Considera el pedido completo solo cuando aparece una cantidad ('kg')."""
 
-    def extract_email_data(self, email_text, images=None) -> EmailData:  # noqa: ANN001
+    def extract_email_data(self, email_text, images=None, documents=None) -> EmailData:  # noqa: ANN001
         completo = "kg" in email_text.lower()
         return EmailData(producto="Pigmento", requiere_aclaracion=not completo)
 

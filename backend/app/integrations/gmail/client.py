@@ -176,6 +176,44 @@ def _collect_image_attachments(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return found
 
 
+# Máximo de documentos (PDF/planillas) a procesar por mail, y tope de tamaño
+# (Gemini inline tiene un límite de payload; una planilla/PDF razonable entra).
+MAX_DOCS = 4
+_MAX_DOC_BYTES = 12_000_000
+
+
+def _collect_document_attachments(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Metadatos de los adjuntos-documento (PDF, Excel .xlsx, CSV) que sabemos
+    leer. Recursivo sobre las partes MIME. Los ítems a cotizar de un RFQ suelen
+    venir acá, no en el cuerpo."""
+    from app.services.documentos import es_documento_util
+
+    found: list[dict[str, Any]] = []
+
+    def walk(part: dict[str, Any]) -> None:
+        mime = part.get("mimeType", "")
+        nombre = part.get("filename") or ""
+        body = part.get("body", {})
+        tiene_datos = body.get("data") or body.get("attachmentId")
+        # Solo adjuntos reales (con filename) que sepamos parsear.
+        if nombre and tiene_datos and es_documento_util(mime, nombre):
+            size = body.get("size") or 0
+            if not size or size <= _MAX_DOC_BYTES:
+                found.append(
+                    {
+                        "nombre": nombre,
+                        "mime": mime or "application/octet-stream",
+                        "attachment_id": body.get("attachmentId"),
+                        "data": body.get("data"),
+                    }
+                )
+        for child in part.get("parts") or []:
+            walk(child)
+
+    walk(payload)
+    return found
+
+
 def parse_gmail_message(msg: dict[str, Any]) -> dict[str, Any]:
     """Normaliza un mensaje de la Gmail API a los campos que usa el pipeline."""
     payload = msg.get("payload", {})
@@ -196,6 +234,7 @@ def parse_gmail_message(msg: dict[str, Any]) -> dict[str, Any]:
         "es_automatico": _es_bulk(headers),
         "referencias": _referencias(headers),
         "attachments": _collect_image_attachments(payload),
+        "document_attachments": _collect_document_attachments(payload),
     }
 
 
@@ -274,15 +313,20 @@ class GmailClient:
             .execute()
         )
         parsed = parse_gmail_message(raw)
-        parsed["images"] = self._download_images(message_id, parsed.pop("attachments", []))
+        parsed["images"] = self._download_attachments(
+            message_id, parsed.pop("attachments", []), MAX_IMAGES
+        )
+        parsed["documentos"] = self._download_attachments(
+            message_id, parsed.pop("document_attachments", []), MAX_DOCS
+        )
         return parsed
 
-    def _download_images(
-        self, message_id: str, attachments: list[dict[str, Any]]
+    def _download_attachments(
+        self, message_id: str, attachments: list[dict[str, Any]], limite: int
     ) -> list[dict[str, Any]]:
-        """Baja los bytes de cada imagen (inline o por attachmentId)."""
-        images: list[dict[str, Any]] = []
-        for att in attachments[:MAX_IMAGES]:
+        """Baja los bytes de cada adjunto (inline o por attachmentId)."""
+        bajados: list[dict[str, Any]] = []
+        for att in attachments[:limite]:
             data_b64 = att.get("data")
             if not data_b64 and att.get("attachment_id"):
                 resp = (
@@ -294,14 +338,14 @@ class GmailClient:
                 )
                 data_b64 = resp.get("data")
             if data_b64:
-                images.append(
+                bajados.append(
                     {
                         "nombre": att["nombre"],
                         "mime": att["mime"],
                         "data": base64.urlsafe_b64decode(data_b64),
                     }
                 )
-        return images
+        return bajados
 
     def send_message(
         self,

@@ -25,6 +25,17 @@ class ImagePart:
     mime_type: str
 
 
+@dataclass
+class DocumentPart:
+    """Documento adjunto (PDF) para pasar a la IA multimodal tal cual: Gemini lo
+    lee de forma nativa (texto y tablas). Las planillas (Excel/CSV) NO van por
+    acá: se convierten a texto y se anexan al cuerpo del mail."""
+
+    data: bytes
+    mime_type: str
+    filename: str | None = None
+
+
 class EmailData(BaseModel):
     """Datos estructurados extraídos de un mail entrante."""
 
@@ -60,9 +71,12 @@ class AIProvider(ABC):
 
     @abstractmethod
     def extract_email_data(
-        self, email_text: str, images: list["ImagePart"] | None = None
+        self,
+        email_text: str,
+        images: list["ImagePart"] | None = None,
+        documents: list["DocumentPart"] | None = None,
     ) -> EmailData:
-        """Extrae datos estructurados de un mail (texto + imágenes opcionales)."""
+        """Extrae datos estructurados de un mail (texto + imágenes + PDFs)."""
 
     @abstractmethod
     def draft_quote(self, compras_response: str) -> QuoteDraft:

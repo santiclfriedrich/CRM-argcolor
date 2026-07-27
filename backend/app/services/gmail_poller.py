@@ -141,6 +141,7 @@ def poll_once(
                 default_vendedor_id=default_vendedor_id,
                 es_automatico=bool(msg.get("es_automatico")),
                 referencias=msg.get("referencias"),
+                documentos=msg.get("documentos"),
             )
             if mail is None:  # no comercial: descartado, sin oportunidad ni respuesta
                 continue

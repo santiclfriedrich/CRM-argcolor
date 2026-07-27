@@ -19,8 +19,9 @@ from app.db.models.dominios_cliente import DominioCliente
 from app.db.models.mails import DireccionMail, Mail
 from app.db.models.mails_descartados import MailDescartado
 from app.db.models.oportunidades import ESTADOS_CERRADOS, EstadoOportunidad, Oportunidad
-from app.integrations.ai.base import AIProvider, EmailData, ImagePart
+from app.integrations.ai.base import AIProvider, DocumentPart, EmailData, ImagePart
 from app.services.attachments import save_attachments
+from app.services.documentos import enriquecer_cuerpo, es_pdf
 from app.services.notificaciones import crear_notificacion
 
 
@@ -334,6 +335,7 @@ def process_incoming_email(
     default_vendedor_id: int | None = None,
     es_automatico: bool = False,
     referencias: list[str] | None = None,
+    documentos: list[dict] | None = None,
 ) -> Mail | None:
     """Procesa un mail entrante y crea la oportunidad + el registro de mail.
 
@@ -348,6 +350,8 @@ def process_incoming_email(
     se usa como vendedor si el cliente no tiene uno asignado.
     """
     now = datetime.now(timezone.utc)
+    # Imágenes + documentos (PDF/planillas): se guardan todos como adjuntos.
+    adjuntos_todos = (images or []) + (documentos or [])
 
     # Notificaciones/recordatorios automáticos de plataformas (ej. avisos de
     # licitaciones): NO crean oportunidad. Se descartan antes de todo (ni dedup
@@ -443,14 +447,14 @@ def process_incoming_email(
             fecha=fecha or now,
             datos_extraidos_ia=datos_reeval.model_dump() if datos_reeval else None,
             adjuntos=(
-                {"items": [{"nombre": i["nombre"], "mime": i["mime"]} for i in images]}
-                if images
+                {"items": [{"nombre": i["nombre"], "mime": i["mime"]} for i in adjuntos_todos]}
+                if adjuntos_todos
                 else None
             ),
         )
         db.add(mail)
         db.flush()
-        save_attachments(db, mail, images or [])
+        save_attachments(db, mail, adjuntos_todos)
         db.commit()
         db.refresh(mail)
         return mail
@@ -507,7 +511,17 @@ def process_incoming_email(
         return None
 
     image_parts = [ImagePart(data=img["data"], mime_type=img["mime"]) for img in (images or [])]
-    extracted: EmailData = ai.extract_email_data(cuerpo, image_parts or None)
+    # Adjuntos-documento: los PDF van a la IA nativos; las planillas (Excel/CSV)
+    # se convierten a texto y se anexan al cuerpo (ahí suelen estar los ítems).
+    doc_parts = [
+        DocumentPart(data=d["data"], mime_type=d["mime"], filename=d.get("nombre"))
+        for d in (documentos or [])
+        if es_pdf(d.get("mime"), d.get("nombre"))
+    ]
+    texto_ia = enriquecer_cuerpo(cuerpo, documentos)
+    extracted: EmailData = ai.extract_email_data(
+        texto_ia, image_parts or None, doc_parts or None
+    )
 
     # Triage: solo las consultas comerciales generan oportunidad y se guardan.
     if extracted.categoria != "consulta_comercial":
@@ -561,14 +575,14 @@ def process_incoming_email(
         fecha=fecha or now,
         datos_extraidos_ia=extracted.model_dump(),
         adjuntos=(
-            {"items": [{"nombre": i["nombre"], "mime": i["mime"]} for i in images]}
-            if images
+            {"items": [{"nombre": i["nombre"], "mime": i["mime"]} for i in adjuntos_todos]}
+            if adjuntos_todos
             else None
         ),
     )
     db.add(mail)
     db.flush()  # asigna mail.id para los adjuntos
-    save_attachments(db, mail, images or [])
+    save_attachments(db, mail, adjuntos_todos)
     db.commit()
     db.refresh(mail)
     return mail

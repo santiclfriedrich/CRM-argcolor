@@ -36,7 +36,7 @@ class FakeAI(AIProvider):
     def __init__(self, data: EmailData) -> None:
         self.data = data
 
-    def extract_email_data(self, email_text, image_paths=None) -> EmailData:  # noqa: ANN001
+    def extract_email_data(self, email_text, image_paths=None, documents=None) -> EmailData:  # noqa: ANN001
         return self.data
 
     def draft_quote(self, compras_response):  # noqa: ANN001
@@ -254,6 +254,58 @@ def test_remitente_raiz_formato_bare_y_mailto() -> None:
     )
     assert _remitente_raiz(cuerpo) == "carlos.s@argentinacolor.com"
     assert hilo_iniciado_por_nosotros(cuerpo) is True
+
+
+def test_ingesta_rfq_lee_planilla_y_guarda_adjuntos(client: TestClient) -> None:
+    # Un RFQ cuyo cuerpo solo dice "cotizar la planilla adjunta": la planilla
+    # (CSV) debe llegar a la IA como texto y el PDF adjunto como documento, y
+    # ambos guardarse como Adjunto.
+    from sqlalchemy import func, select
+
+    from app.services.ingest import process_incoming_email
+
+    class CapturaAI(AIProvider):
+        def __init__(self) -> None:
+            self.texto = ""
+            self.docs: list = []
+
+        def extract_email_data(self, email_text, images=None, documents=None) -> EmailData:  # noqa: ANN001
+            self.texto = email_text
+            self.docs = documents or []
+            return EmailData(producto="Termotanque", requerimiento="RFQ")
+
+        def draft_quote(self, compras_response):  # noqa: ANN001
+            raise NotImplementedError
+
+        def summarize_thread(self, messages):  # noqa: ANN001
+            return ""
+
+    ai = CapturaAI()
+    documentos = [
+        {"nombre": "items.csv", "mime": "text/csv", "data": b"SKU,Cant\nTT50,3\n"},
+        {"nombre": "cond.pdf", "mime": "application/pdf", "data": b"%PDF-1.4 test"},
+    ]
+    with TestingSessionLocal() as db:
+        mail = process_incoming_email(
+            db,
+            ai,
+            de="juan@bencen.com.ar",
+            asunto="RFQ / 00059993 / Termotanque",
+            cuerpo="Estimado proveedor, cotizar los ítems de la planilla adjunta.",
+            documentos=documentos,
+        )
+        assert mail is not None
+        # La planilla se volcó a texto y llegó a la IA.
+        assert "Planilla adjunta: items.csv" in ai.texto
+        assert "TT50 | 3" in ai.texto
+        # El PDF llegó como documento nativo (no como texto).
+        assert len(ai.docs) == 1
+        assert ai.docs[0].mime_type == "application/pdf"
+        # Ambos adjuntos quedaron guardados (imagen 0 + 2 documentos).
+        n_adj = db.scalar(
+            select(func.count()).select_from(Adjunto).where(Adjunto.mail_id == mail.id)
+        )
+        assert n_adj == 2
 
 
 def test_ingesta_hilo_iniciado_por_cliente_si_crea_oportunidad(client: TestClient) -> None:

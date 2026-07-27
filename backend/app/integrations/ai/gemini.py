@@ -10,6 +10,7 @@ from google.genai import types
 from app.config import settings
 from app.integrations.ai.base import (
     AIProvider,
+    DocumentPart,
     EmailData,
     ImagePart,
     QuoteDraft,
@@ -18,7 +19,16 @@ from app.integrations.ai.base import (
 _EXTRACT_SYSTEM = """\
 Sos un asistente del equipo comercial de una empresa industrial argentina.
 Recibís un mail de un cliente (texto y, opcionalmente, imágenes de etiquetas,
-muestras o piezas) y extraés los datos del pedido a cotizar.
+muestras o piezas, y/o adjuntos como planillas Excel/CSV o PDF) y extraés los
+datos del pedido a cotizar.
+
+IMPORTANTE sobre adjuntos: en los pedidos de cotización (RFQ) es muy común que
+el cuerpo del mail solo diga "cotizar los ítems de la planilla/archivo adjunto"
+y que el detalle real (productos, códigos, cantidades) esté en el PDF o en la
+planilla. Si viene el contenido de una planilla anexado al texto (bajo un título
+"--- Planilla adjunta: … ---") o un PDF adjunto, LEELO y extraé de ahí el
+producto/cantidad/requerimiento. En ese caso NO marques requiere_aclaracion solo
+porque el cuerpo esté vacío: los datos están en el adjunto.
 
 Primero clasificá el mail en 'categoria':
 - "consulta_comercial": el cliente pide, solicita o consulta por productos,
@@ -124,10 +134,23 @@ class GeminiProvider(AIProvider):
             for img in (images or [])
         ]
 
+    def _document_parts(self, documents: list[DocumentPart] | None) -> list[types.Part]:
+        return [
+            types.Part.from_bytes(data=doc.data, mime_type=doc.mime_type)
+            for doc in (documents or [])
+        ]
+
     def extract_email_data(
-        self, email_text: str, images: list[ImagePart] | None = None
+        self,
+        email_text: str,
+        images: list[ImagePart] | None = None,
+        documents: list[DocumentPart] | None = None,
     ) -> EmailData:
-        contents: list[object] = [email_text, *self._image_parts(images)]
+        contents: list[object] = [
+            email_text,
+            *self._image_parts(images),
+            *self._document_parts(documents),
+        ]
         response = self._client.models.generate_content(
             model=self._model,
             contents=contents,
