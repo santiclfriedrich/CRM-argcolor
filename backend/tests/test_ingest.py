@@ -314,6 +314,52 @@ def test_ingesta_ignora_posventa_por_asunto(client: TestClient) -> None:
         assert db.scalar(select(func.count()).select_from(Oportunidad)) == 0
 
 
+def test_ingesta_ignora_orden_compra_en_frio(client: TestClient) -> None:
+    from sqlalchemy import func, select
+
+    # Hilo que llega por primera vez ya con la OC adentro (sin oportunidad
+    # previa): es una compra cerrada, no una consulta -> no crea oportunidad.
+    r = client.post(
+        "/api/v1/mails/ingest",
+        json={
+            "de": "juan@bencen.com.ar",
+            "asunto": "RE: EQUIPO COLABORADOR LUPINACCI OC 29992 ARG COLOR",
+            "cuerpo": "Buenas tardes, en adjunto la OC. Saludos.",
+        },
+    )
+    assert r.json()["descartado"] is True
+    assert r.json()["categoria"] == "orden_compra"
+    with TestingSessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(Oportunidad)) == 0
+
+
+def test_ingesta_orden_compra_se_adjunta_si_op_existente(client: TestClient) -> None:
+    from sqlalchemy import func, select
+
+    # Con una oportunidad ya creada por la consulta inicial, la OC posterior del
+    # mismo hilo NO se descarta: se adjunta (el dedup corre antes del filtro OC).
+    r1 = client.post(
+        "/api/v1/mails/ingest",
+        json={"de": "juan@bencen.com.ar", "asunto": "Cotización equipo", "cuerpo": "1 equipo"},
+    )
+    op1 = r1.json()["mail"]["oportunidad_id"]
+
+    r2 = client.post(
+        "/api/v1/mails/ingest",
+        json={
+            "de": "juan@bencen.com.ar",
+            "asunto": "Re: Cotización equipo",
+            "cuerpo": "Perfecto, adjunto la orden de compra. Gracias.",
+        },
+    )
+    assert r2.status_code == 201
+    assert r2.json().get("descartado") is not True
+    assert r2.json()["mail"]["oportunidad_id"] == op1  # se adjuntó, no se descartó
+
+    with TestingSessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(Oportunidad)) == 1
+
+
 def test_ingesta_deduplica_por_cliente_y_asunto(client: TestClient) -> None:
     from sqlalchemy import func, select
 

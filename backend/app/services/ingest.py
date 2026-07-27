@@ -166,6 +166,43 @@ def _remitente_raiz(cuerpo: str | None) -> str | None:
     return max(candidatos, key=lambda t: t[0])[1]
 
 
+# Orden de compra (OC) que el cliente ya envió/confirmó: es una compra cerrada,
+# no una consulta a cotizar. NO crea oportunidad nueva (salvo que ya exista una
+# para el hilo: en ese caso el mail se adjunta ANTES de este chequeo).
+_RE_OC_ASUNTO = re.compile(
+    r"\borden(?:es)? de compra\b"  # "orden de compra" (con o sin número)
+    r"|\b(?:oc|o/c)\b\s*n?[°ºro.:\s\-]*\d",  # "OC 1234", "OC N° 1234", "O/C 12"
+    re.IGNORECASE,
+)
+_FRASES_ORDEN_COMPRA = (
+    "adjunto la oc",
+    "adjunto oc",
+    "en adjunto la oc",
+    "adjunta la oc",
+    "adjunto la orden de compra",
+    "adjunto orden de compra",
+    "adjunta la orden de compra",
+    "adjunto nuestra orden de compra",
+    "orden de compra adjunta",
+    "envío la oc",
+    "envio la oc",
+    "enviamos la oc",
+    "les envío la orden de compra",
+    "les envio la orden de compra",
+    "nuestra orden de compra",
+    "su orden de compra",
+)
+
+
+def es_orden_compra(asunto: str | None, cuerpo: str | None) -> bool:
+    """True si el mail trae/confirma una orden de compra ya emitida por el
+    cliente (número de OC en el asunto o frase típica de OC adjunta)."""
+    if _RE_OC_ASUNTO.search(asunto or ""):
+        return True
+    texto = (cuerpo or "").lower()
+    return any(f in texto for f in _FRASES_ORDEN_COMPRA)
+
+
 def hilo_iniciado_por_nosotros(cuerpo: str | None) -> bool:
     """True si el hilo lo originó una casilla propia (@argentinacolor.com).
 
@@ -445,6 +482,22 @@ def process_incoming_email(
             MailDescartado(
                 gmail_message_id=gmail_message_id,
                 categoria="abastecimiento",
+                de=de,
+                asunto=asunto,
+                fecha=fecha or now,
+            )
+        )
+        db.commit()
+        return None
+
+    # Orden de compra ya emitida por el cliente (compra cerrada): no es una
+    # consulta a cotizar -> no crea oportunidad NUEVA. Si el hilo ya tenía una
+    # oportunidad, la OC se adjuntó más arriba (dedup) y no llega hasta acá.
+    if es_orden_compra(asunto, cuerpo):
+        db.add(
+            MailDescartado(
+                gmail_message_id=gmail_message_id,
+                categoria="orden_compra",
                 de=de,
                 asunto=asunto,
                 fecha=fecha or now,
