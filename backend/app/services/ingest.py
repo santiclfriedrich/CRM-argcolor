@@ -24,11 +24,52 @@ from app.services.attachments import save_attachments
 from app.services.notificaciones import crear_notificacion
 
 
+def _solo_email(de: str | None) -> str:
+    """`"Nombre <a@x.com>"` -> `a@x.com` (o el string tal cual si no hay <>)."""
+    if not de:
+        return ""
+    m = re.search(r"<([^>]+)>", de)
+    return (m.group(1) if m else de).strip().lower()
+
+
 def domain_of(email: str | None) -> str | None:
-    """`juan@bencen.com.ar` -> `bencen.com.ar`."""
-    if not email or "@" not in email:
+    """`juan@bencen.com.ar` -> `bencen.com.ar` (tolera 'Nombre <...>')."""
+    addr = _solo_email(email)
+    if "@" not in addr:
         return None
-    return email.rsplit("@", 1)[1].strip().lower()
+    return addr.rsplit("@", 1)[1].strip().lower()
+
+
+# Frases inequívocas de mail automático/masivo (no un mail 1:1 de un cliente).
+_FRASES_AUTOMATICO = (
+    "unsubscribe",
+    "cancelar suscripción",
+    "cancelar suscripcion",
+    "desuscribir",
+    "darse de baja",
+    "date de baja",
+    "este es un correo automático",
+    "este es un mensaje automático",
+    "no responder a este correo",
+    "no respondas a este correo",
+    "notificación automática",
+    "notificacion automatica",
+)
+
+
+def es_notificacion_automatica(de: str | None, asunto: str | None, cuerpo: str | None) -> bool:
+    """True si el mail es una notificación/recordatorio automático de una
+    plataforma (no una consulta real de un cliente): por remitente en la
+    denylist configurable, o por marcadores típicos (link de baja, etc.)."""
+    from app.config import settings
+
+    addr = _solo_email(de)
+    dom = domain_of(de)
+    for item in settings.ingest_sender_denylist:
+        if item and (item == addr or item == dom or (dom and dom.endswith("." + item))):
+            return True
+    texto = f"{asunto or ''}\n{cuerpo or ''}".lower()
+    return any(f in texto for f in _FRASES_AUTOMATICO)
 
 
 # Cuántos días atrás miramos para deduplicar por (cliente + asunto).
@@ -169,6 +210,22 @@ def process_incoming_email(
     se usa como vendedor si el cliente no tiene uno asignado.
     """
     now = datetime.now(timezone.utc)
+
+    # Notificaciones/recordatorios automáticos de plataformas (ej. avisos de
+    # licitaciones): NO crean oportunidad. Se descartan antes de todo (ni dedup
+    # ni IA); quedan en mails_descartados para auditar.
+    if es_notificacion_automatica(de, asunto, cuerpo):
+        db.add(
+            MailDescartado(
+                gmail_message_id=gmail_message_id,
+                categoria="automatico",
+                de=de,
+                asunto=asunto,
+                fecha=fecha or now,
+            )
+        )
+        db.commit()
+        return None
 
     # Cliente por dominio del remitente: se usa para deduplicar y para crear la op.
     cliente_id, contacto_id = _match_cliente_y_contacto(db, de)

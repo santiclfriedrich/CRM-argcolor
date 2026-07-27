@@ -147,6 +147,33 @@ def test_bandeja_lista_entrantes(client: TestClient) -> None:
     assert items[0]["direccion"] == "entrante"
 
 
+def test_ingesta_ignora_notificacion_automatica(client: TestClient) -> None:
+    from sqlalchemy import func, select
+
+    # Por marcador en el cuerpo (link de baja), aunque diga "cotizar".
+    r1 = client.post(
+        "/api/v1/mails/ingest",
+        json={
+            "de": "info@medox.ai",
+            "asunto": "Nuevo vencimiento MED #15598",
+            "cuerpo": "Te invitamos a realizar tu cotización. Unsubscribe. Copyright Medox",
+        },
+    )
+    assert r1.json()["descartado"] is True
+    assert r1.json()["categoria"] == "automatico"
+
+    # Por dominio en la denylist (medox.ai), sin marcadores en el cuerpo.
+    r2 = client.post(
+        "/api/v1/mails/ingest",
+        json={"de": "avisos@medox.ai", "asunto": "Recordatorio", "cuerpo": "Ir a cotizar"},
+    )
+    assert r2.json()["descartado"] is True
+
+    with TestingSessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(Oportunidad)) == 0
+        assert db.scalar(select(func.count()).select_from(Mail)) == 0
+
+
 def test_ingesta_deduplica_por_cliente_y_asunto(client: TestClient) -> None:
     from sqlalchemy import func, select
 

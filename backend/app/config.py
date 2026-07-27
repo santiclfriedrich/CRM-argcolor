@@ -103,6 +103,16 @@ class Settings(BaseSettings):
     # Solo se sincronizan estos tipos de cliente (ck_id) -> "Clase de cliente".
     # Mapa en app/services/gbp_sync.py (CK_ID_A_CLASE).
 
+    # --- Ingesta de bandeja ---
+    # Remitentes (dominios o direcciones) cuyas notificaciones automáticas NO
+    # deben crear oportunidad. Coma-separado; editable por env sin tocar código.
+    # Ej: "medox.ai,noreply@otraplataforma.com".
+    INGEST_SENDER_DENYLIST: str = "medox.ai"
+
+    @property
+    def ingest_sender_denylist(self) -> list[str]:
+        return [s.strip().lower() for s in self.INGEST_SENDER_DENYLIST.split(",") if s.strip()]
+
     # --- CORS ---
     ALLOWED_ORIGINS: str = "http://localhost:3000"
 
