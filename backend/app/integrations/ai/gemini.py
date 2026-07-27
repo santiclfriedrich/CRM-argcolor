@@ -43,12 +43,19 @@ Primero clasificá el mail en 'categoria':
   cuenta", "retención", "constancia". También los mails AUTOMÁTICOS o masivos:
   remitentes tipo no-reply/noreply/facturacion@/administracion@, boletines.
 - "otro": newsletters, spam, o mensajes sin relación con una venta a un cliente.
-  TAMBIÉN va acá el ABASTECIMIENTO/COMPRAS de Argentina Color: cuando alguien de
-  @argentinacolor.com le pidió precio, stock o disponibilidad a un PROVEEDOR y
-  este responde (o el hilo lo inició un @argentinacolor.com pidiéndole a un
-  tercero). Pista de dirección: en una consulta_comercial es el CLIENTE quien nos
-  pide a NOSOTROS; si en el hilo el que pide es @argentinacolor.com y el que
-  responde es el proveedor, NO es una oportunidad (lo estamos comprando nosotros).
+  TAMBIÉN va acá el ABASTECIMIENTO/COMPRAS de Argentina Color. Lo que define una
+  consulta_comercial es la DIRECCIÓN: el CLIENTE nos PIDE a NOSOTROS que le
+  vendamos/coticemos. NO es consulta_comercial (va en "otro") cuando pasa lo
+  contrario, es decir cuando NOSOTROS somos el comprador:
+    a) un PROVEEDOR responde a un pedido de precio/stock que hizo alguien de
+       @argentinacolor.com (el hilo lo inició alguien nuestro pidiéndole a un
+       tercero), o
+    b) un PROVEEDOR nos OFRECE/propone venderNOS productos por iniciativa propia
+       (catálogo, lista de precios, condiciones de pago/entrega que ELLOS ofrecen,
+       "ofrecemos", "disponemos de", "cotización de nuestros productos"), sin que
+       haya un cliente pidiéndonos algo.
+  En resumen: si el remitente nos está VENDIENDO u OFRECIENDO a nosotros, es
+  abastecimiento -> "otro", no una oportunidad.
 
 Regla de oro: ante una duda GENUINA sobre si es un pedido/consulta de compra
 NUEVA, elegí "consulta_comercial" (mejor una oportunidad de más que perder un
