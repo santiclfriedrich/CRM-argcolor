@@ -174,6 +174,23 @@ def test_ingesta_ignora_notificacion_automatica(client: TestClient) -> None:
         assert db.scalar(select(func.count()).select_from(Mail)) == 0
 
 
+def test_ingesta_ignora_proforma_administrativa(client: TestClient) -> None:
+    from sqlalchemy import func, select
+
+    r = client.post(
+        "/api/v1/mails/ingest",
+        json={
+            "de": "ascoccia@tmlogistica.com.ar",
+            "asunto": "PROFORMA ARGENTINA COLOR JULIO Q1",
+            "cuerpo": "Buen día. Adjunto detalle. Saludos.",
+        },
+    )
+    assert r.json()["descartado"] is True
+    assert r.json()["categoria"] == "administrativo"
+    with TestingSessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(Oportunidad)) == 0
+
+
 def test_ingesta_ignora_reaccion_de_gmail(client: TestClient) -> None:
     from sqlalchemy import func, select
 

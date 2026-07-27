@@ -38,10 +38,11 @@ Primero clasificá el mail en 'categoria':
   (adjunta una OC, da un número de OC), o da instrucciones de facturación/recepción.
 - "administrativo": facturación, pagos, cobranzas, remitos, datos fiscales o
   avisos administrativos. Señales típicas (aunque mencionen productos o montos):
-  "factura", "comprobante", "recibo", "nota de crédito", "nota de débito", "CAE",
-  "AFIP", "ARCA", "aviso de pago", "orden de pago", "cobranza", "resumen de
-  cuenta", "retención", "constancia". También los mails AUTOMÁTICOS o masivos:
-  remitentes tipo no-reply/noreply/facturacion@/administracion@, boletines.
+  "factura", "proforma", "remito", "comprobante", "recibo", "nota de crédito",
+  "nota de débito", "CAE", "AFIP", "ARCA", "aviso de pago", "orden de pago",
+  "cobranza", "resumen de cuenta", "estado de cuenta", "retención", "constancia".
+  También los mails AUTOMÁTICOS o masivos: remitentes tipo
+  no-reply/noreply/facturacion@/administracion@, boletines.
 - "otro": newsletters, spam, o mensajes sin relación con una venta a un cliente.
   TAMBIÉN va acá el ABASTECIMIENTO/COMPRAS de Argentina Color. Lo que define una
   consulta_comercial es la DIRECCIÓN: el CLIENTE nos PIDE a NOSOTROS que le

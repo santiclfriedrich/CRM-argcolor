@@ -110,9 +110,35 @@ _ASUNTO_POSVENTA = (
 )
 
 
+def _contiene_palabra(texto: str, palabras: tuple[str, ...]) -> bool:
+    """Match por palabra completa (evita falsos como 'rma' dentro de 'proforma')."""
+    return any(re.search(rf"\b{re.escape(p)}\b", texto) for p in palabras)
+
+
 def asunto_es_posventa(asunto: str | None) -> bool:
-    norm = normalizar_asunto(asunto)
-    return any(k in norm for k in _ASUNTO_POSVENTA)
+    return _contiene_palabra(normalizar_asunto(asunto), _ASUNTO_POSVENTA)
+
+
+# Documentos administrativos / de facturación (los mandan proveedores o admin):
+# no son una consulta de venta de un cliente.
+_ASUNTO_ADMINISTRATIVO = (
+    "proforma",
+    "factura",
+    "remito",
+    "nota de credito",
+    "nota de crédito",
+    "nota de debito",
+    "nota de débito",
+    "orden de pago",
+    "comprobante",
+    "cobranza",
+    "estado de cuenta",
+    "resumen de cuenta",
+)
+
+
+def asunto_es_administrativo(asunto: str | None) -> bool:
+    return _contiene_palabra(normalizar_asunto(asunto), _ASUNTO_ADMINISTRATIVO)
 
 
 def _buscar_op_por_asunto(
@@ -349,6 +375,24 @@ def process_incoming_email(
         db.commit()
         db.refresh(mail)
         return mail
+
+    # (No hay oportunidad existente para esta conversación.) Documento
+    # administrativo/facturación NUEVO (proforma, factura, remito…): no es una
+    # consulta de venta -> no crea oportunidad. Se chequea acá (no antes) para que
+    # una respuesta de un cliente dentro de una oportunidad ya existente sí se
+    # adjunte en vez de descartarse.
+    if asunto_es_administrativo(asunto):
+        db.add(
+            MailDescartado(
+                gmail_message_id=gmail_message_id,
+                categoria="administrativo",
+                de=de,
+                asunto=asunto,
+                fecha=fecha or now,
+            )
+        )
+        db.commit()
+        return None
 
     image_parts = [ImagePart(data=img["data"], mime_type=img["mime"]) for img in (images or [])]
     extracted: EmailData = ai.extract_email_data(cuerpo, image_parts or None)
