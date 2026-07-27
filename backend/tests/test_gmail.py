@@ -443,6 +443,39 @@ def test_parse_extrae_adjunto_de_imagen() -> None:
     assert att[0]["attachment_id"] == "att-1"
 
 
+def test_parse_saltea_imagenes_de_firma() -> None:
+    # Logo inline (Content-ID) y un ícono chico: son firma -> se saltean.
+    # Solo se conserva la foto de producto (adjunto, sin cid, tamaño real).
+    raw = {
+        "id": "m10",
+        "payload": {
+            "mimeType": "multipart/mixed",
+            "headers": [{"name": "From", "value": "juan@bencen.com.ar"}],
+            "parts": [
+                {"mimeType": "text/plain", "body": {"data": _b64("Mirá")}},
+                {  # logo de firma, embebido
+                    "mimeType": "image/png",
+                    "filename": "logo.png",
+                    "headers": [{"name": "Content-ID", "value": "<logo123>"}],
+                    "body": {"attachmentId": "a-logo", "size": 4000},
+                },
+                {  # ícono chiquito
+                    "mimeType": "image/png",
+                    "filename": "icon.png",
+                    "body": {"attachmentId": "a-icon", "size": 900},
+                },
+                {  # foto real de producto (adjunto, pesada)
+                    "mimeType": "image/jpeg",
+                    "filename": "producto.jpg",
+                    "body": {"attachmentId": "a-prod", "size": 350_000},
+                },
+            ],
+        },
+    }
+    att = parse_gmail_message(raw)["attachments"]
+    assert [a["nombre"] for a in att] == ["producto.jpg"]
+
+
 def test_flujo_multimodal_pasa_imagen_a_ia_y_guarda_adjunto(
     db: Session, tmp_path, monkeypatch
 ) -> None:  # noqa: ANN001

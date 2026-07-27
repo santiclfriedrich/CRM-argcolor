@@ -119,16 +119,37 @@ def _es_bulk(headers: list[dict[str, str]]) -> bool:
 
 # Máximo de imágenes a procesar por mail (corte defensivo de costo/payload).
 MAX_IMAGES = 5
+# Imágenes más chicas que esto se consideran logos/íconos de firma -> se saltean.
+_MIN_IMG_BYTES = 15_000
+
+
+def _es_imagen_de_firma(part: dict[str, Any]) -> bool:
+    """Heurística: logos/sellos/tarjetas de una firma. Son imágenes EMBEBIDAS
+    (inline, con Content-ID / disposition inline) o muy chicas. NO se mandan a la
+    IA (no aportan al pedido y suman costo). Las fotos de producto que adjunta el
+    cliente son attachment y más pesadas -> se conservan."""
+    ph = part.get("headers", []) or []
+    if _header(ph, "Content-ID"):
+        return True
+    if (_header(ph, "Content-Disposition") or "").strip().lower().startswith("inline"):
+        return True
+    size = part.get("body", {}).get("size") or 0
+    return bool(size) and size < _MIN_IMG_BYTES
 
 
 def _collect_image_attachments(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    """Metadatos de los adjuntos tipo imagen (recursivo sobre las partes MIME)."""
+    """Metadatos de los adjuntos tipo imagen (recursivo sobre las partes MIME),
+    salteando las imágenes de firma (logos/sellos)."""
     found: list[dict[str, Any]] = []
 
     def walk(part: dict[str, Any]) -> None:
         mime = part.get("mimeType", "")
         body = part.get("body", {})
-        if mime.startswith("image/") and (body.get("data") or body.get("attachmentId")):
+        if (
+            mime.startswith("image/")
+            and (body.get("data") or body.get("attachmentId"))
+            and not _es_imagen_de_firma(part)
+        ):
             found.append(
                 {
                     "nombre": part.get("filename") or "imagen",

@@ -42,7 +42,13 @@ Primero clasificá el mail en 'categoria':
   "AFIP", "ARCA", "aviso de pago", "orden de pago", "cobranza", "resumen de
   cuenta", "retención", "constancia". También los mails AUTOMÁTICOS o masivos:
   remitentes tipo no-reply/noreply/facturacion@/administracion@, boletines.
-- "otro": newsletters, spam o mensajes claramente sin relación con una venta.
+- "otro": newsletters, spam, o mensajes sin relación con una venta a un cliente.
+  TAMBIÉN va acá el ABASTECIMIENTO/COMPRAS de Argentina Color: cuando alguien de
+  @argentinacolor.com le pidió precio, stock o disponibilidad a un PROVEEDOR y
+  este responde (o el hilo lo inició un @argentinacolor.com pidiéndole a un
+  tercero). Pista de dirección: en una consulta_comercial es el CLIENTE quien nos
+  pide a NOSOTROS; si en el hilo el que pide es @argentinacolor.com y el que
+  responde es el proveedor, NO es una oportunidad (lo estamos comprando nosotros).
 
 Regla de oro: ante una duda GENUINA sobre si es un pedido/consulta de compra
 NUEVA, elegí "consulta_comercial" (mejor una oportunidad de más que perder un
