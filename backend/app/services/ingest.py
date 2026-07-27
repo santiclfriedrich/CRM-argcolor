@@ -11,7 +11,7 @@ adelante, el polling/Pub-Sub de Gmail. Pasos:
 import re
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models.contactos_cliente import ContactoCliente
@@ -247,6 +247,38 @@ def _buscar_op_por_asunto(
     return None
 
 
+def _buscar_op_por_remitente_asunto(
+    db: Session, de: str | None, asunto: str | None, now: datetime
+) -> int | None:
+    """Oportunidad ABIERTA reciente con un mail entrante del MISMO remitente y el
+    mismo asunto normalizado. Es la red de última instancia: ataja duplicados
+    cuando el hilo llega por otra casilla (otro thread_id) y encima el gateway del
+    cliente rompió los headers de threading (References), y el dominio no está
+    cargado como cliente. Devuelve el id o None."""
+    norm = normalizar_asunto(asunto)
+    addr = _solo_email(de)
+    if not norm or not addr:
+        return None
+    limite = now - timedelta(days=_DIAS_DEDUP_ASUNTO)
+    candidatos = db.scalars(
+        select(Mail)
+        .join(Oportunidad, Mail.oportunidad_id == Oportunidad.id)
+        .where(
+            Mail.direccion == DireccionMail.entrante,
+            Mail.oportunidad_id.is_not(None),
+            Oportunidad.estado.notin_(list(ESTADOS_CERRADOS)),
+            Oportunidad.fecha_ultimo_movimiento >= limite,
+            func.lower(Mail.de).like(f"%{addr}%"),
+        )
+        .order_by(Mail.id.desc())
+        .limit(50)
+    ).all()
+    for m in candidatos:
+        if _solo_email(m.de) == addr and normalizar_asunto(m.asunto) == norm:
+            return m.oportunidad_id
+    return None
+
+
 def _reevaluar_hilo(
     db: Session,
     ai: AIProvider,
@@ -393,10 +425,22 @@ def process_incoming_email(
     # (otro thread_id) o sin hilo. Si existe, adjuntamos el mail en vez de crear
     # otra (no llama a la IA ni manda acuse).
     op_existente_id: int | None = None
+    # 0) Por Message-ID propio: el MISMO mensaje (mismo Message-ID global) puede
+    # llegar a dos casillas nuestras (To + CC) -> gmail_message_id distinto pero
+    # rfc_message_id igual. Match exacto, sin riesgo de fusionar mails distintos.
+    if rfc_message_id:
+        op_existente_id = db.scalar(
+            select(Mail.oportunidad_id)
+            .where(
+                Mail.rfc_message_id == rfc_message_id,
+                Mail.oportunidad_id.is_not(None),
+            )
+            .order_by(Mail.id.desc())
+        )
     # 1) Por References/In-Reply-To: el mail responde a otro que ya está en una
     # oportunidad. Es lo más confiable (los Message-ID son globales -> funciona
     # aunque el hilo entre por otra casilla, cambie el asunto o no haya cliente).
-    if referencias:
+    if op_existente_id is None and referencias:
         op_existente_id = db.scalar(
             select(Mail.oportunidad_id)
             .where(
@@ -418,6 +462,10 @@ def process_incoming_email(
     # 3) Por (cliente + asunto normalizado).
     if op_existente_id is None and cliente_id is not None:
         op_existente_id = _buscar_op_por_asunto(db, cliente_id, asunto, now)
+    # 3b) Por (remitente + asunto): red de última instancia cuando no hay cliente
+    # cargado ni References fiables (gateways que reescriben el mail, ej. Verallia).
+    if op_existente_id is None:
+        op_existente_id = _buscar_op_por_remitente_asunto(db, de, asunto, now)
 
     if op_existente_id is not None:
         op = db.get(Oportunidad, op_existente_id)

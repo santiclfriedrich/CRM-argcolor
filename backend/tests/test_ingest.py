@@ -447,6 +447,68 @@ def test_ingesta_deduplica_por_cliente_y_asunto(client: TestClient) -> None:
     assert r3.json()["mail"]["oportunidad_id"] != op1
 
 
+def test_ingesta_deduplica_por_remitente_sin_cliente(client: TestClient) -> None:
+    from sqlalchemy import func, select
+
+    # Dominio NO cargado como cliente (verallia) + sin hilo ni References (el
+    # gateway del cliente rompió los headers): igual NO debe duplicar. Ataja por
+    # remitente + asunto normalizado.
+    r1 = client.post(
+        "/api/v1/mails/ingest",
+        json={
+            "de": "maria.mosso@verallia.com",
+            "asunto": "Pedido de cotización",
+            "cuerpo": "Ribbon color YMCKT x 250",
+        },
+    )
+    op1 = r1.json()["mail"]["oportunidad_id"]
+
+    r2 = client.post(
+        "/api/v1/mails/ingest",
+        json={
+            "de": "maria.mosso@verallia.com",
+            "asunto": "Pedido de cotización",
+            "cuerpo": "Hola Carlos, aguardo tu respuesta!",
+        },
+    )
+    assert r2.json()["mail"]["oportunidad_id"] == op1  # no duplicó
+    with TestingSessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(Oportunidad)) == 1
+
+
+def test_ingesta_deduplica_mismo_message_id_dos_casillas(client: TestClient) -> None:
+    from sqlalchemy import func, select
+
+    from app.services.ingest import process_incoming_email
+
+    # El MISMO mensaje (mismo Message-ID) llega a dos casillas nuestras: distinto
+    # gmail_message_id y thread_id, pero mismo rfc_message_id -> una sola oportunidad.
+    with TestingSessionLocal() as db:
+        m1 = process_incoming_email(
+            db,
+            _fake,
+            de="maria.mosso@verallia.com",
+            asunto="Pedido de cotización",
+            cuerpo="Ribbon YMCKT",
+            gmail_message_id="gmail-A",
+            gmail_thread_id="thread-A",
+            rfc_message_id="<MID-verallia-1@mail>",
+        )
+        m2 = process_incoming_email(
+            db,
+            _fake,
+            de="maria.mosso@verallia.com",
+            asunto="Pedido de cotización",
+            cuerpo="Ribbon YMCKT",
+            gmail_message_id="gmail-B",
+            gmail_thread_id="thread-B",
+            rfc_message_id="<MID-verallia-1@mail>",
+        )
+        assert m2 is not None
+        assert m2.oportunidad_id == m1.oportunidad_id
+        assert db.scalar(select(func.count()).select_from(Oportunidad)) == 1
+
+
 def test_ingesta_no_comercial_descarta_sin_crear_oportunidad(client: TestClient) -> None:
     # IA que clasifica el mail como orden de compra (no comercial).
     app.dependency_overrides[get_ai] = lambda: FakeAI(
