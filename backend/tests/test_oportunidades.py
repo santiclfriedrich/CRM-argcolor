@@ -119,6 +119,21 @@ def test_get_404(client: TestClient) -> None:
     assert client.get("/api/v1/oportunidades/999").status_code == 404
 
 
+def test_eliminar_multiples(client: TestClient) -> None:
+    a = client.post("/api/v1/oportunidades", json={"cliente_id": 1}).json()["id"]
+    b = client.post("/api/v1/oportunidades", json={"cliente_id": 1}).json()["id"]
+    c = client.post("/api/v1/oportunidades", json={"cliente_id": 1}).json()["id"]
+
+    resp = client.post("/api/v1/oportunidades/eliminar-multiples", json={"ids": [a, b]})
+    assert resp.status_code == 200
+    assert resp.json()["eliminadas"] == 2
+
+    # a y b borradas; c sigue.
+    assert client.get(f"/api/v1/oportunidades/{a}").status_code == 404
+    assert client.get(f"/api/v1/oportunidades/{b}").status_code == 404
+    assert client.get(f"/api/v1/oportunidades/{c}").status_code == 200
+
+
 def test_campos_seguimiento_y_comentarios(client: TestClient) -> None:
     op = client.post(
         "/api/v1/oportunidades",

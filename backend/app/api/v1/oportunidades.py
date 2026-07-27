@@ -3,6 +3,7 @@
 from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -252,3 +253,23 @@ def delete_oportunidad(
     eliminar_oportunidades(db, [oportunidad_id])
     db.commit()
     return Response(status_code=204)
+
+
+class EliminarMultiples(BaseModel):
+    ids: list[int]
+
+
+@router.post("/eliminar-multiples")
+def eliminar_multiples(
+    body: EliminarMultiples,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> dict[str, int]:
+    """Borra varias oportunidades en una sola transacción (con todo lo que cuelga
+    de cada una). Devuelve cuántas se pidieron eliminar."""
+    ids = list({i for i in body.ids if i})
+    if not ids:
+        return {"eliminadas": 0}
+    eliminar_oportunidades(db, ids)
+    db.commit()
+    return {"eliminadas": len(ids)}

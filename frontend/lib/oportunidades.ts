@@ -242,3 +242,37 @@ export function useDeleteOportunidad() {
     },
   });
 }
+
+// Borra VARIAS oportunidades de una (una sola request + transacción). Optimista:
+// las saca de la cache al instante, como el borrado individual.
+export function useBulkDeleteOportunidades() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: number[]) =>
+      (await api.post<{ eliminadas: number }>(`${BASE}/eliminar-multiples`, { ids })).data,
+    onMutate: async (ids: number[]) => {
+      await qc.cancelQueries({ queryKey: oportunidadKeys.all });
+      await qc.cancelQueries({ queryKey: MAILS_KEY });
+      const prevOps = qc.getQueriesData<Oportunidad[]>({ queryKey: oportunidadKeys.all });
+      const prevMails = qc.getQueriesData<Mail[]>({ queryKey: MAILS_KEY });
+      const set = new Set(ids);
+      qc.setQueriesData<Oportunidad[]>({ queryKey: oportunidadKeys.all }, (old) =>
+        Array.isArray(old) ? old.filter((o) => !set.has(o.id)) : old
+      );
+      qc.setQueriesData<Mail[]>({ queryKey: MAILS_KEY }, (old) =>
+        Array.isArray(old)
+          ? old.filter((m) => m.oportunidad_id == null || !set.has(m.oportunidad_id))
+          : old
+      );
+      return { prevOps, prevMails };
+    },
+    onError: (_err, _ids, ctx) => {
+      ctx?.prevOps?.forEach(([key, data]) => qc.setQueryData<Oportunidad[]>(key, data));
+      ctx?.prevMails?.forEach(([key, data]) => qc.setQueryData<Mail[]>(key, data));
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: oportunidadKeys.all });
+      qc.invalidateQueries({ queryKey: MAILS_KEY });
+    },
+  });
+}

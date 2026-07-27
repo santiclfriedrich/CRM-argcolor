@@ -36,6 +36,7 @@ import { Modal } from "@/components/ui/modal";
 import {
   ESTADO_META,
   subirAdjuntosOportunidad,
+  useBulkDeleteOportunidades,
   useCreateOportunidad,
   useDeleteOportunidad,
   useOportunidades,
@@ -417,9 +418,20 @@ export default function OportunidadesPage() {
   const { data, isLoading, isError } = useOportunidades(filtros);
   const createMut = useCreateOportunidad();
   const deleteMut = useDeleteOportunidad();
+  const bulkDelete = useBulkDeleteOportunidades();
   const crearPresupuesto = useCreatePresupuesto();
   const toggleGbp = useToggleCargadaGbp();
   const confirm = useConfirm();
+
+  // Selección múltiple para borrado en conjunto.
+  const [seleccion, setSeleccion] = useState<Set<number>>(new Set());
+  const toggleSel = (id: number) =>
+    setSeleccion((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   // Links viejos con ?op=ID redirigen a la página de detalle.
   useEffect(() => {
@@ -498,6 +510,33 @@ export default function OportunidadesPage() {
     }
     return res;
   }, [oportunidadesDelMes, busqueda, colFiltros, sort]);
+
+  // Selección múltiple (sobre las filas visibles).
+  const idsVisibles = filas.map((o) => o.id);
+  const todosSel = idsVisibles.length > 0 && idsVisibles.every((id) => seleccion.has(id));
+  const toggleTodos = () =>
+    setSeleccion((prev) => {
+      if (idsVisibles.length && idsVisibles.every((id) => prev.has(id))) {
+        const next = new Set(prev);
+        idsVisibles.forEach((id) => next.delete(id));
+        return next;
+      }
+      return new Set([...prev, ...idsVisibles]);
+    });
+  const eliminarSeleccionadas = async () => {
+    const ids = [...seleccion];
+    if (!ids.length) return;
+    if (
+      await confirm({
+        title: "Eliminar oportunidades",
+        message: `¿Eliminar ${ids.length} oportunidad(es) y todo lo relacionado (mails, solicitudes, presupuestos)? No se puede deshacer.`,
+        danger: true,
+      })
+    ) {
+      bulkDelete.mutate(ids);
+      setSeleccion(new Set());
+    }
+  };
 
   // Encabezado con orden/filtro para una columna.
   const th = (colKey: ColKey, label: string, extra = "") => (
@@ -665,11 +704,42 @@ export default function OportunidadesPage() {
         </p>
       )}
 
+      {seleccion.size > 0 && (
+        <div className="mt-4 flex items-center gap-3 rounded-lg border border-accent bg-accent-dim px-3 py-2 text-sm">
+          <span className="font-medium text-ink">{seleccion.size} seleccionada(s)</span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setSeleccion(new Set())}
+            className="ml-auto"
+          >
+            Deseleccionar
+          </Button>
+          <Button
+            size="sm"
+            onClick={eliminarSeleccionadas}
+            disabled={bulkDelete.isPending}
+            className="border-red-500 bg-red-500 text-white hover:bg-red-600"
+          >
+            <Trash2 size={14} /> Eliminar ({seleccion.size})
+          </Button>
+        </div>
+      )}
+
       {data && (
         <div className="mt-4 overflow-x-auto rounded-lg border border-line">
           <table className="w-full text-sm">
             <thead className="bg-surface2 text-left text-ink-2">
               <tr className="whitespace-nowrap">
+                <th className="px-2 py-1.5">
+                  <input
+                    type="checkbox"
+                    checked={todosSel}
+                    onChange={toggleTodos}
+                    aria-label="Seleccionar todas"
+                    className="h-4 w-4 rounded border-line accent-navy align-middle"
+                  />
+                </th>
                 <th className="px-2 py-1.5 font-medium">ID</th>
                 {th("cliente", "Cliente")}
                 {th("cl", "CL N°")}
@@ -694,6 +764,15 @@ export default function OportunidadesPage() {
                   onClick={(e) => setMenu({ o, x: e.clientX, y: e.clientY })}
                   className="cursor-pointer border-t border-line hover:bg-surface2"
                 >
+                  <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={seleccion.has(o.id)}
+                      onChange={() => toggleSel(o.id)}
+                      aria-label={`Seleccionar #${o.id}`}
+                      className="h-4 w-4 rounded border-line accent-navy align-middle"
+                    />
+                  </td>
                   <td className="whitespace-nowrap px-2 py-1.5 font-medium text-ink-2">
                     <span className="inline-flex items-center gap-1.5 leading-none">
                       {/* Slot fijo para el punto: así los números arrancan siempre alineados. */}
@@ -777,7 +856,7 @@ export default function OportunidadesPage() {
               ))}
               {filas.length === 0 && (
                 <tr>
-                  <td colSpan={15} className="px-4 py-6 text-center text-ink-3">
+                  <td colSpan={16} className="px-4 py-6 text-center text-ink-3">
                     {oportunidadesDelMes.length > 0
                       ? "No hay oportunidades que coincidan con la búsqueda o los filtros."
                       : periodoModo === "mes"
