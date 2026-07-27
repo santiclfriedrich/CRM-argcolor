@@ -4,6 +4,7 @@ import {
   ChevronRight,
   Copy,
   MessageSquare,
+  Paperclip,
   RefreshCw,
   Send,
   Sparkles,
@@ -577,7 +578,20 @@ function AttachmentImage({ adjunto }: { adjunto: Adjunto }) {
 
   const isImage = (adjunto.mime_type ?? "").startsWith("image/");
   if (!isImage) {
-    return <span className="text-xs text-ink-2">{adjunto.nombre_archivo}</span>;
+    // PDF, planillas, etc.: chip descargable (abre en pestaña nueva).
+    return (
+      <a
+        href={url ?? undefined}
+        target="_blank"
+        rel="noreferrer"
+        download={adjunto.nombre_archivo}
+        title={adjunto.nombre_archivo}
+        className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-line bg-surface2 px-2.5 py-1.5 text-xs text-ink hover:bg-surface3"
+      >
+        <Paperclip size={13} className="shrink-0 text-ink-3" />
+        <span className="truncate">{adjunto.nombre_archivo}</span>
+      </a>
+    );
   }
   return (
     <a href={url ?? undefined} target="_blank" rel="noreferrer" title={adjunto.nombre_archivo}>

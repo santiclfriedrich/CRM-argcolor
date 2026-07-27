@@ -12,6 +12,22 @@ import type {
 
 const BASE = "/api/v1/mails";
 
+// Descarga un adjunto de un mail (PDF, planilla, etc.) con el JWT que mete axios.
+export async function descargarAdjuntoMail(
+  adjuntoId: number,
+  filename: string,
+): Promise<void> {
+  const res = await api.get(`${BASE}/adjuntos/${adjuntoId}`, { responseType: "blob" });
+  const url = URL.createObjectURL(res.data as Blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export const mailKeys = {
   all: ["mails"] as const,
   descartados: ["mails", "descartados"] as const,

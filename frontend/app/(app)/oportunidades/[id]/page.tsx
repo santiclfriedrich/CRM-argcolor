@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { useMails } from "@/lib/mails";
+import { descargarAdjuntoMail, useMails } from "@/lib/mails";
 import {
   descargarAdjuntoOportunidad,
   ESTADO_META,
@@ -318,6 +318,8 @@ function Relacionados({ oportunidadId }: { oportunidadId: number }) {
   const presupuestos = usePresupuestos(oportunidadId);
   const solicitudes = useSolicitudes(undefined, oportunidadId);
   const mails = useMails(oportunidadId);
+  // Adjuntos que llegaron por mail (PDF, planillas): se descargan desde acá.
+  const archivosMail = (mails.data ?? []).flatMap((m) => m.archivos ?? []);
 
   return (
     <section className="rounded-lg border border-line p-5">
@@ -374,6 +376,22 @@ function Relacionados({ oportunidadId }: { oportunidadId: number }) {
               <Mail size={13} className="shrink-0 text-ink-3" />
               <span className="truncate">{m.asunto || m.de || "(sin asunto)"}</span>
             </Link>
+          ))}
+        </SubSeccion>
+
+        <SubSeccion titulo="Archivos recibidos" total={archivosMail.length}>
+          {archivosMail.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => descargarAdjuntoMail(a.id, a.nombre_archivo)}
+              title={`Descargar ${a.nombre_archivo}`}
+              className="flex w-full items-center gap-1.5 truncate rounded-md bg-surface2 px-2.5 py-1.5 text-left text-sm text-ink hover:bg-surface3"
+            >
+              <Paperclip size={13} className="shrink-0 text-ink-3" />
+              <span className="truncate">{a.nombre_archivo}</span>
+              <Download size={13} className="ml-auto shrink-0 text-ink-3" />
+            </button>
           ))}
         </SubSeccion>
       </div>
