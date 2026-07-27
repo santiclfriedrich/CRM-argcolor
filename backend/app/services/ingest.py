@@ -196,6 +196,7 @@ def process_incoming_email(
     rfc_message_id: str | None = None,
     images: list[dict] | None = None,
     default_vendedor_id: int | None = None,
+    es_automatico: bool = False,
 ) -> Mail | None:
     """Procesa un mail entrante y crea la oportunidad + el registro de mail.
 
@@ -214,7 +215,7 @@ def process_incoming_email(
     # Notificaciones/recordatorios automáticos de plataformas (ej. avisos de
     # licitaciones): NO crean oportunidad. Se descartan antes de todo (ni dedup
     # ni IA); quedan en mails_descartados para auditar.
-    if es_notificacion_automatica(de, asunto, cuerpo):
+    if es_automatico or es_notificacion_automatica(de, asunto, cuerpo):
         db.add(
             MailDescartado(
                 gmail_message_id=gmail_message_id,

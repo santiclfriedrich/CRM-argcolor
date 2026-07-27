@@ -105,6 +105,18 @@ def _header(headers: list[dict[str, str]], name: str) -> str | None:
     return next((h["value"] for h in headers if h["name"].lower() == name.lower()), None)
 
 
+def _es_bulk(headers: list[dict[str, str]]) -> bool:
+    """True si los headers son de un mail automático/masivo (newsletter,
+    notificación de plataforma, respuesta automática): un mail humano 1:1 NO los
+    trae. Sirve para filtrar sin mantener listas de remitentes."""
+    if _header(headers, "List-Unsubscribe") or _header(headers, "List-Id"):
+        return True
+    if (_header(headers, "Precedence") or "").strip().lower() in ("bulk", "list", "junk"):
+        return True
+    auto = (_header(headers, "Auto-Submitted") or "").strip().lower()
+    return bool(auto) and auto != "no"
+
+
 # Máximo de imágenes a procesar por mail (corte defensivo de costo/payload).
 MAX_IMAGES = 5
 
@@ -149,6 +161,7 @@ def parse_gmail_message(msg: dict[str, Any]) -> dict[str, Any]:
         "asunto": _header(headers, "Subject"),
         "cuerpo": _extract_text(payload) or msg.get("snippet", ""),
         "fecha": fecha,
+        "es_automatico": _es_bulk(headers),
         "attachments": _collect_image_attachments(payload),
     }
 

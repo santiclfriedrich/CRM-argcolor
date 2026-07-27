@@ -139,6 +139,7 @@ def poll_once(
                 rfc_message_id=msg.get("rfc_message_id"),
                 images=msg.get("images"),
                 default_vendedor_id=default_vendedor_id,
+                es_automatico=bool(msg.get("es_automatico")),
             )
             if mail is None:  # no comercial: descartado, sin oportunidad ni respuesta
                 continue

@@ -83,6 +83,25 @@ def test_parse_gmail_message_multipart() -> None:
     assert parsed["asunto"] == "Pedido de pigmento"
     assert "100kg" in parsed["cuerpo"]
     assert parsed["fecha"] is not None
+    assert parsed["es_automatico"] is False  # mail 1:1 humano
+
+
+def test_parse_gmail_message_detecta_automatico() -> None:
+    # Un mail con List-Unsubscribe es automático/masivo (newsletter, plataforma).
+    raw = {
+        "id": "m2",
+        "threadId": "t2",
+        "payload": {
+            "mimeType": "text/plain",
+            "headers": [
+                {"name": "From", "value": "info@medox.ai"},
+                {"name": "Subject", "value": "Nuevo vencimiento MED #15598"},
+                {"name": "List-Unsubscribe", "value": "<https://medox.ai/unsub>"},
+            ],
+            "body": {"data": _b64("Ir a cotizar")},
+        },
+    }
+    assert parse_gmail_message(raw)["es_automatico"] is True
 
 
 @pytest.fixture()
