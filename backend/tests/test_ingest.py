@@ -207,6 +207,66 @@ def test_ingesta_ignora_reaccion_de_gmail(client: TestClient) -> None:
         assert db.scalar(select(func.count()).select_from(Oportunidad)) == 0
 
 
+def test_ingesta_ignora_hilo_iniciado_por_nosotros(client: TestClient) -> None:
+    from sqlalchemy import func, select
+
+    # Un proveedor (Microglobal) responde a un pedido de cotización que originó
+    # alguien de @argentinacolor.com: es abastecimiento, NO una oportunidad,
+    # aunque el asunto diga "COTIZAR". La raíz del hilo es la casilla propia.
+    cuerpo = (
+        "Hola, ya fue enviada la solicitud a HP, aguardando precios. Saludos.\n\n"
+        "De: Karen Flores <karen.f@argentinacolor.com>\n"
+        "Para: Rodriguez Augusto <arodrigu@microglobal.com.ar>\n"
+        "Asunto: Re: Proyecto Impresoras OROPLATA - COTIZAR\n\n"
+        "Buen dia, adjunto excel con el detalle para cotizar.\n\n"
+        "El jue, 23 jul 2026, Rodriguez Augusto (<arodrigu@microglobal.com.ar>) escribió:\n"
+        "Buenos dias, copio a Paula por precios.\n\n"
+        "De: Diego Ramirez <diego.ramirez@argentinacolor.com>\n"
+        "Para: Rodriguez Augusto <arodrigu@microglobal.com.ar>\n"
+        "Asunto: Proyecto Impresoras OROPLATA - COTIZAR\n"
+        "Pongo en copia a Karen para que me puedan cotizar esta oportunidad."
+    )
+    r = client.post(
+        "/api/v1/mails/ingest",
+        json={
+            "de": "pdonofri@microglobal.com.ar",
+            "asunto": "RE: Proyecto Impresoras OROPLATA - OPD - COTIZAR",
+            "cuerpo": cuerpo,
+        },
+    )
+    assert r.json()["descartado"] is True
+    assert r.json()["categoria"] == "abastecimiento"
+    with TestingSessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(Oportunidad)) == 0
+
+
+def test_ingesta_hilo_iniciado_por_cliente_si_crea_oportunidad(client: TestClient) -> None:
+    from sqlalchemy import func, select
+
+    # Control: un hilo cuya RAÍZ es el cliente (no nosotros) sí genera
+    # oportunidad, aunque en el medio haya una respuesta nuestra citada.
+    cuerpo = (
+        "Perfecto, quedo a la espera del presupuesto. Gracias.\n\n"
+        "El jue, 23 jul 2026, Ventas (<ventas@argentinacolor.com>) escribió:\n"
+        "Buen dia, recibimos su consulta.\n\n"
+        "De: Juan Perez <juan@bencen.com.ar>\n"
+        "Para: Ventas <ventas@argentinacolor.com>\n"
+        "Asunto: Consulta de compra\n"
+        "Necesito cotizar 100 kg de pigmento rojo."
+    )
+    r = client.post(
+        "/api/v1/mails/ingest",
+        json={
+            "de": "juan@bencen.com.ar",
+            "asunto": "Re: Consulta de compra",
+            "cuerpo": cuerpo,
+        },
+    )
+    assert r.json().get("descartado") is not True
+    with TestingSessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(Oportunidad)) == 1
+
+
 def test_ingesta_remitente_interno_no_matchea_cliente(client: TestClient) -> None:
     # Aunque exista un DominioCliente 'argentinacolor.com' (dato malo), un mail
     # de un remitente interno NO debe matchear a ese cliente.

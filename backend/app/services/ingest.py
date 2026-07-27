@@ -141,6 +141,48 @@ def asunto_es_administrativo(asunto: str | None) -> bool:
     return _contiene_palabra(normalizar_asunto(asunto), _ASUNTO_ADMINISTRATIVO)
 
 
+# Atribuciones citadas dentro del cuerpo ("De: X <mail>" de Outlook, o
+# "... (<mail>) escribió:" de Gmail). Sirven para saber quién ORIGINÓ el hilo.
+_RE_ATRIB_HEADER = re.compile(
+    r"(?:^|\n)\s*(?:de|from)\s*:[^\n<]*<?\s*([\w.\-+]+@[\w.\-]+)",
+    re.IGNORECASE,
+)
+_RE_ATRIB_INLINE = re.compile(
+    r"([\w.\-+]+@[\w.\-]+)[^\n]{0,80}?(?:escribió|escribio|wrote)\s*:",
+    re.IGNORECASE,
+)
+
+
+def _remitente_raiz(cuerpo: str | None) -> str | None:
+    """Email del que INICIÓ el hilo: la atribución citada más al fondo del
+    cuerpo (la más antigua). None si el mail no cita ningún hilo previo."""
+    candidatos: list[tuple[int, str]] = []
+    for rx in (_RE_ATRIB_HEADER, _RE_ATRIB_INLINE):
+        for m in rx.finditer(cuerpo or ""):
+            candidatos.append((m.start(), m.group(1).strip().lower()))
+    if not candidatos:
+        return None
+    # La atribución más abajo en el texto (mayor posición) = mensaje raíz.
+    return max(candidatos, key=lambda t: t[0])[1]
+
+
+def hilo_iniciado_por_nosotros(cuerpo: str | None) -> bool:
+    """True si el hilo lo originó una casilla propia (@argentinacolor.com).
+
+    Un hilo que arrancamos nosotros pidiéndole algo a un tercero es
+    abastecimiento/compras o gestión interna, no una consulta de un cliente:
+    aunque el asunto diga "cotizar" y el que responde sea un proveedor, NOSOTROS
+    somos el comprador -> no genera oportunidad.
+    """
+    from app.config import settings
+
+    raiz = _remitente_raiz(cuerpo)
+    if not raiz:
+        return False
+    dom = domain_of(raiz)
+    return bool(dom and dom in settings.company_email_domains)
+
+
 def _buscar_op_por_asunto(
     db: Session, cliente_id: int, asunto: str | None, now: datetime
 ) -> int | None:
@@ -386,6 +428,23 @@ def process_incoming_email(
             MailDescartado(
                 gmail_message_id=gmail_message_id,
                 categoria="administrativo",
+                de=de,
+                asunto=asunto,
+                fecha=fecha or now,
+            )
+        )
+        db.commit()
+        return None
+
+    # Hilo que originó una casilla propia (le pedimos algo a un tercero: cotizar,
+    # stock, precios): es abastecimiento/gestión interna, no una consulta de un
+    # cliente. Se chequea acá (no antes) para que la respuesta de un cliente a una
+    # oportunidad ya existente se adjunte en vez de descartarse.
+    if hilo_iniciado_por_nosotros(cuerpo):
+        db.add(
+            MailDescartado(
+                gmail_message_id=gmail_message_id,
+                categoria="abastecimiento",
                 de=de,
                 asunto=asunto,
                 fecha=fecha or now,
