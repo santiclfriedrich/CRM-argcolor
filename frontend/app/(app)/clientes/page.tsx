@@ -61,12 +61,7 @@ export default function CuentasPage() {
 
       {data && (
         <>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <p className="text-sm text-ink-2">
-                {cuentas.length} {cuentas.length === 1 ? "elemento" : "elementos"}
-              </p>
-            </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             <div className="relative w-64 max-w-full">
               <Search
                 size={15}
@@ -79,6 +74,9 @@ export default function CuentasPage() {
                 className="h-9 w-full rounded-md border border-line bg-surface pl-8 pr-3 text-sm text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
               />
             </div>
+            <p className="text-sm text-ink-2">
+              {cuentas.length} {cuentas.length === 1 ? "cuenta" : "cuentas"}
+            </p>
           </div>
 
           <div className="mt-3 overflow-x-auto rounded-lg border border-line">
