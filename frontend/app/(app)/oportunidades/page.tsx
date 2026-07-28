@@ -507,6 +507,10 @@ export default function OportunidadesPage() {
       res = [...res].sort(
         (a, b) => comparar(ACCESOR[key].get(a), ACCESOR[key].get(b), ACCESOR[key].tipo) * factor
       );
+    } else {
+      // Orden por llegada: la más antigua arriba y la más nueva abajo (se cargan
+      // "desde abajo", no como una pila). El backend las trae id desc.
+      res = [...res].sort((a, b) => a.id - b.id);
     }
     return res;
   }, [oportunidadesDelMes, busqueda, colFiltros, sort]);
