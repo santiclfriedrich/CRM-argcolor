@@ -25,6 +25,8 @@ export function useTransferenciasPendientes() {
     queryKey: oportunidadKeys.pendientes,
     queryFn: async () =>
       (await api.get<Oportunidad[]>(`${BASE}/transferencias-pendientes`)).data,
+    // Refresca solo para que el indicador aparezca sin recargar la página.
+    refetchInterval: 30_000,
   });
 }
 
@@ -34,9 +36,10 @@ export function useTransferirOportunidad() {
   return useMutation({
     mutationFn: async ({ id, aUsuarioId }: { id: number; aUsuarioId: number }) =>
       (await api.post<Oportunidad>(`${BASE}/${id}/transferir`, { a_usuario_id: aUsuarioId })).data,
-    onSuccess: () => {
+    onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: oportunidadKeys.all });
       qc.invalidateQueries({ queryKey: oportunidadKeys.pendientes });
+      qc.invalidateQueries({ queryKey: oportunidadKeys.detail(id) });
     },
   });
 }
@@ -47,9 +50,10 @@ export function useResolverTransferencia() {
   return useMutation({
     mutationFn: async ({ id, accion }: { id: number; accion: "aceptar" | "rechazar" }) =>
       (await api.post<Oportunidad>(`${BASE}/${id}/transferir/${accion}`)).data,
-    onSuccess: () => {
+    onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: oportunidadKeys.all });
       qc.invalidateQueries({ queryKey: oportunidadKeys.pendientes });
+      qc.invalidateQueries({ queryKey: oportunidadKeys.detail(id) });
     },
   });
 }

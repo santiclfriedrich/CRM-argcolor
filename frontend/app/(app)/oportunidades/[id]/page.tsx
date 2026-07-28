@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  ArrowRightLeft,
   ClipboardList,
   Download,
   FileText,
@@ -12,6 +13,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
@@ -30,12 +32,13 @@ import {
   useEliminarComentario,
   useDeleteOportunidad,
   useOportunidad,
+  useResolverTransferencia,
   useSubirAdjuntosOportunidad,
   useUpdateOportunidad,
 } from "@/lib/oportunidades";
 import { ESTADO_PRESUPUESTO, fmtMonto, usePresupuestos } from "@/lib/presupuestos";
 import { ESTADO_SOLICITUD_META, useSolicitudes } from "@/lib/solicitudes";
-import type { OportunidadCreate } from "@/lib/types";
+import type { Oportunidad, OportunidadCreate } from "@/lib/types";
 
 export default function OportunidadDetallePage() {
   const params = useParams();
@@ -96,6 +99,8 @@ export default function OportunidadDetallePage() {
         </Button>
       </div>
 
+      {o.transferencia_para && <TransferenciaBanner oportunidad={o} />}
+
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Columna principal: datos + bitácora */}
         <div className="space-y-6 lg:col-span-2">
@@ -123,6 +128,53 @@ export default function OportunidadDetallePage() {
           <Relacionados oportunidadId={id} />
         </div>
       </div>
+    </div>
+  );
+}
+
+// Banner de transferencia pendiente. Si soy el destinatario, puedo aceptar o
+// rechazar acá mismo (además del indicador de la toolbar).
+function TransferenciaBanner({ oportunidad }: { oportunidad: Oportunidad }) {
+  const { data: session } = useSession();
+  const currentUserId = Number(session?.usuario?.id) || null;
+  const resolver = useResolverTransferencia();
+  const destino = oportunidad.transferencia_para;
+  if (!destino) return null;
+  const soyDestinatario = currentUserId === destino.id;
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-navy bg-surface2 px-4 py-3">
+      <ArrowRightLeft size={16} className="shrink-0 text-navy" />
+      {soyDestinatario ? (
+        <>
+          <span className="text-sm text-ink">
+            <strong>{oportunidad.vendedor?.nombre ?? "Alguien"}</strong> te transfirió esta
+            oportunidad. ¿La aceptás?
+          </span>
+          <div className="ml-auto flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => resolver.mutate({ id: oportunidad.id, accion: "aceptar" })}
+              disabled={resolver.isPending}
+            >
+              Aceptar
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => resolver.mutate({ id: oportunidad.id, accion: "rechazar" })}
+              disabled={resolver.isPending}
+            >
+              Rechazar
+            </Button>
+          </div>
+        </>
+      ) : (
+        <span className="text-sm text-ink-2">
+          Transferencia pendiente → <strong className="text-ink">{destino.nombre}</strong>{" "}
+          (esperando que la acepte).
+        </span>
+      )}
     </div>
   );
 }

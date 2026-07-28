@@ -146,7 +146,7 @@ def transferir_oportunidad(
             f"{current_user.nombre} te quiere transferir la oportunidad de "
             f"{cliente}. Aceptala o rechazala."
         ),
-        link="/oportunidades",
+        link=f"/oportunidades/{op.id}",
     )
     db.commit()
     db.refresh(op)
@@ -175,7 +175,7 @@ def aceptar_transferencia(
                 f"{current_user.nombre} aceptó la oportunidad de {cliente} "
                 "que le transferiste."
             ),
-            link="/oportunidades",
+            link=f"/oportunidades/{op.id}",
         )
     db.commit()
     db.refresh(op)
@@ -202,7 +202,7 @@ def rechazar_transferencia(
                 f"{current_user.nombre} rechazó la oportunidad de {cliente} "
                 "que le transferiste."
             ),
-            link="/oportunidades",
+            link=f"/oportunidades/{op.id}",
         )
     db.commit()
     db.refresh(op)
