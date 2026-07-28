@@ -49,28 +49,35 @@ def client() -> Iterator[TestClient]:
         Base.metadata.drop_all(bind=engine, tables=tables)
 
 
-def test_nota_vacia_al_inicio_y_upsert(client: TestClient) -> None:
-    # Sin nota previa -> contenido vacío.
-    assert client.get("/api/v1/notas").json()["contenido"] == ""
+def test_crear_listar_actualizar_eliminar(client: TestClient) -> None:
+    # Sin notas al inicio.
+    assert client.get("/api/v1/notas").json() == []
 
-    # Guardar crea la fila.
-    r = client.put("/api/v1/notas", json={"contenido": "comprar toner\nllamar a Juan"})
+    # Crear dos notas.
+    a = client.post("/api/v1/notas", json={"contenido": "comprar toner"}).json()
+    b = client.post("/api/v1/notas", json={"contenido": ""}).json()
+    assert a["id"] != b["id"]
+
+    lista = client.get("/api/v1/notas").json()
+    assert len(lista) == 2
+
+    # Actualizar una (autoguardado).
+    r = client.put(f"/api/v1/notas/{b['id']}", json={"contenido": "idea nueva"})
     assert r.status_code == 200
-    assert r.json()["contenido"] == "comprar toner\nllamar a Juan"
+    assert r.json()["contenido"] == "idea nueva"
 
-    # Persistió.
-    assert client.get("/api/v1/notas").json()["contenido"] == "comprar toner\nllamar a Juan"
-
-    # Guardar de nuevo actualiza (no duplica).
-    client.put("/api/v1/notas", json={"contenido": "actualizado"})
-    assert client.get("/api/v1/notas").json()["contenido"] == "actualizado"
+    # Eliminar.
+    assert client.delete(f"/api/v1/notas/{a['id']}").status_code == 204
+    assert len(client.get("/api/v1/notas").json()) == 1
 
 
-def test_nota_es_privada_por_usuario(client: TestClient) -> None:
-    client.put("/api/v1/notas", json={"contenido": "nota de Uno"})
+def test_notas_privadas_por_usuario(client: TestClient) -> None:
+    mia = client.post("/api/v1/notas", json={"contenido": "nota de Uno"}).json()
 
-    # Cambiamos al usuario 2: no ve la nota de Uno.
+    # Usuario 2 no ve las de Uno y no puede tocarlas.
     app.dependency_overrides[get_current_user] = lambda: Usuario(
         id=2, email="v2@argentinacolor.com", nombre="Dos", activo=True
     )
-    assert client.get("/api/v1/notas").json()["contenido"] == ""
+    assert client.get("/api/v1/notas").json() == []
+    assert client.put(f"/api/v1/notas/{mia['id']}", json={"contenido": "hack"}).status_code == 404
+    assert client.delete(f"/api/v1/notas/{mia['id']}").status_code == 404

@@ -7,14 +7,15 @@ from app.db.base import Base, TimestampMixin
 
 
 class NotaPersonal(Base, TimestampMixin):
-    """Bloc de notas libre y privado de cada usuario. Autoguardado desde el
-    front (sin botón). Una sola fila por usuario."""
+    """Una nota libre y privada de un usuario (estilo bloc de notas / Apple
+    Notes). Autoguardado desde el front (sin botón). Cada usuario puede tener
+    varias; el título se deriva de la primera línea del contenido."""
 
     __tablename__ = "notas_personales"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     usuario_id: Mapped[int] = mapped_column(
-        ForeignKey("usuarios.id"), unique=True, index=True, nullable=False
+        ForeignKey("usuarios.id"), index=True, nullable=False
     )
     contenido: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("''"))
 
