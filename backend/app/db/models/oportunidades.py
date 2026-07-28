@@ -87,6 +87,9 @@ class Oportunidad(Base, TimestampMixin):
 
     # --- Seguimiento (uso comercial diario) ---
     asunto: Mapped[str | None] = mapped_column(String(255))  # título/descripción breve
+    # Requerimiento leído por la IA del mail original (producto/cantidad/detalle/
+    # plazo). Editable a mano. En oportunidades manuales arranca vacío.
+    requerimiento: Mapped[str | None] = mapped_column(Text)
     producto: Mapped[str | None] = mapped_column(String(120))  # rubro/producto (Insumos, Tablets…)
     numero_pedido: Mapped[str | None] = mapped_column(String(60))  # "PEDIDO" (ej. 1-594059)
     ing: Mapped[str | None] = mapped_column(String(10))  # iniciales del "Ing." asignado (ej. C.S)

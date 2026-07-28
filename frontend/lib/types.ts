@@ -162,6 +162,7 @@ export interface Oportunidad {
   estado: EstadoOportunidad;
   fuente: string | null;
   asunto: string | null;
+  requerimiento: string | null;
   producto: string | null;
   numero_pedido: string | null;
   ing: string | null;
@@ -192,6 +193,7 @@ export type OportunidadCreate = {
   estado?: EstadoOportunidad;
   fuente?: string | null;
   asunto?: string | null;
+  requerimiento?: string | null;
   producto?: string | null;
   numero_pedido?: string | null;
   ing?: string | null;

@@ -31,6 +31,7 @@ type Snapshot = {
   estado: EstadoOportunidad;
   fuente: string;
   asunto: string;
+  requerimiento: string;
   producto: string;
   numeroPedido: string;
   ing: string;
@@ -75,6 +76,9 @@ export function OportunidadForm({
   );
   const [fuente, setFuente] = useState(draft?.fuente ?? initial?.fuente ?? "manual");
   const [asunto, setAsunto] = useState(draft?.asunto ?? initial?.asunto ?? "");
+  const [requerimiento, setRequerimiento] = useState(
+    draft?.requerimiento ?? initial?.requerimiento ?? ""
+  );
   const [producto, setProducto] = useState(draft?.producto ?? initial?.producto ?? "");
   const [numeroPedido, setNumeroPedido] = useState(
     draft?.numeroPedido ?? initial?.numero_pedido ?? ""
@@ -116,6 +120,7 @@ export function OportunidadForm({
       estado,
       fuente,
       asunto,
+      requerimiento,
       producto,
       numeroPedido,
       ing,
@@ -137,6 +142,7 @@ export function OportunidadForm({
     estado,
     fuente,
     asunto,
+    requerimiento,
     producto,
     numeroPedido,
     ing,
@@ -165,6 +171,7 @@ export function OportunidadForm({
       estado,
       fuente: fuente.trim() || null,
       asunto: asunto.trim() || null,
+      requerimiento: requerimiento.trim() || null,
       producto: producto.trim() || null,
       numero_pedido: numeroPedido.trim() || null,
       ing: ing.trim() || null,
@@ -220,6 +227,17 @@ export function OportunidadForm({
           value={asunto}
           onChange={(e) => setAsunto(e.target.value)}
           placeholder="Ej: Cotización 100kg pigmento rojo"
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="o-requerimiento">Requerimiento (leído por la IA)</Label>
+        <Textarea
+          id="o-requerimiento"
+          rows={4}
+          value={requerimiento}
+          onChange={(e) => setRequerimiento(e.target.value)}
+          placeholder="Qué pidió el cliente: producto, cantidad, detalle, plazo…"
         />
       </div>
 

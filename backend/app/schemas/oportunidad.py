@@ -16,6 +16,7 @@ class OportunidadBase(BaseModel):
     fuente: str | None = None
     # Seguimiento
     asunto: str | None = None
+    requerimiento: str | None = None
     producto: str | None = None
     numero_pedido: str | None = None
     ing: str | None = None
@@ -40,6 +41,7 @@ class OportunidadUpdate(BaseModel):
     estado: EstadoOportunidad | None = None
     fuente: str | None = None
     asunto: str | None = None
+    requerimiento: str | None = None
     producto: str | None = None
     numero_pedido: str | None = None
     ing: str | None = None

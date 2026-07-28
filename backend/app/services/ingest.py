@@ -324,6 +324,21 @@ def _notificar_aclaracion_resuelta(db: Session, op: Oportunidad) -> None:
     )
 
 
+def componer_requerimiento(datos: EmailData) -> str | None:
+    """Arma el texto de requerimiento a partir de lo que la IA extrajo del mail
+    (producto, cantidad, detalle, plazo). None si no hay nada."""
+    partes: list[str] = []
+    if datos.producto:
+        partes.append(f"Producto: {datos.producto}")
+    if datos.cantidad:
+        partes.append(f"Cantidad: {datos.cantidad}")
+    if datos.requerimiento:
+        partes.append(datos.requerimiento)
+    if datos.plazo:
+        partes.append(f"Plazo requerido: {datos.plazo}")
+    return "\n".join(partes) or None
+
+
 def _match_cliente_y_contacto(
     db: Session, remitente: str | None
 ) -> tuple[int | None, int | None]:
@@ -605,6 +620,7 @@ def process_incoming_email(
         fecha_ultimo_movimiento=now,
         # Seguimiento: el asunto y la fecha del pedido salen del mail original.
         asunto=asunto,
+        requerimiento=componer_requerimiento(extracted),
         fecha_pedido_cliente=(fecha or now).date(),
     )
     db.add(oportunidad)
