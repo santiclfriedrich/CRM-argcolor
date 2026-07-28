@@ -99,6 +99,7 @@ class OportunidadRead(OportunidadBase):
     contacto: ContactoMini | None = None
     vendedor: VendedorMini | None = None
     creado_por: VendedorMini | None = None
+    transferencia_para: VendedorMini | None = None  # destinatario pendiente de aceptar
 
     @field_validator("comentarios", mode="before")
     @classmethod

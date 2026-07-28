@@ -182,6 +182,7 @@ export interface Oportunidad {
   contacto: PersonaMini | null;
   vendedor: PersonaMini | null;
   creado_por: { id: number; nombre: string } | null;
+  transferencia_para: { id: number; nombre: string } | null;
 }
 
 export type OportunidadCreate = {

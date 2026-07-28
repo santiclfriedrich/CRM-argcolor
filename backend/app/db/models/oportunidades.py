@@ -64,6 +64,11 @@ class Oportunidad(Base, TimestampMixin):
     # Quién creó la oportunidad (registro): manual = quien la carga; mail = dueño
     # de la casilla. No cambia aunque se reasigne el vendedor.
     creado_por_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
+    # Transferencia pendiente: destinatario propuesto que todavía no aceptó. El
+    # vendedor_id NO cambia hasta que acepta; mientras tanto sale de las "Mías"
+    # de ambos y aparece como pendiente para el destinatario. Al rechazar, se
+    # limpia (vuelve al vendedor). Al aceptar, vendedor_id = este id y se limpia.
+    transferencia_para_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
     estado: Mapped[EstadoOportunidad] = mapped_column(
         Enum(EstadoOportunidad, name="estado_oportunidad"),
         default=EstadoOportunidad.nueva,
@@ -106,6 +111,7 @@ class Oportunidad(Base, TimestampMixin):
         "Usuario", foreign_keys=[vendedor_id], back_populates="oportunidades"
     )
     creado_por = relationship("Usuario", foreign_keys=[creado_por_id])
+    transferencia_para = relationship("Usuario", foreign_keys=[transferencia_para_id])
     solicitudes_compras = relationship("SolicitudCompras", back_populates="oportunidad")
     presupuestos = relationship("Presupuesto", back_populates="oportunidad")
     mails = relationship("Mail", back_populates="oportunidad")

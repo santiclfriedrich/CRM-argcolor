@@ -2,6 +2,7 @@
 
 import {
   ArrowDown,
+  ArrowRightLeft,
   ArrowUp,
   Check,
   ChevronLeft,
@@ -10,6 +11,7 @@ import {
   Eye,
   FileText,
   Filter,
+  Inbox,
   Pencil,
   Plus,
   Search,
@@ -40,14 +42,18 @@ import {
   useCreateOportunidad,
   useDeleteOportunidad,
   useOportunidades,
+  useResolverTransferencia,
   useSetIng,
   useSugerenciaCompras,
   useToggleCargadaGbp,
+  useTransferenciasPendientes,
+  useTransferirOportunidad,
   useUpdateOportunidad,
 } from "@/lib/oportunidades";
 import { clearDraft, DRAFT_OPORTUNIDAD } from "@/lib/draft";
 import { useCreatePresupuesto } from "@/lib/presupuestos";
 import { useCrearYEnviarSolicitud } from "@/lib/solicitudes";
+import { useUsuarios } from "@/lib/usuarios";
 import type {
   EstadoOportunidad,
   Oportunidad,
@@ -292,6 +298,7 @@ function RowMenu({
   onModificar,
   onPedir,
   onPresupuesto,
+  onTransferir,
   onEliminar,
   presupuestoPending,
 }: {
@@ -303,6 +310,7 @@ function RowMenu({
   onModificar: () => void;
   onPedir: () => void;
   onPresupuesto: () => void;
+  onTransferir: () => void;
   onEliminar: () => void;
   presupuestoPending: boolean;
 }) {
@@ -327,7 +335,7 @@ function RowMenu({
   }, [onClose]);
 
   const W = 208;
-  const H = 250;
+  const H = 290;
   const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
   const vh = typeof window !== "undefined" ? window.innerHeight : 800;
   const left = Math.max(8, Math.min(x, vw - W - 8));
@@ -370,6 +378,7 @@ function RowMenu({
         disabled: presupuestoPending,
       })}
       {item("Modificar", onModificar, <Pencil size={14} />)}
+      {item("Transferir a…", onTransferir, <ArrowRightLeft size={14} />)}
       <div className="my-1 border-t border-line" />
       {item("Eliminar", onEliminar, <Trash2 size={14} />, { danger: true })}
     </div>
@@ -384,6 +393,7 @@ export default function OportunidadesPage() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Oportunidad | null>(null);
   const [pidiendo, setPidiendo] = useState<Oportunidad | null>(null);
+  const [transfiriendo, setTransfiriendo] = useState<Oportunidad | null>(null);
   // Menú de acciones que aparece al clickear una fila (posición del cursor).
   const [menu, setMenu] = useState<{ o: Oportunidad; x: number; y: number } | null>(null);
   const [filtros, setFiltros] = useState<OportunidadFiltros>({
@@ -683,6 +693,11 @@ export default function OportunidadesPage() {
           {oportunidadesDelMes.length}{" "}
           {oportunidadesDelMes.length === 1 ? "oportunidad" : "oportunidades"}
         </span>
+
+        {/* Transferencias pendientes hacia mí (pegado a la derecha). */}
+        <div className="sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2">
+          <TransferenciasPendientes />
+        </div>
       </div>
 
       {/* Buscador global */}
@@ -909,6 +924,9 @@ export default function OportunidadesPage() {
 
       {editing && <EditOportunidadModal oportunidad={editing} onClose={() => setEditing(null)} />}
       {pidiendo && <PedirComprasModal oportunidad={pidiendo} onClose={() => setPidiendo(null)} />}
+      {transfiriendo && (
+        <TransferirModal oportunidad={transfiriendo} onClose={() => setTransfiriendo(null)} />
+      )}
 
       {menu && (
         <RowMenu
@@ -920,6 +938,7 @@ export default function OportunidadesPage() {
           onModificar={() => setEditing(menu.o)}
           onPedir={() => setPidiendo(menu.o)}
           onPresupuesto={() => armarPresupuesto(menu.o)}
+          onTransferir={() => setTransfiriendo(menu.o)}
           onEliminar={() => eliminar(menu.o)}
           presupuestoPending={crearPresupuesto.isPending}
         />
@@ -997,5 +1016,126 @@ function EditOportunidadModal({ oportunidad, onClose }: { oportunidad: Oportunid
         onSubmit={handleSubmit}
       />
     </Modal>
+  );
+}
+
+// Modal para transferir una oportunidad a otro vendedor registrado.
+function TransferirModal({
+  oportunidad,
+  onClose,
+}: {
+  oportunidad: Oportunidad;
+  onClose: () => void;
+}) {
+  const { data: usuarios } = useUsuarios();
+  const transferir = useTransferirOportunidad();
+  const [sel, setSel] = useState<number | null>(null);
+  const cliente = oportunidad.cliente?.razon_social ?? `#${oportunidad.id}`;
+  const candidatos = (usuarios ?? []).filter(
+    (u) => u.activo && u.id !== oportunidad.vendedor_id,
+  );
+
+  const enviar = () => {
+    if (!sel) return;
+    transferir.mutate({ id: oportunidad.id, aUsuarioId: sel }, { onSuccess: onClose });
+  };
+
+  return (
+    <Modal open onClose={onClose} title={`Transferir oportunidad — ${cliente}`} size="lg">
+      <p className="text-sm text-ink-2">
+        Elegí a quién transferírsela. Le va a llegar como pendiente y podrá aceptarla o
+        rechazarla; mientras tanto sale de tus “Mías”.
+      </p>
+      <div className="mt-3 max-h-72 space-y-1 overflow-y-auto">
+        {candidatos.map((u) => (
+          <button
+            key={u.id}
+            type="button"
+            onClick={() => setSel(u.id)}
+            className={cn(
+              "flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition-colors",
+              sel === u.id
+                ? "border-navy bg-surface2 text-ink"
+                : "border-line text-ink-2 hover:bg-surface2",
+            )}
+          >
+            <span>{u.nombre}</span>
+            {sel === u.id && <Check size={15} className="text-navy" />}
+          </button>
+        ))}
+        {candidatos.length === 0 && (
+          <p className="text-sm text-ink-3">No hay otros usuarios disponibles.</p>
+        )}
+      </div>
+      <div className="mt-4 flex justify-end gap-2">
+        <Button variant="outline" onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button onClick={enviar} disabled={!sel || transferir.isPending}>
+          {transferir.isPending ? "Transfiriendo…" : "Transferir"}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+// Indicador (toolbar) de oportunidades que otro me transfirió: aceptar/rechazar.
+function TransferenciasPendientes() {
+  const { data } = useTransferenciasPendientes();
+  const resolver = useResolverTransferencia();
+  const [abierto, setAbierto] = useState(false);
+  const pendientes = data ?? [];
+  if (pendientes.length === 0) return null;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface2 px-3 py-1 text-sm font-medium text-ink hover:bg-surface"
+      >
+        <Inbox size={15} className="text-navy" />
+        Transferencias
+        <span className="ml-0.5 rounded-full bg-navy px-1.5 text-xs font-semibold text-white">
+          {pendientes.length}
+        </span>
+      </button>
+      {abierto && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setAbierto(false)} />
+          <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-lg border border-line bg-surface shadow-pop">
+            <p className="border-b border-line px-3 py-1.5 text-xs font-semibold text-ink-3">
+              Oportunidades que te transfirieron
+            </p>
+            <div className="max-h-96 divide-y divide-line overflow-y-auto">
+              {pendientes.map((o) => (
+                <div key={o.id} className="px-3 py-2 text-sm">
+                  <p className="font-medium text-ink">{o.cliente?.razon_social ?? `#${o.id}`}</p>
+                  {o.asunto && <p className="truncate text-xs text-ink-3">{o.asunto}</p>}
+                  <p className="text-xs text-ink-3">De: {o.vendedor?.nombre ?? "—"}</p>
+                  <div className="mt-1.5 flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => resolver.mutate({ id: o.id, accion: "aceptar" })}
+                      disabled={resolver.isPending}
+                    >
+                      Aceptar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => resolver.mutate({ id: o.id, accion: "rechazar" })}
+                      disabled={resolver.isPending}
+                    >
+                      Rechazar
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 }

@@ -20,6 +20,7 @@ from app.schemas.oportunidad import (
 )
 from app.schemas.solicitud import SugerenciaCompras
 from app.services.borrado import eliminar_oportunidades
+from app.services.notificaciones import crear_notificacion
 from app.services.oportunidades import (
     buscar_adjunto,
     eliminar_adjunto_oportunidad,
@@ -36,6 +37,7 @@ _RELATIONS = (
     selectinload(Oportunidad.contacto),
     selectinload(Oportunidad.vendedor),
     selectinload(Oportunidad.creado_por),
+    selectinload(Oportunidad.transferencia_para),
 )
 
 
@@ -58,7 +60,12 @@ def list_oportunidades(
     if usuario_id is not None:
         query = query.where(Oportunidad.vendedor_id == usuario_id)
     elif solo_mias:
-        query = query.where(Oportunidad.vendedor_id == current_user.id)
+        # Mías: las que son mías Y no están pendientes de transferir a otro
+        # (mientras la transferencia está pendiente, sale de mis "Mías").
+        query = query.where(
+            Oportunidad.vendedor_id == current_user.id,
+            Oportunidad.transferencia_para_id.is_(None),
+        )
     if estado is not None:
         query = query.where(Oportunidad.estado == estado)
     if cliente_id is not None:
@@ -85,6 +92,121 @@ def create_oportunidad(
     db.commit()
     db.refresh(oportunidad)
     return oportunidad
+
+
+class TransferirRequest(BaseModel):
+    a_usuario_id: int
+
+
+def _get_op(db: Session, oportunidad_id: int) -> Oportunidad:
+    op = db.get(Oportunidad, oportunidad_id, options=list(_RELATIONS))
+    if op is None:
+        raise NotFoundError("Oportunidad no encontrada")
+    return op
+
+
+@router.get("/transferencias-pendientes", response_model=list[OportunidadRead])
+def transferencias_pendientes(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> list[Oportunidad]:
+    """Oportunidades que otro me transfirió y todavía no acepté/rechacé."""
+    query = (
+        select(Oportunidad)
+        .options(*_RELATIONS)
+        .where(Oportunidad.transferencia_para_id == current_user.id)
+        .order_by(Oportunidad.id.desc())
+    )
+    return list(db.scalars(query))
+
+
+@router.post("/{oportunidad_id}/transferir", response_model=OportunidadRead)
+def transferir_oportunidad(
+    oportunidad_id: int,
+    body: TransferirRequest,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> Oportunidad:
+    """Propone transferir la oportunidad a otro vendedor. Queda pendiente hasta
+    que el destinatario acepte; mientras tanto sale de las 'Mías' de ambos."""
+    op = _get_op(db, oportunidad_id)
+    destino = db.get(Usuario, body.a_usuario_id)
+    if destino is None or not destino.activo:
+        raise HTTPException(status_code=404, detail="Usuario destino no encontrado o inactivo.")
+    if destino.id == current_user.id:
+        raise HTTPException(status_code=400, detail="No podés transferírtela a vos mismo.")
+    if destino.id == op.vendedor_id:
+        raise HTTPException(status_code=400, detail="La oportunidad ya es de ese vendedor.")
+    op.transferencia_para_id = destino.id
+    cliente = op.cliente.razon_social if op.cliente else f"#{op.id}"
+    crear_notificacion(
+        db,
+        usuario_id=destino.id,
+        mensaje=(
+            f"{current_user.nombre} te quiere transferir la oportunidad de "
+            f"{cliente}. Aceptala o rechazala."
+        ),
+        link="/oportunidades",
+    )
+    db.commit()
+    db.refresh(op)
+    return op
+
+
+@router.post("/{oportunidad_id}/transferir/aceptar", response_model=OportunidadRead)
+def aceptar_transferencia(
+    oportunidad_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> Oportunidad:
+    """El destinatario acepta: la oportunidad pasa a ser suya."""
+    op = _get_op(db, oportunidad_id)
+    if op.transferencia_para_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Esta transferencia no es para vos.")
+    anterior = op.vendedor_id
+    op.vendedor_id = current_user.id
+    op.transferencia_para_id = None
+    cliente = op.cliente.razon_social if op.cliente else f"#{op.id}"
+    if anterior and anterior != current_user.id:
+        crear_notificacion(
+            db,
+            usuario_id=anterior,
+            mensaje=(
+                f"{current_user.nombre} aceptó la oportunidad de {cliente} "
+                "que le transferiste."
+            ),
+            link="/oportunidades",
+        )
+    db.commit()
+    db.refresh(op)
+    return op
+
+
+@router.post("/{oportunidad_id}/transferir/rechazar", response_model=OportunidadRead)
+def rechazar_transferencia(
+    oportunidad_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> Oportunidad:
+    """El destinatario rechaza: la transferencia se cancela y vuelve al vendedor."""
+    op = _get_op(db, oportunidad_id)
+    if op.transferencia_para_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Esta transferencia no es para vos.")
+    op.transferencia_para_id = None
+    cliente = op.cliente.razon_social if op.cliente else f"#{op.id}"
+    if op.vendedor_id and op.vendedor_id != current_user.id:
+        crear_notificacion(
+            db,
+            usuario_id=op.vendedor_id,
+            mensaje=(
+                f"{current_user.nombre} rechazó la oportunidad de {cliente} "
+                "que le transferiste."
+            ),
+            link="/oportunidades",
+        )
+    db.commit()
+    db.refresh(op)
+    return op
 
 
 @router.get("/{oportunidad_id}", response_model=OportunidadRead)

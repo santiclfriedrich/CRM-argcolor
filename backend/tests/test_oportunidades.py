@@ -119,6 +119,69 @@ def test_get_404(client: TestClient) -> None:
     assert client.get("/api/v1/oportunidades/999").status_code == 404
 
 
+def _sembrar_usuario2() -> Usuario:
+    with TestingSessionLocal() as db:
+        if not db.get(Usuario, 2):
+            db.add(Usuario(id=2, email="v2@argentinacolor.com", nombre="Vendedor Dos", activo=True))
+            db.commit()
+    return Usuario(id=2, email="v2@argentinacolor.com", nombre="Vendedor Dos", activo=True)
+
+
+def test_transferir_aceptar(client: TestClient) -> None:
+    u2 = _sembrar_usuario2()
+    op_id = client.post(
+        "/api/v1/oportunidades", json={"cliente_id": 1, "vendedor_id": 1}
+    ).json()["id"]
+
+    # Usuario 1 la transfiere a usuario 2.
+    r = client.post(f"/api/v1/oportunidades/{op_id}/transferir", json={"a_usuario_id": 2})
+    assert r.status_code == 200
+    assert r.json()["transferencia_para"]["id"] == 2
+
+    # Sale de las "Mías" del que transfiere (usuario 1).
+    mias_u1 = client.get("/api/v1/oportunidades", params={"solo_mias": True}).json()
+    assert all(o["id"] != op_id for o in mias_u1)
+
+    # Como usuario 2: la ve en pendientes y la acepta.
+    app.dependency_overrides[get_current_user] = lambda: u2
+    pend = client.get("/api/v1/oportunidades/transferencias-pendientes").json()
+    assert [o["id"] for o in pend] == [op_id]
+
+    r2 = client.post(f"/api/v1/oportunidades/{op_id}/transferir/aceptar")
+    assert r2.status_code == 200
+    assert r2.json()["vendedor"]["id"] == 2
+    assert r2.json()["transferencia_para"] is None
+
+    # Ahora es de las "Mías" de usuario 2.
+    mias_u2 = client.get("/api/v1/oportunidades", params={"solo_mias": True}).json()
+    assert any(o["id"] == op_id for o in mias_u2)
+
+
+def test_transferir_rechazar_vuelve_al_vendedor(client: TestClient) -> None:
+    u2 = _sembrar_usuario2()
+    op_id = client.post(
+        "/api/v1/oportunidades", json={"cliente_id": 1, "vendedor_id": 1}
+    ).json()["id"]
+    client.post(f"/api/v1/oportunidades/{op_id}/transferir", json={"a_usuario_id": 2})
+
+    app.dependency_overrides[get_current_user] = lambda: u2
+    r = client.post(f"/api/v1/oportunidades/{op_id}/transferir/rechazar")
+    assert r.status_code == 200
+    assert r.json()["transferencia_para"] is None
+    assert r.json()["vendedor"]["id"] == 1  # sigue siendo del vendedor original
+
+    # Usuario 2 ya no la tiene pendiente.
+    assert client.get("/api/v1/oportunidades/transferencias-pendientes").json() == []
+
+
+def test_transferir_a_uno_mismo_rechazado(client: TestClient) -> None:
+    op_id = client.post(
+        "/api/v1/oportunidades", json={"cliente_id": 1, "vendedor_id": 1}
+    ).json()["id"]
+    r = client.post(f"/api/v1/oportunidades/{op_id}/transferir", json={"a_usuario_id": 1})
+    assert r.status_code == 400
+
+
 def test_eliminar_multiples(client: TestClient) -> None:
     a = client.post("/api/v1/oportunidades", json={"cliente_id": 1}).json()["id"]
     b = client.post("/api/v1/oportunidades", json={"cliente_id": 1}).json()["id"]

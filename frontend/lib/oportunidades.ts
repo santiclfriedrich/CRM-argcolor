@@ -16,7 +16,43 @@ const BASE = "/api/v1/oportunidades";
 export const oportunidadKeys = {
   all: ["oportunidades"] as const,
   detail: (id: number) => ["oportunidades", "detail", id] as const,
+  pendientes: ["oportunidades", "transferencias-pendientes"] as const,
 };
+
+// Transferencias pendientes hacia el usuario logueado (para el indicador).
+export function useTransferenciasPendientes() {
+  return useQuery({
+    queryKey: oportunidadKeys.pendientes,
+    queryFn: async () =>
+      (await api.get<Oportunidad[]>(`${BASE}/transferencias-pendientes`)).data,
+  });
+}
+
+// Transferir una oportunidad a otro vendedor (queda pendiente hasta que acepte).
+export function useTransferirOportunidad() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, aUsuarioId }: { id: number; aUsuarioId: number }) =>
+      (await api.post<Oportunidad>(`${BASE}/${id}/transferir`, { a_usuario_id: aUsuarioId })).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: oportunidadKeys.all });
+      qc.invalidateQueries({ queryKey: oportunidadKeys.pendientes });
+    },
+  });
+}
+
+// Aceptar / rechazar una transferencia recibida.
+export function useResolverTransferencia() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, accion }: { id: number; accion: "aceptar" | "rechazar" }) =>
+      (await api.post<Oportunidad>(`${BASE}/${id}/transferir/${accion}`)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: oportunidadKeys.all });
+      qc.invalidateQueries({ queryKey: oportunidadKeys.pendientes });
+    },
+  });
+}
 
 // Etiqueta legible + color por estado (Tailwind). Orden = flujo del ciclo comercial.
 export const ESTADOS: { value: EstadoOportunidad; label: string; color: string }[] = [
