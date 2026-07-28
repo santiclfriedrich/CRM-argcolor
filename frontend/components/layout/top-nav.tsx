@@ -9,6 +9,7 @@ import {
   ListChecks,
   LogOut,
   Menu,
+  NotebookPen,
   Settings,
   Target,
   UsersRound,
@@ -33,6 +34,7 @@ const NAV = [
   { href: "/solicitudes", label: "Compras", icon: ClipboardList },
   { href: "/presupuestos", label: "Presupuestos", icon: FileText },
   { href: "/tareas", label: "Tareas", icon: ListChecks },
+  { href: "/notas", label: "Notas", icon: NotebookPen },
   { href: "/configuracion", label: "Configuración", icon: Settings },
 ];
 

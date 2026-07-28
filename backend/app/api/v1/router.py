@@ -10,6 +10,7 @@ from app.api.v1 import (
     dominios,
     health,
     mails,
+    notas,
     notificaciones,
     oportunidades,
     presupuestos,
@@ -33,6 +34,7 @@ api_router.include_router(search.router)
 api_router.include_router(tareas.router)
 api_router.include_router(solicitudes.router)
 api_router.include_router(mails.router)
+api_router.include_router(notas.router)
 api_router.include_router(notificaciones.router)
 api_router.include_router(config.router)
 api_router.include_router(sync_gbp.router)
