@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 
@@ -24,8 +24,13 @@ interface ModalProps {
   size?: ModalSize;
 }
 
-// Diálogo modal liviano basado en estado (sin Radix). Cierra con Escape o backdrop.
+// Diálogo modal liviano basado en estado (sin Radix). Cierra con Escape o con un
+// clic en el fondo. Para no perder datos por accidente, el clic del fondo solo
+// cierra si empezó Y terminó ahí (no cuando arrastrás una selección desde adentro
+// y soltás afuera).
 export function Modal({ open, onClose, title, children, size = "lg" }: ModalProps) {
+  const pressStartedOnBackdrop = useRef(false);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -40,12 +45,20 @@ export function Modal({ open, onClose, title, children, size = "lg" }: ModalProp
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={onClose}
+      onMouseDown={(e) => {
+        pressStartedOnBackdrop.current = e.target === e.currentTarget;
+      }}
+      onClick={(e) => {
+        // Solo cierra si el gesto empezó y terminó en el fondo (no un arrastre
+        // que arrancó dentro de un campo).
+        if (e.target === e.currentTarget && pressStartedOnBackdrop.current) {
+          onClose();
+        }
+      }}
       role="presentation"
     >
       <div
         className={`flex max-h-[85vh] w-full flex-col overflow-hidden rounded-2xl bg-surface shadow-soft ring-1 ring-line ${SIZE[size]}`}
-        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={title}
