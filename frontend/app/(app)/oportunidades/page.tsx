@@ -604,7 +604,7 @@ export default function OportunidadesPage() {
               className={cn(
                 "rounded-md px-3 py-1 text-sm font-medium transition-colors",
                 Boolean(filtros.solo_mias) === opt.value
-                  ? "bg-surface text-ink shadow-sm"
+                  ? "bg-accent text-white shadow-sm"
                   : "text-ink-2 hover:text-ink",
               )}
             >
