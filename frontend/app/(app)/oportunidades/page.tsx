@@ -627,8 +627,8 @@ export default function OportunidadesPage() {
               className={cn(
                 "rounded-md px-3 py-1 text-sm font-medium transition-colors",
                 periodoModo === opt.value
-                  ? "bg-surface text-ink shadow-sm"
-                  : "text-ink-2 hover:text-ink",
+                  ? "bg-navy text-white"
+                  : "text-ink-2 hover:bg-surface",
               )}
             >
               {opt.label}
@@ -638,22 +638,27 @@ export default function OportunidadesPage() {
 
         {/* Detalle del período según el modo */}
         {periodoModo === "mes" && (
-          <div className="inline-flex items-center gap-1.5">
-            <Button variant="outline" size="icon" onClick={() => cambiarMes(-1)} aria-label="Mes anterior">
+          <div className="inline-flex items-center rounded-lg border border-line bg-surface2 p-0.5">
+            <button
+              type="button"
+              onClick={() => cambiarMes(-1)}
+              aria-label="Mes anterior"
+              className="rounded-md p-1.5 text-ink-2 transition-colors hover:bg-surface hover:text-ink"
+            >
               <ChevronLeft size={16} />
-            </Button>
-            <span className="min-w-[120px] text-center text-sm font-semibold capitalize text-ink">
+            </button>
+            <span className="min-w-[130px] px-1 text-center text-sm font-semibold capitalize text-ink">
               {labelMes}
             </span>
-            <Button
-              variant="outline"
-              size="icon"
+            <button
+              type="button"
               onClick={() => cambiarMes(1)}
               disabled={esMesActual}
               aria-label="Mes siguiente"
+              className="rounded-md p-1.5 text-ink-2 transition-colors hover:bg-surface hover:text-ink disabled:pointer-events-none disabled:opacity-40"
             >
               <ChevronRight size={16} />
-            </Button>
+            </button>
           </div>
         )}
         {periodoModo === "rango" && (
