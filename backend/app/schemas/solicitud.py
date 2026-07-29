@@ -23,6 +23,9 @@ class SolicitudCreate(SolicitudBase):
     # Grupo de destinatarios de Compras elegido (del usuario). Si es None, se
     # usa el grupo default del usuario; si no tiene, el destinatario global.
     grupo_compras_id: int | None = None
+    # Refs de adjuntos de la oportunidad a incluir en el mail a Compras
+    # ("op:<id>" / "mail:<id>"). Lo elige el usuario en el modal.
+    adjuntos_oportunidad: list[str] = []
 
 
 class SolicitudUpdate(BaseModel):

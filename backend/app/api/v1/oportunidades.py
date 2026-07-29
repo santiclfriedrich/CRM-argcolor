@@ -232,6 +232,28 @@ def sugerencia_compras(
     return SugerenciaCompras(requerimiento=sugerir_requerimiento(db, oportunidad_id))
 
 
+class AdjuntoRef(BaseModel):
+    ref: str
+    filename: str
+    mime_type: str
+
+
+@router.get("/{oportunidad_id}/adjuntos-compras", response_model=list[AdjuntoRef])
+def adjuntos_para_compras(
+    oportunidad_id: int,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> list[dict]:
+    """Archivos ya adjuntos a la oportunidad (subidos + los que llegaron por
+    mail) que se pueden incluir en el pedido a Compras."""
+    from app.services.solicitudes import adjuntos_de_oportunidad
+
+    op = db.get(Oportunidad, oportunidad_id)
+    if op is None:
+        raise NotFoundError("Oportunidad no encontrada")
+    return adjuntos_de_oportunidad(db, op)
+
+
 @router.post("/{oportunidad_id}/comentarios", response_model=OportunidadRead)
 def agregar_comentario(
     oportunidad_id: int,

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
 import type {
+  AdjuntoCompras,
   EstadoOportunidad,
   Mail,
   Oportunidad,
@@ -18,6 +19,17 @@ export const oportunidadKeys = {
   detail: (id: number) => ["oportunidades", "detail", id] as const,
   pendientes: ["oportunidades", "transferencias-pendientes"] as const,
 };
+
+// Adjuntos ya cargados a la oportunidad (subidos + de mails) que se pueden
+// incluir en el pedido a Compras.
+export function useAdjuntosCompras(oportunidadId: number) {
+  return useQuery({
+    queryKey: [...oportunidadKeys.detail(oportunidadId), "adjuntos-compras"],
+    queryFn: async () =>
+      (await api.get<AdjuntoCompras[]>(`${BASE}/${oportunidadId}/adjuntos-compras`)).data,
+    enabled: oportunidadId > 0,
+  });
+}
 
 // Transferencias pendientes hacia el usuario logueado (para el indicador).
 export function useTransferenciasPendientes() {

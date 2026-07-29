@@ -308,7 +308,15 @@ export type SolicitudCreate = {
   presupuesto_gbp_referencia?: string | null;
   ccs_extra?: string[] | null;
   grupo_compras_id?: number | null;
+  // Refs de adjuntos de la oportunidad a incluir ("op:<id>" / "mail:<id>").
+  adjuntos_oportunidad?: string[];
 };
+
+export interface AdjuntoCompras {
+  ref: string;
+  filename: string;
+  mime_type: string;
+}
 export type SolicitudUpdate = Partial<Omit<SolicitudCreate, "oportunidad_id">> & {
   estado?: EstadoSolicitud;
 };

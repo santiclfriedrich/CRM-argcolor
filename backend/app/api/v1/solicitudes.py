@@ -25,6 +25,7 @@ from app.schemas.solicitud import (
 from app.services.grupos_compras import resolver_destino
 from app.services.solicitudes import (
     build_email_preview,
+    copiar_adjuntos_oportunidad,
     enviar_a_compras,
     guardar_adjuntos_solicitud,
 )
@@ -94,6 +95,7 @@ def create_solicitud(
     # Destino de Compras: grupo elegido (o el default del usuario). Se snapshotea
     # en la solicitud para no depender de que el grupo siga existiendo luego.
     grupo_id = data.pop("grupo_compras_id", None)
+    refs_adjuntos = data.pop("adjuntos_oportunidad", []) or []
     destino_to, destino_cc = resolver_destino(db, user.id, grupo_id)
     now = datetime.now(timezone.utc)
     solicitud = SolicitudCompras(
@@ -110,6 +112,9 @@ def create_solicitud(
     oportunidad.estado = EstadoOportunidad.en_compras
     oportunidad.fecha_ultimo_movimiento = now
 
+    db.flush()  # asigna solicitud.id para copiar adjuntos
+    # Copia los adjuntos de la oportunidad que el usuario dejó marcados.
+    copiar_adjuntos_oportunidad(db, solicitud, oportunidad, refs_adjuntos)
     db.commit()
     return _get_loaded(db, solicitud.id)
 

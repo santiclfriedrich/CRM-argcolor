@@ -12,6 +12,7 @@ import {
   FileText,
   Filter,
   Inbox,
+  Paperclip,
   Pencil,
   Plus,
   Search,
@@ -38,6 +39,7 @@ import { Modal } from "@/components/ui/modal";
 import {
   ESTADO_META,
   subirAdjuntosOportunidad,
+  useAdjuntosCompras,
   useBulkDeleteOportunidades,
   useCreateOportunidad,
   useDeleteOportunidad,
@@ -975,8 +977,14 @@ export default function OportunidadesPage() {
 function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad; onClose: () => void }) {
   const router = useRouter();
   const { data: sugerencia, isLoading } = useSugerenciaCompras(oportunidad.id);
+  const { data: adjuntosOp } = useAdjuntosCompras(oportunidad.id);
   const crearYEnviar = useCrearYEnviarSolicitud();
   const cliente = oportunidad.cliente?.razon_social ?? `#${oportunidad.id}`;
+
+  // Refs de adjuntos de la oportunidad que se van a incluir (por defecto todos).
+  // Se llena al llegar la lista; una "x" saca los que no quiera adjuntar.
+  const [excluidos, setExcluidos] = useState<Set<string>>(new Set());
+  const incluidos = (adjuntosOp ?? []).filter((a) => !excluidos.has(a.ref));
 
   return (
     <Modal open onClose={onClose} title={`Pedir a Compras — ${cliente}`} size="3xl">
@@ -984,6 +992,41 @@ function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad;
         <p className="text-ink-2">Cargando sugerencia…</p>
       ) : (
         <div className="space-y-3">
+          {(adjuntosOp?.length ?? 0) > 0 && (
+            <div>
+              <p className="mb-1.5 text-sm font-medium text-ink">
+                Adjuntos de la oportunidad
+              </p>
+              <div className="space-y-1">
+                {incluidos.length === 0 && (
+                  <p className="text-xs text-ink-3">
+                    No se adjuntará ninguno. (Sacaste todos.)
+                  </p>
+                )}
+                {incluidos.map((a) => (
+                  <div
+                    key={a.ref}
+                    className="flex items-center gap-2 rounded-md border border-line bg-surface2 px-2.5 py-1.5 text-sm"
+                  >
+                    <Paperclip size={13} className="shrink-0 text-ink-3" />
+                    <span className="truncate text-ink">{a.filename}</span>
+                    <button
+                      type="button"
+                      onClick={() => setExcluidos((s) => new Set(s).add(a.ref))}
+                      aria-label={`Quitar ${a.filename}`}
+                      title="No adjuntar este archivo"
+                      className="ml-auto shrink-0 rounded p-0.5 text-ink-3 hover:bg-surface3 hover:text-red-600"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-1 text-[11px] text-ink-3">
+                Se envían a Compras junto con los que agregues abajo.
+              </p>
+            </div>
+          )}
           <SolicitudForm
             isPending={crearYEnviar.isPending}
             submitLabel="Enviar a Compras"
@@ -994,7 +1037,7 @@ function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad;
             onCancel={onClose}
             onSubmit={(values, files) =>
               crearYEnviar.mutate(
-                { body: values, files },
+                { body: { ...values, adjuntos_oportunidad: incluidos.map((a) => a.ref) }, files },
                 {
                   onSuccess: () => {
                     onClose();

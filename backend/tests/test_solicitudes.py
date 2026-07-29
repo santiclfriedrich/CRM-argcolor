@@ -10,10 +10,12 @@ from sqlalchemy.pool import StaticPool
 
 from app.api.deps import get_current_user
 from app.db.base import Base
+from app.db.models.adjuntos import Adjunto
 from app.db.models.clientes import Cliente
 from app.db.models.configuracion import Configuracion
 from app.db.models.contactos_cliente import ContactoCliente
 from app.db.models.grupos_compras import GrupoCompras
+from app.db.models.mails import Mail
 from app.db.models.oportunidades import Oportunidad
 from app.db.models.respuestas_compras import RespuestaCompras
 from app.db.models.solicitudes_compras import SolicitudCompras
@@ -40,6 +42,8 @@ def client() -> Iterator[TestClient]:
         RespuestaCompras.__table__,
         Configuracion.__table__,
         GrupoCompras.__table__,
+        Mail.__table__,
+        Adjunto.__table__,
     ]
     Base.metadata.create_all(bind=engine, tables=tables)
 
@@ -93,6 +97,46 @@ def test_create_mueve_oportunidad_a_en_compras(client: TestClient) -> None:
     # Efecto colateral: la oportunidad pasó a en_compras.
     op = client.get("/api/v1/oportunidades/1").json()
     assert op["estado"] == "en_compras"
+
+
+def test_adjuntos_de_oportunidad_se_copian_a_la_solicitud(client: TestClient) -> None:
+    from app.services.storage import get_storage
+
+    # Simulamos un archivo ya adjunto a la oportunidad (subido).
+    key = "oportunidades/1/0_plano.pdf"
+    get_storage().put(key, b"%PDF-1.4 plano", "application/pdf")
+    with TestingSessionLocal() as db:
+        op = db.get(Oportunidad, 1)
+        op.archivos_adjuntos = [
+            {"id": 1, "filename": "plano.pdf", "mime_type": "application/pdf", "path": key}
+        ]
+        db.commit()
+
+    # Aparece en la lista de adjuntos para Compras.
+    disponibles = client.get("/api/v1/oportunidades/1/adjuntos-compras").json()
+    assert any(a["ref"] == "op:1" and a["filename"] == "plano.pdf" for a in disponibles)
+
+    # Al crear la solicitud incluyéndolo, se copia a la solicitud.
+    sid = client.post(
+        "/api/v1/solicitudes",
+        json={
+            "oportunidad_id": 1,
+            "requerimiento": "Cotizar según plano",
+            "adjuntos_oportunidad": ["op:1"],
+        },
+    ).json()["id"]
+
+    with TestingSessionLocal() as db:
+        sol = db.get(SolicitudCompras, sid)
+        nombres = [m["filename"] for m in (sol.archivos_adjuntos or [])]
+        assert "plano.pdf" in nombres
+
+    # Una ref inexistente no rompe la creación (se ignora).
+    r = client.post(
+        "/api/v1/solicitudes",
+        json={"oportunidad_id": 1, "requerimiento": "x", "adjuntos_oportunidad": ["op:999"]},
+    )
+    assert r.status_code == 201
 
 
 def test_email_preview_arma_asunto_y_cc(client: TestClient) -> None:

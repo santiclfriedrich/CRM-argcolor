@@ -11,12 +11,90 @@ from typing import Protocol
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.db.models.adjuntos import Adjunto
 from app.db.models.configuracion import Configuracion
 from app.db.models.mails import DireccionMail, Mail
+from app.db.models.oportunidades import Oportunidad
 from app.db.models.solicitudes_compras import EstadoSolicitud, SolicitudCompras
 from app.services.storage import get_storage
 
 _SAFE = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def adjuntos_de_oportunidad(db: Session, op: Oportunidad) -> list[dict]:
+    """Lista unificada de archivos ya adjuntos a la oportunidad, para poder
+    sumarlos al pedido a Compras. Cada item: {ref, filename, mime_type}.
+
+    - "op:<id>"  -> adjunto cargado a la oportunidad (archivos_adjuntos).
+    - "mail:<id>" -> adjunto que llegó en un mail del cliente (PDF/planilla).
+    """
+    items: list[dict] = []
+    for m in op.archivos_adjuntos or []:
+        if m.get("id") is not None and m.get("path"):
+            items.append(
+                {
+                    "ref": f"op:{m['id']}",
+                    "filename": m.get("filename") or "adjunto",
+                    "mime_type": m.get("mime_type") or "application/octet-stream",
+                }
+            )
+    adjuntos_mail = db.scalars(
+        select(Adjunto)
+        .join(Mail, Adjunto.mail_id == Mail.id)
+        .where(Mail.oportunidad_id == op.id, Adjunto.path_storage.is_not(None))
+        .order_by(Adjunto.id.asc())
+    )
+    for a in adjuntos_mail:
+        items.append(
+            {
+                "ref": f"mail:{a.id}",
+                "filename": a.nombre_archivo or "adjunto",
+                "mime_type": a.mime_type or "application/octet-stream",
+            }
+        )
+    return items
+
+
+def _leer_bytes_ref(db: Session, op: Oportunidad, ref: str) -> dict | None:
+    """Resuelve una ref ('op:<id>' / 'mail:<id>') a {filename, mime_type, data}.
+    Devuelve None si no existe o no pertenece a la oportunidad."""
+    storage = get_storage()
+    tipo, _, sid = ref.partition(":")
+    if not sid.isdigit():
+        return None
+    idn = int(sid)
+    if tipo == "op":
+        meta = next(
+            (m for m in (op.archivos_adjuntos or []) if m.get("id") == idn), None
+        )
+        if not meta or not meta.get("path"):
+            return None
+        key, nombre, mime = meta["path"], meta.get("filename"), meta.get("mime_type")
+    elif tipo == "mail":
+        adj = db.get(Adjunto, idn)
+        if adj is None or not adj.path_storage:
+            return None
+        # Debe pertenecer a un mail de esta oportunidad.
+        if adj.mail is None or adj.mail.oportunidad_id != op.id:
+            return None
+        key, nombre, mime = adj.path_storage, adj.nombre_archivo, adj.mime_type
+    else:
+        return None
+    try:
+        data = storage.get(key)
+    except FileNotFoundError:
+        return None
+    return {"filename": nombre or "adjunto", "mime_type": mime, "data": data}
+
+
+def copiar_adjuntos_oportunidad(
+    db: Session, solicitud: SolicitudCompras, op: Oportunidad, refs: list[str]
+) -> None:
+    """Copia a la solicitud los adjuntos de la oportunidad indicados por `refs`
+    (para que viajen en el mail a Compras)."""
+    archivos = [x for r in refs if (x := _leer_bytes_ref(db, op, r))]
+    if archivos:
+        guardar_adjuntos_solicitud(db, solicitud, archivos)
 
 
 def guardar_adjuntos_solicitud(
