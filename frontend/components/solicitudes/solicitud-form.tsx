@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
 import { ClientePicker } from "@/components/clientes/cliente-picker";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,8 @@ interface Props {
   // Textos del botón de submit (ej. "Enviar a Compras" cuando además se envía).
   submitLabel?: string;
   pendingLabel?: string;
+  // Contenido extra debajo del input de adjuntos (ej. archivos de la oportunidad).
+  adjuntosExtra?: ReactNode;
 }
 
 // "a@x.com, b@y.com" -> ["a@x.com", "b@y.com"]
@@ -44,6 +46,7 @@ export function SolicitudForm({
   lockOportunidad = false,
   submitLabel = "Crear solicitud",
   pendingLabel = "Creando…",
+  adjuntosExtra,
 }: Props) {
   const { data: oportunidades } = useOportunidades();
   const { data: clientes } = useClientes();
@@ -302,6 +305,7 @@ export function SolicitudForm({
             ))}
           </ul>
         )}
+        {adjuntosExtra}
       </div>
 
       <div className="flex justify-end gap-2 pt-2">

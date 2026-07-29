@@ -992,41 +992,6 @@ function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad;
         <p className="text-ink-2">Cargando sugerencia…</p>
       ) : (
         <div className="space-y-3">
-          {(adjuntosOp?.length ?? 0) > 0 && (
-            <div>
-              <p className="mb-1.5 text-sm font-medium text-ink">
-                Adjuntos de la oportunidad
-              </p>
-              <div className="space-y-1">
-                {incluidos.length === 0 && (
-                  <p className="text-xs text-ink-3">
-                    No se adjuntará ninguno. (Sacaste todos.)
-                  </p>
-                )}
-                {incluidos.map((a) => (
-                  <div
-                    key={a.ref}
-                    className="flex items-center gap-2 rounded-md border border-line bg-surface2 px-2.5 py-1.5 text-sm"
-                  >
-                    <Paperclip size={13} className="shrink-0 text-ink-3" />
-                    <span className="truncate text-ink">{a.filename}</span>
-                    <button
-                      type="button"
-                      onClick={() => setExcluidos((s) => new Set(s).add(a.ref))}
-                      aria-label={`Quitar ${a.filename}`}
-                      title="No adjuntar este archivo"
-                      className="ml-auto shrink-0 rounded p-0.5 text-ink-3 hover:bg-surface3 hover:text-red-600"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-1 text-[11px] text-ink-3">
-                Se envían a Compras junto con los que agregues abajo.
-              </p>
-            </div>
-          )}
           <SolicitudForm
             isPending={crearYEnviar.isPending}
             submitLabel="Enviar a Compras"
@@ -1035,6 +1000,30 @@ function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad;
             defaultRequerimiento={sugerencia?.requerimiento ?? ""}
             lockOportunidad
             onCancel={onClose}
+            adjuntosExtra={
+              incluidos.length > 0 ? (
+                <ul className="mt-2 space-y-1">
+                  {incluidos.map((a) => (
+                    <li
+                      key={a.ref}
+                      className="flex items-center gap-2 rounded-md bg-surface2 px-2.5 py-1 text-xs text-ink-2"
+                    >
+                      <Paperclip size={12} className="shrink-0 text-ink-3" />
+                      <span className="truncate">{a.filename}</span>
+                      <button
+                        type="button"
+                        onClick={() => setExcluidos((s) => new Set(s).add(a.ref))}
+                        aria-label={`Quitar ${a.filename}`}
+                        title="No adjuntar este archivo"
+                        className="ml-auto shrink-0 text-ink-3 hover:text-red-600"
+                      >
+                        Quitar
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null
+            }
             onSubmit={(values, files) =>
               crearYEnviar.mutate(
                 { body: { ...values, adjuntos_oportunidad: incluidos.map((a) => a.ref) }, files },
