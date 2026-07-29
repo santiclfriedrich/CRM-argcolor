@@ -39,7 +39,7 @@ export default function CuentasPage() {
   });
 
   return (
-    <div>
+    <div className="flex h-full flex-col">
       <div className="flex items-center gap-3">
         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-white">
           <Building2 size={18} />
@@ -79,8 +79,8 @@ export default function CuentasPage() {
             </p>
           </div>
 
-          <div className="mt-3 overflow-x-auto rounded-lg border border-line">
-            <table className="w-full text-sm">
+          <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-line">
+            <table className="w-full text-sm [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:border-b [&_thead_th]:border-line [&_thead_th]:bg-surface2">
               <thead className="bg-surface2 text-left text-xs uppercase tracking-wide text-ink-2">
                 <tr>
                   <th className="w-10 px-3 py-2 font-medium">#</th>

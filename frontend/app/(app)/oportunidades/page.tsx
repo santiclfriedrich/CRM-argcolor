@@ -614,7 +614,7 @@ export default function OportunidadesPage() {
     setFiltros((f) => ({ ...f, ...patch }));
 
   return (
-    <div>
+    <div className="flex h-full flex-col">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-ink">Oportunidades</h1>
         <Button onClick={() => setCreating(true)}>
@@ -774,8 +774,8 @@ export default function OportunidadesPage() {
       )}
 
       {data && (
-        <div className="mt-4 overflow-x-auto rounded-lg border border-line">
-          <table className="w-full text-sm">
+        <div className="mt-4 min-h-0 flex-1 overflow-auto rounded-lg border border-line">
+          <table className="w-full text-sm [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:border-b [&_thead_th]:border-line [&_thead_th]:bg-surface2">
             <thead className="bg-surface2 text-left text-ink-2">
               <tr className="whitespace-nowrap">
                 <th className="px-2 py-1.5">
@@ -873,7 +873,7 @@ export default function OportunidadesPage() {
                     <span
                       className={
                         o.estado === "confirmada" && o.fecha_limite
-                          ? "font-semibold text-green-600"
+                          ? "font-semibold text-yellow-600"
                           : estaVencida(o)
                           ? "font-semibold text-red-600"
                           : "text-ink-2"

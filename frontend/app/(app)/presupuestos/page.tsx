@@ -56,7 +56,7 @@ export default function PresupuestosPage() {
   };
 
   return (
-    <div>
+    <div className="flex h-full flex-col">
       <h1 className="text-2xl font-bold text-ink">Presupuestos</h1>
       <p className="mt-1 text-sm text-ink-2">
         Cotizaciones armadas en el CRM. Para crear una nueva, entrá a una oportunidad y usá
@@ -90,8 +90,8 @@ export default function PresupuestosPage() {
       {isError && <p className="mt-4 text-red-600">No se pudo cargar.</p>}
 
       {data && (
-        <div className="mt-6 overflow-hidden rounded-lg border border-line">
-          <table className="w-full text-sm">
+        <div className="mt-6 min-h-0 flex-1 overflow-auto rounded-lg border border-line">
+          <table className="w-full text-sm [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:border-b [&_thead_th]:border-line [&_thead_th]:bg-surface2">
             <thead className="bg-surface2 text-left text-ink-2">
               <tr>
                 <th className="px-4 py-2 font-medium">Código</th>

@@ -53,7 +53,7 @@ export default function SolicitudesPage() {
   );
 
   return (
-    <div>
+    <div className="flex h-full flex-col">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-ink">Solicitudes a Compras</h1>
         <Button onClick={() => setCreating(true)}>
@@ -92,8 +92,8 @@ export default function SolicitudesPage() {
       )}
 
       {data && (
-        <div className="mt-6 overflow-hidden rounded-lg border border-line">
-          <table className="w-full text-sm">
+        <div className="mt-6 min-h-0 flex-1 overflow-auto rounded-lg border border-line">
+          <table className="w-full text-sm [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:border-b [&_thead_th]:border-line [&_thead_th]:bg-surface2">
             <thead className="bg-surface2 text-left text-ink-2">
               <tr>
                 <th className="px-4 py-2 font-medium">ID</th>
