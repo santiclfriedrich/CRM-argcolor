@@ -297,7 +297,7 @@ export function SolicitudForm({
                 <button
                   type="button"
                   onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
-                  className="ml-2 shrink-0 text-ink-3 hover:text-red-600"
+                  className="ml-2 shrink-0 text-ink-3 transition-colors hover:text-red-600"
                 >
                   Quitar
                 </button>

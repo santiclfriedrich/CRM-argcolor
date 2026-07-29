@@ -1015,7 +1015,7 @@ function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad;
                         onClick={() => setExcluidos((s) => new Set(s).add(a.ref))}
                         aria-label={`Quitar ${a.filename}`}
                         title="No adjuntar este archivo"
-                        className="ml-auto shrink-0 text-ink-3 hover:text-red-600"
+                        className="ml-auto shrink-0 text-ink-3 transition-colors hover:text-red-600"
                       >
                         Quitar
                       </button>
