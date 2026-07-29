@@ -278,6 +278,29 @@ function FiltroColumna({
 
 const CERRADOS: EstadoOportunidad[] = ["ganada", "perdida"];
 
+// Punto de estado junto al #id:
+//   rojo    = sin cerrar (default)
+//   amarillo = confirmada / pendiente
+//   verde   = pagada ("ganada")
+//   sin punto = perdida ("No avanzó")
+function PuntoEstado({ estado }: { estado: EstadoOportunidad }) {
+  let color: string | null = "bg-red-500";
+  let title = "Sin cerrar";
+  if (estado === "ganada") {
+    color = "bg-green-500";
+    title = "Pago";
+  } else if (estado === "confirmada") {
+    color = "bg-yellow-500";
+    title = "Confirmada / pendiente";
+  } else if (estado === "perdida") {
+    color = null;
+  }
+  if (!color) return null;
+  return (
+    <span className={`h-1.5 w-1.5 rounded-full ${color}`} title={title} aria-label={title} />
+  );
+}
+
 // Índice de mes absoluto (año*12+mes) para comparar meses fácilmente.
 const idxMes = (d: Date): number => d.getFullYear() * 12 + d.getMonth();
 
@@ -801,13 +824,7 @@ export default function OportunidadesPage() {
                     <span className="inline-flex items-center gap-1.5 leading-none">
                       {/* Slot fijo para el punto: así los números arrancan siempre alineados. */}
                       <span className="flex h-1.5 w-1.5 shrink-0 items-center justify-center">
-                        {!CERRADOS.includes(o.estado) && (
-                          <span
-                            className="h-1.5 w-1.5 rounded-full bg-red-500"
-                            title="Sin cerrar"
-                            aria-label="Sin cerrar"
-                          />
-                        )}
+                        <PuntoEstado estado={o.estado} />
                       </span>
                       <span className="leading-none">#{o.id}</span>
                     </span>
@@ -853,7 +870,15 @@ export default function OportunidadesPage() {
                     {fmtDate(o.fecha_enviado_cliente)}
                   </td>
                   <td className="whitespace-nowrap px-2 py-1.5">
-                    <span className={estaVencida(o) ? "font-semibold text-red-600" : "text-ink-2"}>
+                    <span
+                      className={
+                        o.estado === "confirmada" && o.fecha_limite
+                          ? "font-semibold text-green-600"
+                          : estaVencida(o)
+                          ? "font-semibold text-red-600"
+                          : "text-ink-2"
+                      }
+                    >
                       {fmtDate(o.fecha_limite)}
                     </span>
                   </td>
