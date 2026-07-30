@@ -220,7 +220,7 @@ export function TareaModal({ open, onClose, tarea, fechaPorDefecto }: Props) {
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={esEdicion ? "Editar tarea" : "Nueva tarea"} size="3xl">
+    <Modal open={open} onClose={onClose} title={esEdicion ? "Editar tarea" : "Nueva tarea"} size="5xl">
       <form onSubmit={submit} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
