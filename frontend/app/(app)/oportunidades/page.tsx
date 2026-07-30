@@ -16,7 +16,6 @@ import {
   Pencil,
   Plus,
   Search,
-  Sparkles,
   Trash2,
   X,
 } from "lucide-react";
@@ -1156,7 +1155,6 @@ function PropuestasIndicator() {
         onClick={() => setAbierto(true)}
         className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface2 px-3 py-1 text-sm font-medium text-ink hover:bg-surface"
       >
-        <Sparkles size={15} className="text-navy" />
         Propuestas
         <span className="ml-0.5 rounded-full bg-navy px-1.5 text-xs font-semibold text-white">
           {propuestas.length}

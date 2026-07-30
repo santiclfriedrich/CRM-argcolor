@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import { Button } from "@/components/ui/button";
 
@@ -40,9 +41,11 @@ export function Modal({ open, onClose, title, children, size = "lg" }: ModalProp
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  // Portal al body: así el modal cubre toda la pantalla aunque un ancestro tenga
+  // transform (que si no, "atrapa" al position:fixed y lo achica).
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onMouseDown={(e) => {
@@ -77,6 +80,7 @@ export function Modal({ open, onClose, title, children, size = "lg" }: ModalProp
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
