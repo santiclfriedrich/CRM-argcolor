@@ -18,6 +18,9 @@ class CondicionPago(str, enum.Enum):
     dias_60 = "60"
     dias_120 = "120"
     transferencia = "Transferencia"
+    cheque_ant_15 = "Cheque Anticipado a Entrega - 15 días"
+    cheque_ant_30 = "Cheque Anticipado a Entrega - 30 días"
+    cheque_ant_60 = "Cheque Anticipado a Entrega - 60 días"
 
 
 class EstadoSolicitud(str, enum.Enum):

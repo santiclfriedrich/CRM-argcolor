@@ -202,7 +202,9 @@ export function SolicitudForm({
               { value: "", label: "— Sin especificar —" },
               ...CONDICIONES_PAGO.map((c) => ({
                 value: c,
-                label: c === "Transferencia" ? c : `${c} días`,
+                // A los numéricos ("15", "30"…) se les agrega "días"; el resto
+                // ya trae su texto completo.
+                label: /^\d+$/.test(c) ? `${c} días` : c,
               })),
             ]}
           />

@@ -226,7 +226,16 @@ export interface SearchResults {
 }
 
 // ---- Solicitudes a Compras ----
-export type CondicionPago = "15" | "30" | "45" | "60" | "120" | "Transferencia";
+export type CondicionPago =
+  | "15"
+  | "30"
+  | "45"
+  | "60"
+  | "120"
+  | "Transferencia"
+  | "Cheque Anticipado a Entrega - 15 días"
+  | "Cheque Anticipado a Entrega - 30 días"
+  | "Cheque Anticipado a Entrega - 60 días";
 export type EstadoSolicitud = "enviada" | "respondida" | "cerrada";
 
 interface SolicitudOportunidadMini {

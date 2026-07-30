@@ -20,7 +20,17 @@ export const solicitudKeys = {
   detail: (id: number) => ["solicitudes", id] as const,
 };
 
-export const CONDICIONES_PAGO: CondicionPago[] = ["15", "30", "45", "60", "120", "Transferencia"];
+export const CONDICIONES_PAGO: CondicionPago[] = [
+  "15",
+  "30",
+  "45",
+  "60",
+  "120",
+  "Transferencia",
+  "Cheque Anticipado a Entrega - 15 días",
+  "Cheque Anticipado a Entrega - 30 días",
+  "Cheque Anticipado a Entrega - 60 días",
+];
 
 export const ESTADO_SOLICITUD_META: Record<EstadoSolicitud, { label: string; color: string }> = {
   enviada: { label: "Enviada", color: "bg-amber-100 text-amber-700" },
