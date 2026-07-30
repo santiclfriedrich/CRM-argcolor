@@ -39,6 +39,7 @@ class ClienteMini(BaseModel):
 
     id: int
     razon_social: str
+    numero_cliente: str | None = None
 
 
 class OportunidadMini(BaseModel):

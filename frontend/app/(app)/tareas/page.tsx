@@ -102,7 +102,12 @@ export default function TareasPage() {
                           {t.titulo}
                         </span>
                         <span className="block truncate text-xs text-ink-3">
-                          {t.usuario?.nombre ?? "—"} · {fmtFecha(t.fecha_vencimiento)}
+                          {t.cliente
+                            ? `${t.cliente.razon_social}${
+                                t.cliente.numero_cliente ? ` (${t.cliente.numero_cliente})` : ""
+                              }`
+                            : (t.usuario?.nombre ?? "—")}{" "}
+                          · {fmtFecha(t.fecha_vencimiento)}
                         </span>
                       </span>
                       {t.recordatorio && (
@@ -154,7 +159,11 @@ function DetalleTarea({ tarea, onModificar }: { tarea: Tarea; onModificar: () =>
   const toggle = () =>
     actualizar.mutate({ id: tarea.id, body: { completada: !tarea.completada } });
 
-  const relacionado = tarea.cliente?.razon_social ?? tarea.oportunidad?.asunto ?? null;
+  const relacionado = tarea.cliente
+    ? `${tarea.cliente.razon_social}${
+        tarea.cliente.numero_cliente ? ` · N° ${tarea.cliente.numero_cliente}` : ""
+      }`
+    : (tarea.oportunidad?.asunto ?? null);
 
   return (
     <div className="rounded-lg border border-line bg-surface shadow-sm">

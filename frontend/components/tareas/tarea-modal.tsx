@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 
+import { ClientePicker } from "@/components/clientes/cliente-picker";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
@@ -170,36 +171,29 @@ export function TareaModal({ open, onClose, tarea, fechaPorDefecto }: Props) {
         </div>
 
         {/* Relacionado con: cuenta y/o oportunidad */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label htmlFor="t-cliente">Cuenta relacionada</Label>
-            <SelectMenu
-              id="t-cliente"
-              value={clienteId != null ? String(clienteId) : ""}
-              onChange={(v) => setClienteId(v ? Number(v) : null)}
-              placeholder="— Ninguna —"
-              options={[
-                { value: "", label: "— Ninguna —" },
-                ...(clientes ?? []).map((c) => ({ value: String(c.id), label: c.razon_social })),
-              ]}
-            />
-          </div>
-          <div>
-            <Label htmlFor="t-oportunidad">Oportunidad relacionada</Label>
-            <SelectMenu
-              id="t-oportunidad"
-              value={oportunidadId != null ? String(oportunidadId) : ""}
-              onChange={(v) => setOportunidadId(v ? Number(v) : null)}
-              placeholder="— Ninguna —"
-              options={[
-                { value: "", label: "— Ninguna —" },
-                ...(oportunidades ?? []).map((o) => ({
-                  value: String(o.id),
-                  label: `#${o.id} · ${o.cliente?.razon_social ?? o.asunto ?? "s/asunto"}`,
-                })),
-              ]}
-            />
-          </div>
+        <div>
+          <Label>Cuenta relacionada</Label>
+          <ClientePicker
+            clientes={clientes ?? []}
+            value={clienteId}
+            onChange={setClienteId}
+          />
+        </div>
+        <div>
+          <Label htmlFor="t-oportunidad">Oportunidad relacionada</Label>
+          <SelectMenu
+            id="t-oportunidad"
+            value={oportunidadId != null ? String(oportunidadId) : ""}
+            onChange={(v) => setOportunidadId(v ? Number(v) : null)}
+            placeholder="— Ninguna —"
+            options={[
+              { value: "", label: "— Ninguna —" },
+              ...(oportunidades ?? []).map((o) => ({
+                value: String(o.id),
+                label: `#${o.id} · ${o.cliente?.razon_social ?? o.asunto ?? "s/asunto"}`,
+              })),
+            ]}
+          />
         </div>
 
         {/* Otra información: recordatorio */}

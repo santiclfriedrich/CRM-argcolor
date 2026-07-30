@@ -19,7 +19,7 @@ export interface Tarea {
   updated_at: string;
   oportunidad_id: number | null;
   cliente_id: number | null;
-  cliente: { id: number; razon_social: string } | null;
+  cliente: { id: number; razon_social: string; numero_cliente: string | null } | null;
   oportunidad: { id: number; asunto: string | null } | null;
   usuario: { id: number; nombre: string } | null;
 }
