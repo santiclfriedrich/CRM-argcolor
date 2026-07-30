@@ -33,7 +33,7 @@ function Sugerencias({
         className="fixed inset-0 z-40 cursor-default"
         onClick={onClose}
       />
-      <ul className="absolute left-0 top-[calc(100%+4px)] z-50 max-h-60 w-80 max-w-[90vw] overflow-y-auto rounded-lg border border-line bg-surface p-1 shadow-soft">
+      <ul className="absolute left-0 top-[calc(100%+4px)] z-50 max-h-60 w-[30rem] max-w-[90vw] overflow-y-auto rounded-lg border border-line bg-surface p-1 shadow-soft">
         {items.map((c) => (
           <li key={c.id}>
             <button
