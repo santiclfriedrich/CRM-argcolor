@@ -1169,16 +1169,43 @@ function PropuestasIndicator() {
 function PropuestasModal({ onClose }: { onClose: () => void }) {
   const { data } = usePropuestas();
   const resolver = useResolverPropuesta();
-  const propuestas = data ?? [];
+  const { data: session } = useSession();
+  const currentUserId = Number(session?.usuario?.id) || null;
+  const [filtro, setFiltro] = useState<"mias" | "todos">("mias");
+
+  const todas = data ?? [];
+  const mias = todas.filter((p) => p.vendedor_id === currentUserId);
+  const propuestas = filtro === "mias" ? mias : todas;
 
   return (
     <Modal open onClose={onClose} title="Propuestas de oportunidad" size="6xl">
-      <p className="mb-3 text-sm text-ink-2">
-        Mails que entraron y proponen una oportunidad. Revisá y aceptá para sumarla a
-        Oportunidades, o descartala.
-      </p>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-ink-2">
+          Mails que entraron y proponen una oportunidad. Revisá y aceptá para sumarla a
+          Oportunidades, o descartala.
+        </p>
+        <div className="inline-flex shrink-0 rounded-lg border border-line bg-surface2 p-0.5 text-sm">
+          {(["mias", "todos"] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFiltro(f)}
+              className={cn(
+                "rounded-md px-3 py-1 font-medium transition-colors",
+                filtro === f ? "bg-navy text-white" : "text-ink-2 hover:bg-surface",
+              )}
+            >
+              {f === "mias" ? `Mías (${mias.length})` : `Todos (${todas.length})`}
+            </button>
+          ))}
+        </div>
+      </div>
       {propuestas.length === 0 ? (
-        <p className="py-6 text-center text-sm text-ink-3">No hay propuestas pendientes.</p>
+        <p className="py-6 text-center text-sm text-ink-3">
+          {filtro === "mias"
+            ? "No tenés propuestas en tu casilla. Cambiá a “Todos” para ver las del equipo."
+            : "No hay propuestas pendientes."}
+        </p>
       ) : (
         <div className="space-y-4">
           {propuestas.map((p) => (

@@ -227,6 +227,7 @@ class PropuestaRead(BaseModel):
     asunto: str | None = None
     requerimiento: str | None = None
     vendedor: str | None = None
+    vendedor_id: int | None = None
     mail_de: str | None = None
     mail_para: str | None = None
     recibido_en: str | None = None  # casilla que recibió el mail
@@ -282,6 +283,7 @@ def listar_propuestas(
                 asunto=op.asunto,
                 requerimiento=op.requerimiento,
                 vendedor=op.vendedor.nombre if op.vendedor else None,
+                vendedor_id=op.vendedor_id,
                 mail_de=mail.de if mail else None,
                 mail_para=mail.para if mail else None,
                 recibido_en=recibido_en,

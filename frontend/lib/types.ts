@@ -325,6 +325,7 @@ export interface Propuesta {
   asunto: string | null;
   requerimiento: string | null;
   vendedor: string | null;
+  vendedor_id: number | null;
   mail_de: string | null;
   mail_para: string | null;
   recibido_en: string | null;
