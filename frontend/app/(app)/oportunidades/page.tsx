@@ -1330,6 +1330,7 @@ function PropuestaCard({
 function TransferenciasPendientes() {
   const { data } = useTransferenciasPendientes();
   const resolver = useResolverTransferencia();
+  const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const pendientes = data ?? [];
   if (pendientes.length === 0) return null;
@@ -1357,8 +1358,20 @@ function TransferenciasPendientes() {
             <div className="max-h-96 divide-y divide-line overflow-y-auto">
               {pendientes.map((o) => (
                 <div key={o.id} className="px-3 py-2 text-sm">
-                  <p className="font-medium text-ink">{o.cliente?.razon_social ?? `#${o.id}`}</p>
-                  {o.asunto && <p className="truncate text-xs text-ink-3">{o.asunto}</p>}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAbierto(false);
+                      router.push(`/oportunidades/${o.id}`);
+                    }}
+                    title="Ver detalle de la oportunidad"
+                    className="block w-full text-left"
+                  >
+                    <p className="truncate font-medium text-ink hover:text-accent hover:underline">
+                      {o.cliente?.razon_social ?? `#${o.id}`}
+                    </p>
+                    {o.asunto && <p className="truncate text-xs text-ink-3">{o.asunto}</p>}
+                  </button>
                   <p className="text-xs text-ink-3">De: {o.vendedor?.nombre ?? "—"}</p>
                   <div className="mt-1.5 flex gap-2">
                     <Button
