@@ -1,11 +1,12 @@
 "use client";
 
-import { Building2, Plus, Search } from "lucide-react";
+import { Building2, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { ClienteForm } from "@/components/clientes/cliente-form";
+import { ClientePicker } from "@/components/clientes/cliente-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -23,20 +24,10 @@ const cuitErrorDe = (err: unknown): string | null =>
 export default function CuentasPage() {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
-  const [q, setQ] = useState("");
   const { data, isLoading, isError } = useClientes();
   const createMut = useCreateCliente();
 
-  const termino = q.trim().toLowerCase();
-  const cuentas = (data ?? []).filter((c) => {
-    if (
-      termino &&
-      !c.razon_social.toLowerCase().includes(termino) &&
-      !(c.cuit ?? "").toLowerCase().includes(termino)
-    )
-      return false;
-    return true;
-  });
+  const cuentas = data ?? [];
 
   return (
     <div className="flex h-full flex-col">
@@ -62,16 +53,13 @@ export default function CuentasPage() {
       {data && (
         <>
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <div className="relative w-64 max-w-full">
-              <Search
-                size={15}
-                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3"
-              />
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Buscar en esta lista…"
-                className="h-9 w-full rounded-md border border-line bg-surface pl-8 pr-3 text-sm text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+            <div className="w-full max-w-xl">
+              <ClientePicker
+                clientes={cuentas}
+                value={null}
+                onChange={(id) => {
+                  if (id) router.push(`/clientes/${id}`);
+                }}
               />
             </div>
             <p className="text-sm text-ink-2">
@@ -121,7 +109,7 @@ export default function CuentasPage() {
                 {cuentas.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-4 py-6 text-center text-ink-3">
-                      {termino ? "Sin coincidencias." : "No hay cuentas todavía."}
+                      No hay cuentas todavía.
                     </td>
                   </tr>
                 )}
