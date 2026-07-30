@@ -15,11 +15,10 @@ down_revision: str | None = "f6a7b8c9d0e1"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-_NUEVOS = [
-    "Cheque Anticipado a Entrega - 15 días",
-    "Cheque Anticipado a Entrega - 30 días",
-    "Cheque Anticipado a Entrega - 60 días",
-]
+# SQLAlchemy guarda el NOMBRE del miembro del enum como label en Postgres
+# (los existentes son dias_15, transferencia, etc.), no el `value`. Por eso acá
+# agregamos los nombres, no el texto visible.
+_NUEVOS = ["cheque_ant_15", "cheque_ant_30", "cheque_ant_60"]
 
 
 def upgrade() -> None:
