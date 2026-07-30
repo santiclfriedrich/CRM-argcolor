@@ -1256,6 +1256,7 @@ function PropuestaCard({
             size="sm"
             onClick={() => resolver.mutate({ id: p.id, accion: "aceptar" })}
             disabled={resolver.isPending}
+            className="bg-green-600 text-white hover:bg-green-700"
           >
             Aceptar
           </Button>
