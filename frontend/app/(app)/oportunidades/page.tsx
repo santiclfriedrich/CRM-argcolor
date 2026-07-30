@@ -1259,7 +1259,7 @@ function PropuestaCard({
             aria-label="Aceptar"
             onClick={() => resolver.mutate({ id: p.id, accion: "aceptar" })}
             disabled={resolver.isPending}
-            className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
+            className="rounded-full border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
           >
             <Check size={16} />
           </Button>
@@ -1270,7 +1270,7 @@ function PropuestaCard({
             aria-label="Rechazar"
             onClick={() => resolver.mutate({ id: p.id, accion: "rechazar" })}
             disabled={resolver.isPending}
-            className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+            className="rounded-full border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
           >
             <X size={16} />
           </Button>
