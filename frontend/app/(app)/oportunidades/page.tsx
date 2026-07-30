@@ -1172,7 +1172,7 @@ function PropuestasModal({ onClose }: { onClose: () => void }) {
   const propuestas = data ?? [];
 
   return (
-    <Modal open onClose={onClose} title="Propuestas de oportunidad" size="5xl">
+    <Modal open onClose={onClose} title="Propuestas de oportunidad" size="6xl">
       <p className="mb-3 text-sm text-ink-2">
         Mails que entraron y proponen una oportunidad. Revisá y aceptá para sumarla a
         Oportunidades, o descartala.
