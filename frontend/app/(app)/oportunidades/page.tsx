@@ -629,7 +629,7 @@ export default function OportunidadesPage() {
       </div>
 
       {/* Controles: Mías/Todas a la izquierda; período centrado. */}
-      <div className="relative mt-3 flex flex-wrap items-center justify-center gap-3">
+      <div className="relative z-20 mt-3 flex flex-wrap items-center justify-center gap-3">
         {/* Mías / Todas (pegado a la izquierda en pantallas grandes) */}
         <div className="inline-flex rounded-lg border border-line bg-surface2 p-0.5 sm:absolute sm:left-0 sm:top-1/2 sm:-translate-y-1/2">
           {[
