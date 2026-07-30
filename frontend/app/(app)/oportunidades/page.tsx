@@ -1253,21 +1253,24 @@ function PropuestaCard({
         </div>
         <div className="flex shrink-0 gap-2">
           <Button
-            size="sm"
+            size="icon"
+            title="Aceptar"
+            aria-label="Aceptar"
             onClick={() => resolver.mutate({ id: p.id, accion: "aceptar" })}
             disabled={resolver.isPending}
             className="bg-green-600 text-white hover:bg-green-700"
           >
-            Aceptar
+            <Check size={16} />
           </Button>
           <Button
-            size="sm"
-            variant="outline"
+            size="icon"
+            title="Rechazar"
+            aria-label="Rechazar"
             onClick={() => resolver.mutate({ id: p.id, accion: "rechazar" })}
             disabled={resolver.isPending}
-            className="text-red-600"
+            className="bg-red-600 text-white hover:bg-red-700"
           >
-            Rechazar
+            <X size={16} />
           </Button>
         </div>
       </div>
