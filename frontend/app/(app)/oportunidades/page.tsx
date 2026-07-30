@@ -16,6 +16,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Sparkles,
   Trash2,
   X,
 } from "lucide-react";
@@ -44,6 +45,8 @@ import {
   useCreateOportunidad,
   useDeleteOportunidad,
   useOportunidades,
+  usePropuestas,
+  useResolverPropuesta,
   useResolverTransferencia,
   useSetIng,
   useSugerenciaCompras,
@@ -719,8 +722,9 @@ export default function OportunidadesPage() {
           {oportunidadesDelMes.length === 1 ? "oportunidad" : "oportunidades"}
         </span>
 
-        {/* Transferencias pendientes hacia mí (pegado a la derecha). */}
-        <div className="sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2">
+        {/* Propuestas + transferencias pendientes (pegado a la derecha). */}
+        <div className="flex items-center gap-2 sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2">
+          <PropuestasIndicator />
           <TransferenciasPendientes />
         </div>
       </div>
@@ -1137,6 +1141,104 @@ function TransferirModal({
 }
 
 // Indicador (toolbar) de oportunidades que otro me transfirió: aceptar/rechazar.
+// Indicador (toolbar) de oportunidades PROPUESTAS por mail auto-ingestado, para
+// revisarlas (ver mail + requerimiento) y aceptar o descartar.
+function PropuestasIndicator() {
+  const { data } = usePropuestas();
+  const [abierto, setAbierto] = useState(false);
+  const propuestas = data ?? [];
+  if (propuestas.length === 0) return null;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface2 px-3 py-1 text-sm font-medium text-ink hover:bg-surface"
+      >
+        <Sparkles size={15} className="text-navy" />
+        Propuestas
+        <span className="ml-0.5 rounded-full bg-navy px-1.5 text-xs font-semibold text-white">
+          {propuestas.length}
+        </span>
+      </button>
+      {abierto && <PropuestasModal onClose={() => setAbierto(false)} />}
+    </>
+  );
+}
+
+function PropuestasModal({ onClose }: { onClose: () => void }) {
+  const { data } = usePropuestas();
+  const resolver = useResolverPropuesta();
+  const propuestas = data ?? [];
+
+  return (
+    <Modal open onClose={onClose} title="Propuestas de oportunidad" size="3xl">
+      <p className="mb-3 text-sm text-ink-2">
+        Mails que entraron y proponen una oportunidad. Revisá y aceptá para sumarla a
+        Oportunidades, o descartala.
+      </p>
+      {propuestas.length === 0 ? (
+        <p className="py-6 text-center text-sm text-ink-3">No hay propuestas pendientes.</p>
+      ) : (
+        <div className="space-y-4">
+          {propuestas.map((p) => (
+            <div key={p.id} className="rounded-lg border border-line p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-semibold text-ink">
+                    {p.cliente ?? "Cliente por identificar"}
+                  </p>
+                  <p className="truncate text-sm text-ink-2">{p.asunto ?? "(sin asunto)"}</p>
+                  <p className="text-xs text-ink-3">De: {p.mail_de ?? "—"}</p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => resolver.mutate({ id: p.id, accion: "aceptar" })}
+                    disabled={resolver.isPending}
+                  >
+                    Aceptar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => resolver.mutate({ id: p.id, accion: "rechazar" })}
+                    disabled={resolver.isPending}
+                    className="text-red-600"
+                  >
+                    Rechazar
+                  </Button>
+                </div>
+              </div>
+              {p.requerimiento && (
+                <div className="mt-3">
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-3">
+                    Requerimiento
+                  </p>
+                  <p className="whitespace-pre-wrap rounded-md bg-surface2 p-2.5 text-sm text-ink">
+                    {p.requerimiento}
+                  </p>
+                </div>
+              )}
+              {p.mail_cuerpo && (
+                <div className="mt-3">
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-3">
+                    Mail original
+                  </p>
+                  <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-md bg-surface2 p-2.5 font-mono text-xs text-ink-2">
+                    {p.mail_cuerpo}
+                  </pre>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 function TransferenciasPendientes() {
   const { data } = useTransferenciasPendientes();
   const resolver = useResolverTransferencia();

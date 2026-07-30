@@ -383,6 +383,7 @@ def process_incoming_email(
     es_automatico: bool = False,
     referencias: list[str] | None = None,
     documentos: list[dict] | None = None,
+    revisar: bool = False,
 ) -> Mail | None:
     """Procesa un mail entrante y crea la oportunidad + el registro de mail.
 
@@ -622,6 +623,8 @@ def process_incoming_email(
         asunto=asunto,
         requerimiento=componer_requerimiento(extracted),
         fecha_pedido_cliente=(fecha or now).date(),
+        # Auto-ingestada (polling): entra como propuesta a revisar, no directo.
+        pendiente_revision=revisar,
     )
     db.add(oportunidad)
     db.flush()  # asigna oportunidad.id

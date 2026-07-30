@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user
 from app.core.exceptions import NotFoundError
+from app.db.models.mails import DireccionMail, Mail
 from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
@@ -56,7 +57,10 @@ def list_oportunidades(
     fecha de último movimiento (inclusive). Con `solo_mias=true` se limita a las
     del usuario logueado (toggle Mías/Todas). Con `usuario_id` se limita a las de
     ese vendedor (perfil de un usuario; el pipeline es compartido)."""
-    query = select(Oportunidad).options(*_RELATIONS)
+    # Las propuestas (pendientes de revisión) no aparecen acá: se revisan aparte.
+    query = select(Oportunidad).options(*_RELATIONS).where(
+        Oportunidad.pendiente_revision.is_(False)
+    )
     if usuario_id is not None:
         query = query.where(Oportunidad.vendedor_id == usuario_id)
     elif solo_mias:
@@ -207,6 +211,82 @@ def rechazar_transferencia(
     db.commit()
     db.refresh(op)
     return op
+
+
+class PropuestaRead(BaseModel):
+    """Propuesta de oportunidad (mail auto-ingestado) para revisar antes de crearla."""
+
+    id: int
+    cliente: str | None = None
+    asunto: str | None = None
+    requerimiento: str | None = None
+    vendedor: str | None = None
+    mail_de: str | None = None
+    mail_fecha: datetime | None = None
+    mail_cuerpo: str | None = None
+
+
+@router.get("/propuestas", response_model=list[PropuestaRead])
+def listar_propuestas(
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> list[PropuestaRead]:
+    """Oportunidades propuestas (pendientes de revisión), con el mail original.
+    Compartidas: las ve todo el equipo para aceptar o descartar."""
+    ops = db.scalars(
+        select(Oportunidad)
+        .options(*_RELATIONS)
+        .where(Oportunidad.pendiente_revision.is_(True))
+        .order_by(Oportunidad.id.desc())
+    ).all()
+    out: list[PropuestaRead] = []
+    for op in ops:
+        mail = db.scalar(
+            select(Mail)
+            .where(Mail.oportunidad_id == op.id, Mail.direccion == DireccionMail.entrante)
+            .order_by(Mail.id.asc())
+        )
+        out.append(
+            PropuestaRead(
+                id=op.id,
+                cliente=op.cliente.razon_social if op.cliente else None,
+                asunto=op.asunto,
+                requerimiento=op.requerimiento,
+                vendedor=op.vendedor.nombre if op.vendedor else None,
+                mail_de=mail.de if mail else None,
+                mail_fecha=mail.fecha if mail else None,
+                mail_cuerpo=mail.cuerpo if mail else None,
+            )
+        )
+    return out
+
+
+@router.post("/{oportunidad_id}/propuesta/aceptar", response_model=OportunidadRead)
+def aceptar_propuesta(
+    oportunidad_id: int,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> Oportunidad:
+    """Acepta la propuesta: deja de estar pendiente y entra al pipeline."""
+    op = _get_op(db, oportunidad_id)
+    op.pendiente_revision = False
+    op.fecha_ultimo_movimiento = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(op)
+    return op
+
+
+@router.post("/{oportunidad_id}/propuesta/rechazar", status_code=204)
+def rechazar_propuesta(
+    oportunidad_id: int,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> None:
+    """Descarta la propuesta: se elimina (y sus mails quedan marcados como
+    descartados para que el polling no los vuelva a ingresar)."""
+    op = _get_op(db, oportunidad_id)
+    eliminar_oportunidades(db, [op.id])
+    db.commit()
 
 
 @router.get("/{oportunidad_id}", response_model=OportunidadRead)

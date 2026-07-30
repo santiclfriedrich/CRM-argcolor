@@ -317,6 +317,18 @@ export interface AdjuntoCompras {
   filename: string;
   mime_type: string;
 }
+
+// Propuesta de oportunidad (mail auto-ingestado) pendiente de revisión.
+export interface Propuesta {
+  id: number;
+  cliente: string | null;
+  asunto: string | null;
+  requerimiento: string | null;
+  vendedor: string | null;
+  mail_de: string | null;
+  mail_fecha: string | null;
+  mail_cuerpo: string | null;
+}
 export type SolicitudUpdate = Partial<Omit<SolicitudCreate, "oportunidad_id">> & {
   estado?: EstadoSolicitud;
 };

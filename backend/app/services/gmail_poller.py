@@ -142,6 +142,7 @@ def poll_once(
                 es_automatico=bool(msg.get("es_automatico")),
                 referencias=msg.get("referencias"),
                 documentos=msg.get("documentos"),
+                revisar=True,  # auto-ingesta: entra como propuesta a revisar
             )
             if mail is None:  # no comercial: descartado, sin oportunidad ni respuesta
                 continue
@@ -264,6 +265,9 @@ def _maybe_acuse(db: Session, gmail: object, mail: Mail) -> None:
     - requiere aclaración -> aclaración al cliente (si aclaracion_automatica)
     """
     if not mail.de:
+        return
+    # Propuesta pendiente de revisión: no se responde nada hasta que se acepte.
+    if mail.oportunidad is not None and mail.oportunidad.pendiente_revision:
         return
     # Respuesta dentro de un hilo existente (sin datos de IA): no lleva acuse.
     if not mail.datos_extraidos_ia:

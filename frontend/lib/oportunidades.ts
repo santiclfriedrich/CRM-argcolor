@@ -7,6 +7,7 @@ import type {
   EstadoOportunidad,
   Mail,
   Oportunidad,
+  Propuesta,
   OportunidadCreate,
   OportunidadFiltros,
   OportunidadUpdate,
@@ -18,7 +19,31 @@ export const oportunidadKeys = {
   all: ["oportunidades"] as const,
   detail: (id: number) => ["oportunidades", "detail", id] as const,
   pendientes: ["oportunidades", "transferencias-pendientes"] as const,
+  propuestas: ["oportunidades", "propuestas"] as const,
 };
+
+// Propuestas pendientes de revisión (mails auto-ingestados). Compartidas.
+export function usePropuestas() {
+  return useQuery({
+    queryKey: oportunidadKeys.propuestas,
+    queryFn: async () => (await api.get<Propuesta[]>(`${BASE}/propuestas`)).data,
+    refetchInterval: 30_000,
+  });
+}
+
+// Aceptar (entra al pipeline) o rechazar (se descarta) una propuesta.
+export function useResolverPropuesta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, accion }: { id: number; accion: "aceptar" | "rechazar" }) => {
+      await api.post(`${BASE}/${id}/propuesta/${accion}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: oportunidadKeys.propuestas });
+      qc.invalidateQueries({ queryKey: oportunidadKeys.all });
+    },
+  });
+}
 
 // Adjuntos ya cargados a la oportunidad (subidos + de mails) que se pueden
 // incluir en el pedido a Compras.

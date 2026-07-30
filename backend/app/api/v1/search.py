@@ -79,7 +79,10 @@ def buscar(
     oportunidades = list(
         db.scalars(
             select(Oportunidad)
-            .where(Oportunidad.asunto.ilike(patron))
+            .where(
+                Oportunidad.asunto.ilike(patron),
+                Oportunidad.pendiente_revision.is_(False),
+            )
             .options(selectinload(Oportunidad.cliente))
             .order_by(Oportunidad.fecha_ultimo_movimiento.desc())
             .limit(_LIMIT)

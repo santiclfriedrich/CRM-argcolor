@@ -182,6 +182,78 @@ def test_transferir_a_uno_mismo_rechazado(client: TestClient) -> None:
     assert r.status_code == 400
 
 
+def _crear_propuesta(cuerpo: str = "Necesito 100kg", gmail_id: str = "gm-x") -> int:
+    """Crea una oportunidad pendiente de revisión con su mail original."""
+    from app.db.models.mails import DireccionMail, Mail
+
+    with TestingSessionLocal() as db:
+        op = Oportunidad(
+            cliente_id=1,
+            vendedor_id=1,
+            fuente="mail",
+            asunto="Pedido de prueba",
+            requerimiento="Producto: Pigmento\nCantidad: 100kg",
+            pendiente_revision=True,
+        )
+        db.add(op)
+        db.flush()
+        db.add(
+            Mail(
+                oportunidad_id=op.id,
+                gmail_message_id=gmail_id,
+                direccion=DireccionMail.entrante,
+                de="juan@bencen.com.ar",
+                asunto="Pedido de prueba",
+                cuerpo=cuerpo,
+            )
+        )
+        db.commit()
+        return op.id
+
+
+def test_propuesta_no_aparece_en_listado_pero_si_en_propuestas(client: TestClient) -> None:
+    op_id = _crear_propuesta(cuerpo="Hola, necesito cotizar 100kg de pigmento")
+
+    # No está en el listado normal…
+    lista = client.get("/api/v1/oportunidades").json()
+    assert all(o["id"] != op_id for o in lista)
+
+    # …pero sí en propuestas, con el mail y el requerimiento.
+    props = client.get("/api/v1/oportunidades/propuestas").json()
+    p = next((x for x in props if x["id"] == op_id), None)
+    assert p is not None
+    assert "100kg" in (p["mail_cuerpo"] or "")
+    assert "Pigmento" in (p["requerimiento"] or "")
+
+
+def test_propuesta_aceptar_entra_al_pipeline(client: TestClient) -> None:
+    op_id = _crear_propuesta(gmail_id="gm-aceptar")
+    assert client.post(f"/api/v1/oportunidades/{op_id}/propuesta/aceptar").status_code == 200
+
+    lista = client.get("/api/v1/oportunidades").json()
+    assert any(o["id"] == op_id for o in lista)
+    assert client.get("/api/v1/oportunidades/propuestas").json() == []
+
+
+def test_propuesta_rechazar_elimina_y_descarta_mail(client: TestClient) -> None:
+    from sqlalchemy import func, select
+
+    from app.db.models.mails_descartados import MailDescartado
+
+    op_id = _crear_propuesta(gmail_id="gm-rechazar")
+    assert client.post(f"/api/v1/oportunidades/{op_id}/propuesta/rechazar").status_code == 204
+
+    with TestingSessionLocal() as db:
+        assert db.get(Oportunidad, op_id) is None
+        # El mail queda descartado para que el polling no lo vuelva a ingresar.
+        n = db.scalar(
+            select(func.count())
+            .select_from(MailDescartado)
+            .where(MailDescartado.gmail_message_id == "gm-rechazar")
+        )
+        assert n == 1
+
+
 def test_eliminar_multiples(client: TestClient) -> None:
     a = client.post("/api/v1/oportunidades", json={"cliente_id": 1}).json()["id"]
     b = client.post("/api/v1/oportunidades", json={"cliente_id": 1}).json()["id"]

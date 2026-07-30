@@ -96,6 +96,12 @@ class Oportunidad(Base, TimestampMixin):
     observacion: Mapped[str | None] = mapped_column(Text)  # nota corta de seguimiento
     # Se cargó el pedido en GBP (ex-estado, ahora un flag marcable a mano).
     cargada_en_gbp: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
+    # Propuesta pendiente de revisión: la generó un mail auto-ingestado y todavía
+    # no se aceptó. Mientras es True NO aparece en Oportunidades ni dispara mails
+    # automáticos; se revisa (mail + requerimiento) y se acepta o se descarta.
+    pendiente_revision: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=false(), index=True
+    )
     valor_estimado: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     # Fechas clave del ciclo (se autocompletan en los eventos, editables a mano):
     fecha_pedido_cliente: Mapped[date | None] = mapped_column(Date)  # cuándo pidió el cliente
