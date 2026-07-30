@@ -326,8 +326,11 @@ export interface Propuesta {
   requerimiento: string | null;
   vendedor: string | null;
   mail_de: string | null;
+  mail_para: string | null;
+  recibido_en: string | null;
   mail_fecha: string | null;
   mail_cuerpo: string | null;
+  adjuntos: { id: number; nombre: string; mime: string | null }[];
 }
 export type SolicitudUpdate = Partial<Omit<SolicitudCreate, "oportunidad_id">> & {
   estado?: EstadoSolicitud;

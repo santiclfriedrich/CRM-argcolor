@@ -55,6 +55,7 @@ import {
   useUpdateOportunidad,
 } from "@/lib/oportunidades";
 import { clearDraft, DRAFT_OPORTUNIDAD } from "@/lib/draft";
+import { descargarAdjuntoMail } from "@/lib/mails";
 import { useCreatePresupuesto } from "@/lib/presupuestos";
 import { useCrearYEnviarSolicitud } from "@/lib/solicitudes";
 import { useUsuarios } from "@/lib/usuarios";
@@ -1171,7 +1172,7 @@ function PropuestasModal({ onClose }: { onClose: () => void }) {
   const propuestas = data ?? [];
 
   return (
-    <Modal open onClose={onClose} title="Propuestas de oportunidad" size="3xl">
+    <Modal open onClose={onClose} title="Propuestas de oportunidad" size="5xl">
       <p className="mb-3 text-sm text-ink-2">
         Mails que entraron y proponen una oportunidad. Revisá y aceptá para sumarla a
         Oportunidades, o descartala.
@@ -1188,7 +1189,23 @@ function PropuestasModal({ onClose }: { onClose: () => void }) {
                     {p.cliente ?? "Cliente por identificar"}
                   </p>
                   <p className="truncate text-sm text-ink-2">{p.asunto ?? "(sin asunto)"}</p>
-                  <p className="text-xs text-ink-3">De: {p.mail_de ?? "—"}</p>
+                  <p className="mt-0.5 text-xs text-ink-3">De: {p.mail_de ?? "—"}</p>
+                  {p.recibido_en && (
+                    <p className="text-xs text-ink-3">
+                      Recibido en <span className="text-ink-2">{p.recibido_en}</span>
+                    </p>
+                  )}
+                  {p.mail_fecha && (
+                    <p className="text-xs text-ink-3">
+                      {new Date(p.mail_fecha).toLocaleString("es-AR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  )}
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <Button
@@ -1227,6 +1244,27 @@ function PropuestasModal({ onClose }: { onClose: () => void }) {
                   <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-md bg-surface2 p-2.5 font-mono text-xs text-ink-2">
                     {p.mail_cuerpo}
                   </pre>
+                </div>
+              )}
+              {p.adjuntos.length > 0 && (
+                <div className="mt-3">
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-3">
+                    Adjuntos
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {p.adjuntos.map((a) => (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => descargarAdjuntoMail(a.id, a.nombre)}
+                        title={`Descargar ${a.nombre}`}
+                        className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-line bg-surface2 px-2.5 py-1 text-xs text-ink hover:bg-surface3"
+                      >
+                        <Paperclip size={12} className="shrink-0 text-ink-3" />
+                        <span className="truncate">{a.nombre}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

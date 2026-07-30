@@ -213,6 +213,12 @@ def rechazar_transferencia(
     return op
 
 
+class PropuestaAdjunto(BaseModel):
+    id: int
+    nombre: str
+    mime: str | None = None
+
+
 class PropuestaRead(BaseModel):
     """Propuesta de oportunidad (mail auto-ingestado) para revisar antes de crearla."""
 
@@ -222,8 +228,11 @@ class PropuestaRead(BaseModel):
     requerimiento: str | None = None
     vendedor: str | None = None
     mail_de: str | None = None
+    mail_para: str | None = None
+    recibido_en: str | None = None  # casilla que recibió el mail
     mail_fecha: datetime | None = None
     mail_cuerpo: str | None = None
+    adjuntos: list[PropuestaAdjunto] = []
 
 
 @router.get("/propuestas", response_model=list[PropuestaRead])
@@ -239,6 +248,9 @@ def listar_propuestas(
         .where(Oportunidad.pendiente_revision.is_(True))
         .order_by(Oportunidad.id.desc())
     ).all()
+    from app.db.models.adjuntos import Adjunto
+    from app.services.ingest import _solo_email
+
     out: list[PropuestaRead] = []
     for op in ops:
         mail = db.scalar(
@@ -246,6 +258,23 @@ def listar_propuestas(
             .where(Mail.oportunidad_id == op.id, Mail.direccion == DireccionMail.entrante)
             .order_by(Mail.id.asc())
         )
+        # Casilla que recibió el mail: la del vendedor (casilla polleada). Como
+        # fallback, el "Para" si no coincide con el remitente.
+        recibido_en = op.vendedor.email if op.vendedor else None
+        if not recibido_en and mail and mail.para:
+            dest = _solo_email(mail.para)
+            if dest and dest != _solo_email(mail.de):
+                recibido_en = dest
+        adjuntos: list[PropuestaAdjunto] = []
+        if mail is not None:
+            filas = db.scalars(
+                select(Adjunto).where(Adjunto.mail_id == mail.id).order_by(Adjunto.id.asc())
+            )
+            adjuntos = [
+                PropuestaAdjunto(id=a.id, nombre=a.nombre_archivo, mime=a.mime_type)
+                for a in filas
+                if a.path_storage
+            ]
         out.append(
             PropuestaRead(
                 id=op.id,
@@ -254,8 +283,11 @@ def listar_propuestas(
                 requerimiento=op.requerimiento,
                 vendedor=op.vendedor.nombre if op.vendedor else None,
                 mail_de=mail.de if mail else None,
+                mail_para=mail.para if mail else None,
+                recibido_en=recibido_en,
                 mail_fecha=mail.fecha if mail else None,
                 mail_cuerpo=mail.cuerpo if mail else None,
+                adjuntos=adjuntos,
             )
         )
     return out
