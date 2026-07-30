@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 
 import { ClientePicker } from "@/components/clientes/cliente-picker";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,125 @@ import { SelectMenu } from "@/components/ui/select-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { useClientes } from "@/lib/clientes";
 import { useOportunidades } from "@/lib/oportunidades";
+import type { Oportunidad } from "@/lib/types";
+import { cn } from "@/lib/utils";
+
+// Buscador de oportunidad: input + desplegable en portal (no lo recorta el
+// scroll del modal) con búsqueda por N°, cliente o asunto.
+function OportunidadPicker({
+  oportunidades,
+  value,
+  onChange,
+}: {
+  oportunidades: Oportunidad[];
+  value: number | null;
+  onChange: (id: number | null) => void;
+}) {
+  const etiqueta = (o: Oportunidad) =>
+    `#${o.id} · ${o.cliente?.razon_social ?? o.asunto ?? "s/asunto"}`;
+  const selected = useMemo(
+    () => oportunidades.find((o) => o.id === value) ?? null,
+    [oportunidades, value],
+  );
+  const [query, setQuery] = useState(selected ? etiqueta(selected) : "");
+  const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState<{ left: number; top: number; width: number } | null>(null);
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setQuery(selected ? etiqueta(selected) : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
+
+  const abrir = () => {
+    const r = ref.current?.getBoundingClientRect();
+    if (r) setRect({ left: r.left, top: r.bottom + 4, width: r.width });
+    setOpen(true);
+  };
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const igualAlSeleccionado = selected && q === etiqueta(selected).toLowerCase();
+    const list =
+      !q || igualAlSeleccionado
+        ? oportunidades
+        : oportunidades.filter((o) => etiqueta(o).toLowerCase().includes(q));
+    return list.slice(0, 40);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [oportunidades, query, selected]);
+
+  const elegir = (o: Oportunidad | null) => {
+    onChange(o ? o.id : null);
+    setQuery(o ? etiqueta(o) : "");
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <input
+        ref={ref}
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          if (!open) abrir();
+        }}
+        onFocus={abrir}
+        placeholder="— Ninguna — (buscá por N°, cliente o asunto)"
+        className="h-11 w-full rounded-lg border border-line bg-surface px-3.5 text-sm text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+      />
+      {open &&
+        rect &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <>
+            <button
+              type="button"
+              aria-hidden
+              tabIndex={-1}
+              className="fixed inset-0 z-[55] cursor-default"
+              onClick={() => setOpen(false)}
+            />
+            <ul
+              style={{ position: "fixed", left: rect.left, top: rect.top, width: rect.width }}
+              className="z-[60] max-h-72 overflow-y-auto rounded-lg border border-line bg-surface p-1 shadow-pop"
+            >
+              <li>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => elegir(null)}
+                  className="block w-full rounded-md px-3 py-2 text-left text-sm text-ink-3 hover:bg-surface2"
+                >
+                  — Ninguna —
+                </button>
+              </li>
+              {matches.map((o) => (
+                <li key={o.id}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => elegir(o)}
+                    className={cn(
+                      "block w-full truncate rounded-md px-3 py-2 text-left text-sm transition-colors",
+                      o.id === value
+                        ? "bg-accent-dim font-medium text-accent"
+                        : "text-ink hover:bg-surface2",
+                    )}
+                  >
+                    {etiqueta(o)}
+                  </button>
+                </li>
+              ))}
+              {matches.length === 0 && (
+                <li className="px-3 py-2 text-sm text-ink-3">Sin coincidencias.</li>
+              )}
+            </ul>
+          </>,
+          document.body,
+        )}
+    </div>
+  );
+}
 import {
   PRIORIDAD_OPCIONES,
   type PrioridadTarea,
@@ -100,7 +220,7 @@ export function TareaModal({ open, onClose, tarea, fechaPorDefecto }: Props) {
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={esEdicion ? "Editar tarea" : "Nueva tarea"} size="xl">
+    <Modal open={open} onClose={onClose} title={esEdicion ? "Editar tarea" : "Nueva tarea"} size="3xl">
       <form onSubmit={submit} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -180,19 +300,11 @@ export function TareaModal({ open, onClose, tarea, fechaPorDefecto }: Props) {
           />
         </div>
         <div>
-          <Label htmlFor="t-oportunidad">Oportunidad relacionada</Label>
-          <SelectMenu
-            id="t-oportunidad"
-            value={oportunidadId != null ? String(oportunidadId) : ""}
-            onChange={(v) => setOportunidadId(v ? Number(v) : null)}
-            placeholder="— Ninguna —"
-            options={[
-              { value: "", label: "— Ninguna —" },
-              ...(oportunidades ?? []).map((o) => ({
-                value: String(o.id),
-                label: `#${o.id} · ${o.cliente?.razon_social ?? o.asunto ?? "s/asunto"}`,
-              })),
-            ]}
+          <Label>Oportunidad relacionada</Label>
+          <OportunidadPicker
+            oportunidades={oportunidades ?? []}
+            value={oportunidadId}
+            onChange={setOportunidadId}
           />
         </div>
 
