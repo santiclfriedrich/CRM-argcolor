@@ -55,12 +55,14 @@ def _run_seguimiento() -> None:
 
 
 def _run_gbp_sync() -> None:
-    """Sync incremental de clientes GBP -> CRM (dedup por CUIT, solo nuevos).
-    Respeta el lock: si ya hay una corrida (manual o previa), no hace nada."""
+    """Sync de clientes GBP -> CRM de madrugada: scan COMPLETO (agarra altas y
+    también cambios en clientes existentes, que el incremental se perdería).
+    Respeta el lock: si ya hay una corrida (manual o previa), no hace nada.
+    El botón del CRM usa el modo incremental (rápido) para las altas del día."""
     from app.services.gbp_runner import lanzar_sync
 
-    r = lanzar_sync()
-    logger.info("GBP sync programado: %s", r.get("status"))
+    r = lanzar_sync(full=True)
+    logger.info("GBP sync programado (full): %s", r.get("status"))
 
 
 def _run_recordatorios() -> None:
