@@ -464,3 +464,82 @@ DEUDA TÉCNICA PENDIENTE (no urgente, pero tenerla presente):
 
 Arrancá leyendo el contexto y proponiéndome un plan de archivos para el CRUD de clientes antes de escribir código.
 ```
+
+---
+
+## 16. Estado técnico actual (actualización 2026-07)
+
+> Esta sección **reemplaza/actualiza** lo que quedó viejo en las secciones 4–15 (que se conservan como historia). El proyecto ya está **en producción y en uso**. Fuente de verdad: el código del repo.
+
+### 16.1 Infraestructura real (no la del "Plan A")
+
+- **Frontend**: Next.js 14 (app router, TS estricto, Tailwind) en **Vercel** (deploy automático desde `main`).
+- **Backend**: FastAPI en **Railway** (Docker). El arranque corre **`alembic upgrade head && uvicorn`** → **las migraciones se aplican solas en cada deploy**.
+- **Base de datos**: **Postgres en Neon** (sa-east-1), a través del **pooler pgbouncer** (transaction mode), driver **psycopg3**.
+- **Storage de archivos**: **Cloudflare R2** en prod (`STORAGE_BACKEND=r2`), local en dev. Se persiste la *key*, no la ruta (`app/services/storage.py`, con `delete_many` en lote para R2).
+- **IA**: **Google Gemini** vía SDK **`google-genai`** (no `google-generativeai`). Interfaz desacoplada `AIProvider` (`extract_email_data`, `draft_quote`, `summarize_thread`). El **free tier (~20 req/día) rompe la ingesta en silencio** → hay que tener **billing activo** para uso real.
+- **Gmail**: OAuth **por usuario** (Camino C): cada vendedor conecta su casilla en el login; el token se guarda **cifrado por usuario**. El scheduler (APScheduler) pollea todas las casillas conectadas; el botón "Sincronizar" manual pollea **solo la del usuario** (aislamiento anti-bandeja-cruzada).
+
+#### Gotchas críticos de Neon/pgbouncer (romper esto tira TODA la conexión)
+1. **NUNCA** pasar `options=-c statement_timeout` en `connect_args` → el pooler lo rechaza y caen todas las conexiones.
+2. `prepare_threshold=None` obligatorio (psycopg no debe preparar statements server-side con pgbouncer en transaction mode).
+3. **No** mantener una transacción abierta durante una llamada externa lenta (SOAP/HTTP) → Neon la mata por `idle_in_transaction_session_timeout`. Patrón: **commit por lote/página**. Ver `app/db/session.py` (keepalives + pool_pre_ping + pool_recycle=1800).
+
+### 16.2 Gestión COMPARTIDA (todos ven todo)
+
+Se **revirtió** el scoping personal: hoy **todos los usuarios ven y actúan sobre todo** (bandeja, oportunidades, cuentas, presupuestos, solicitudes, tareas). Los `_assert_owner(...)` quedaron **no-op**; `resolver_duenio(user, usuario_id)` es solo un filtro opcional (`usuario_id`) para la UI. Los toggles **Mías/Todas** son comodidad visual (default por rol: vendedor→Mías, admin/compras→Todas). Se audita quién hizo qué (`creado_por`, `editado_por`, etc.).
+
+### 16.3 Bandeja / ingesta de mails (múltiples capas)
+
+Pipeline en `app/services/ingest.py` (`process_incoming_email`). **Orden**: descartes automáticos → posventa → match cliente → **dedup** → descartes administrativos → IA → crear.
+
+- **Dedup de conversación** (para no duplicar oportunidades), en orden: (0) mismo `rfc_message_id` (el MISMO mail entró a 2 casillas To+CC), (1) `References`/`In-Reply-To` (Message-IDs globales), (2) `gmail_thread_id`, (3) cliente + asunto normalizado, (3b) **remitente + asunto** (red de última instancia cuando el gateway del cliente rompe los headers, ej. Verallia). Si matchea, **adjunta** el mail a la oportunidad existente.
+- **Descartes** (no crean oportunidad, quedan en `mails_descartados`): automáticos/bulk (headers List-Unsubscribe, Precedence, Auto-Submitted) y reacciones de Gmail; **posventa** por asunto (reclamo/garantía/RMA/…); **administrativo** por asunto (proforma/factura/remito/nota de crédito/orden de pago/…); **abastecimiento** = el hilo lo **originamos nosotros** (`@argentinacolor.com` como raíz del hilo) **y** pedimos cotización (lenguaje de comprador) → distingue "venta saliente" (SÍ es oportunidad) de "le pedimos a un proveedor" (NO); **orden de compra** en frío (OC ya emitida por el cliente).
+- Match por **palabra completa** (regex `\b…\b`) para evitar falsos (ej. "rma" dentro de "proforma").
+- **Guard de dominio propio**: un remitente `@argentinacolor.com` nunca matchea como cliente.
+- **Lee adjuntos**: PDF va nativo a Gemini; planillas Excel (`openpyxl`) / CSV se convierten a texto y se anexan al cuerpo (los RFQ suelen traer los ítems en el adjunto). Se guardan también como `Adjunto`.
+
+### 16.4 Propuestas de oportunidad (revisión previa)
+
+Los mails **auto-ingestados por el polling** ya **no crean la oportunidad directo**: entran como **propuesta** (`Oportunidad.pendiente_revision=True`) → **no** aparecen en el listado/búsqueda ni disparan mails automáticos. Se revisan desde el indicador **"Propuestas (N)"** en la barra de Oportunidades (modal con cliente/asunto/**requerimiento**/**mail original**/**adjuntos**/**recibido en**), **compartido** (lo ve todo el equipo, con toggle Mías/Todos). **Aceptar** → entra al pipeline (misma fila, no duplica). **Rechazar** → se elimina y el mail queda descartado. La **carga manual** (`POST /mails/ingest`) sigue creando la oportunidad directo (`revisar=False`).
+
+### 16.5 Oportunidades
+
+- **Estados** (código DB / etiqueta UI): `nueva`, `requiere_aclaracion`, `en_compras`/"Enviado a compras", `cotizado_compras`/"Cotizado por compras", `presupuestada`/"Enviada al cliente", `confirmada`/"Confirmada · Pendiente", `ganada`/"Pago", `perdida`/"No avanzó". Terminales: `ganada`, `perdida` (confirmada NO es terminal). Vista **mensual** con arrastre de abiertas.
+- **Requerimiento leído por la IA** (`Oportunidad.requerimiento`): se guarda al ingestar (producto+cantidad+detalle+plazo) y es **editable** en el form.
+- **Transferencia entre vendedores**: `transferencia_para_id`; acción "Transferir a…" en el menú de fila → queda **pendiente** (sale de las "Mías" de ambos) hasta que el destinatario **acepta** (pasa a ser suya) o **rechaza** (vuelve). Indicador "Transferencias (N)" en la barra + banner en el detalle; notificación in-app.
+- Orden por llegada (más antigua arriba), multi-select + borrado en lote, headers sticky al scrollear.
+
+### 16.6 Pedir a Compras
+
+- Enum `CondicionPago`: 15/30/45/60/120 días · Transferencia · **Cheque Anticipado a Entrega 15/30/60**. **Gotcha**: SQLAlchemy persiste el **NOMBRE** del miembro del enum como label de Postgres (ej. `dias_15`, `cheque_ant_15`), **no** el `value`. Agregar valores = `ALTER TYPE … ADD VALUE '<nombre>'` (migración con `autocommit_block`).
+- En el modal se listan los **adjuntos de la oportunidad** (subidos + los que llegaron por mail) con una **X** para excluir; los que queden se copian a la solicitud y viajan en el mail a Compras (refs `op:<id>` / `mail:<id>`).
+
+### 16.7 Sync de clientes GBP → CRM (ERP GlobalBluePoint)
+
+- **One-way** (solo lectura del ERP), SOAP 1.1 (`app/integrations/gbp/client.py`). Filtra **`ck_id` 1/16/17** → "Clase de cliente" (Gremio/Corporativo/Gubernamental); el resto se ignora. Dedup por **CUIT** (normaliza 11 díg): **solo crea nuevos** (no re-matchea). Extrae dominios de los emails (omite públicos y el propio) para el match de bandeja.
+- **Incremental y rápido**: precarga en memoria todos los CUIT/dominios existentes (2 queries) y saltea; solo inserta nuevos. El único costo de una re-corrida es el **fetch SOAP de todas las páginas** (el WS **no tiene filtro delta**) = minutos. La carga inicial (~8200) tardó ~4h por las **escrituras**, no por el fetch.
+- **Automatizado**: runner con lock anti-solape (`app/services/gbp_runner.py`); el scheduler lo corre **cada 8h**; **botón "Sincronizar GBP"** (admin) en Cuentas con estado en vivo. Endpoints: `POST /sync/gbp/run` + `GET /sync/gbp/status` (autenticados) y `GET /sync/gbp?token=…` (externo/token).
+
+### 16.8 Notas
+
+Sección **"Notas"** (nav): bloc de notas **personal** por usuario, **multi-nota** estilo Apple Notes (lista lateral agrupada por fecha + editor), **autoguardado** (debounce, sin botón). Endpoints `GET/POST /notas`, `PUT/DELETE /notas/{id}`.
+
+### 16.9 Patrones de UI a respetar
+
+- **Modales** (`components/ui/modal.tsx`): se renderizan vía **portal a `document.body`**. Motivo: un ancestro con `transform` (ej. `-translate-y-1/2`) "atrapa" al `position:fixed` y achica el modal. Cierran con Escape o clic en el fondo **solo si el gesto empezó y terminó ahí** (para no perder datos al arrastrar una selección afuera).
+- **ClientePicker** (`components/clientes/cliente-picker.tsx`): búsqueda doble — **N° de cliente** (sugiere al tipear; Enter = match exacto) y **nombre** (autocompletado ≥2 letras); cada sugerencia muestra `nombre | CUIT` + N°. Reusado en Nueva oportunidad, Cuentas y Tareas. Para dropdowns dentro de modales que se recortan, usar **dropdown en portal** (ej. el buscador de oportunidad en el modal de tarea).
+- Colores/tokens semánticos (surface/line/ink/accent/navy). Los toggles activos usan **navy**; para no chocar, el "Aceptar" de propuestas va en verde y los botones aceptar/rechazar son íconos redondos (check verde / cruz roja).
+
+### 16.10 Validación y flujo de trabajo (obligatorio antes de commitear)
+
+- **Backend**: `ruff check app/ tests/` + `pytest` con **`DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`** (WeasyPrint necesita las libs de Homebrew en macOS). `next build` local suele fallar por EAGAIN → la validación real del front es **`npx tsc --noEmit`** + **`npx next lint`**.
+- **Git**: rama feature → commit → `git merge --ff-only main` → push. Commits terminan con `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
+- **Migraciones**: cadena Alembic en `alembic/versions/`; se aplican solas en el deploy de Railway. Para verificar en prod, chequear `alembic_version` / `information_schema` contra Neon (verificar `current_database()=='neondb'` antes de cualquier escritura a prod).
+- **Convenciones**: tablas/columnas en español, código en inglés; TS estricto; Pydantic v2 + SQLAlchemy 2.0 (`mapped_column`); nada de secrets en código.
+
+### 16.11 Deuda técnica / pendientes
+
+- Rotar `GOOGLE_CLIENT_SECRET`; actualizar Next.js 14.2.x; `npm audit`.
+- GBP: resolver `provincia` (state_id vía `States_funGetXMLData`) y mapear `sm_id`→vendedor.
+- Escribir el archivo de contexto no reemplaza la lectura del código: **verificar contra el código actual** antes de asumir.
