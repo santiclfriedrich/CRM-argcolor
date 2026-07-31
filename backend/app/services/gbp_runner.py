@@ -62,7 +62,10 @@ def lanzar_sync(force: bool = False) -> dict:
 
 def estado_con_conteo() -> dict:
     """Estado de la última corrida + conteo real de clientes GBP en la base."""
+    from app.config import get_settings
+
     out = dict(_estado)
+    out["concurrencia"] = get_settings().GBP_FETCH_CONCURRENCY
     try:
         from sqlalchemy import func, select
 

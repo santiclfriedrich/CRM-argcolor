@@ -98,8 +98,8 @@ class Settings(BaseSettings):
     GBP_WS: str = ""  # ID del Web Service (ej. 1011)
     GBP_VERIFY_SSL: bool = False  # el server usa certificado propio
     # Páginas de clientes que se bajan en paralelo (acorta el fetch, que es lento
-    # por la latencia del ERP). Conservador para no saturar GBP; subir con cuidado.
-    GBP_FETCH_CONCURRENCY: int = 5
+    # por la latencia del ERP). Subir con cuidado para no saturar GBP.
+    GBP_FETCH_CONCURRENCY: int = 8
     # Token secreto para disparar la sync desde un endpoint (corre en el server).
     # Si queda vacío, el endpoint está deshabilitado.
     GBP_SYNC_TOKEN: str = ""
