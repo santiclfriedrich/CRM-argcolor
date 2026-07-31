@@ -518,8 +518,8 @@ Los mails **auto-ingestados por el polling** ya **no crean la oportunidad direct
 ### 16.7 Sync de clientes GBP → CRM (ERP GlobalBluePoint)
 
 - **One-way** (solo lectura del ERP), SOAP 1.1 (`app/integrations/gbp/client.py`). Filtra **`ck_id` 1/16/17** → "Clase de cliente" (Gremio/Corporativo/Gubernamental); el resto se ignora. Dedup por **CUIT** (normaliza 11 díg): **solo crea nuevos** (no re-matchea). Extrae dominios de los emails (omite públicos y el propio) para el match de bandeja.
-- **Incremental y rápido**: precarga en memoria todos los CUIT/dominios existentes (2 queries) y saltea; solo inserta nuevos. El único costo de una re-corrida es el **fetch SOAP de todas las páginas** (el WS **no tiene filtro delta**) = minutos. La carga inicial (~8200) tardó ~4h por las **escrituras**, no por el fetch.
-- **Automatizado**: runner con lock anti-solape (`app/services/gbp_runner.py`); el scheduler lo corre **cada 8h**; **botón "Sincronizar GBP"** (admin) en Cuentas con estado en vivo. Endpoints: `POST /sync/gbp/run` + `GET /sync/gbp/status` (autenticados) y `GET /sync/gbp?token=…` (externo/token).
+- **Incremental**: precarga en memoria todos los CUIT/dominios existentes (2 queries) y saltea; solo inserta nuevos, así una re-corrida NO re-matchea los ~8200. **PERO tarda ~1-3h igual**: el **fetch SOAP** baja TODOS los clientes (el WS **no tiene filtro delta**) y es lento (medido: un dry-run corrió 2.5h+). La carga inicial (~8200) tardó ~4h (fetch + escrituras).
+- **Automatizado**: runner con lock anti-solape (`app/services/gbp_runner.py`); el scheduler lo corre **1 vez al día a las 07:00 UTC (04:00 ART)** — de madrugada porque cada corrida es larga y no debe competir con el uso del ERP en horario comercial. **Botón "Sincronizar GBP"** (admin) en Cuentas con estado en vivo. Endpoints: `POST /sync/gbp/run` + `GET /sync/gbp/status` (autenticados) y `GET /sync/gbp?token=…` (externo/token). El tiempo real de prod se ve en `/sync/gbp/status` (`iniciado`/`ultimo_resultado`).
 
 ### 16.8 Notas
 

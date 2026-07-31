@@ -100,10 +100,12 @@ def start_scheduler() -> None:
     # Recordatorios de tareas: chequeo frecuente (granularidad de ~5 min).
     _scheduler.add_job(_run_recordatorios, "interval", minutes=5, id="recordatorios")
 
-    # Sync incremental de clientes GBP cada 8h (solo si GBP está configurado).
+    # Sync incremental de clientes GBP: 1 vez al día de madrugada (07:00 UTC ≈
+    # 04:00 ART). Cada corrida tarda ~1-3h (el fetch SOAP de GBP es lento), así
+    # que se corre cuando nadie usa el ERP. Manual: botón "Sincronizar GBP".
     if settings.GBP_USER and settings.GBP_PWD and settings.GBP_WS:
-        _scheduler.add_job(_run_gbp_sync, "interval", hours=8, id="gbp_sync")
-        logger.info("Sync GBP programado cada 8h")
+        _scheduler.add_job(_run_gbp_sync, "cron", hour=7, minute=0, id="gbp_sync")
+        logger.info("Sync GBP programado diario (07:00 UTC)")
 
     _scheduler.start()
     logger.info("Scheduler activo (seguimiento diario + recordatorios cada 5 min)")
