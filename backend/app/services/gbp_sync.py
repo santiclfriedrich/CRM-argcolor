@@ -166,6 +166,140 @@ def _crear_emails(
         rep.dominios_creados += 1
 
 
+# --- Watermark (último cust_id revisado) para el sync incremental ---
+_WATERMARK_KEY = "gbp_last_cust_id"
+
+
+def get_watermark(db: Session) -> int | None:
+    """Último cust_id revisado (guardado en `configuracion`). None si no hay."""
+    from app.db.models.configuracion import Configuracion
+
+    cfg = db.get(Configuracion, _WATERMARK_KEY)
+    if cfg and cfg.valor and "id" in cfg.valor:
+        try:
+            return int(cfg.valor["id"])
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def set_watermark(db: Session, cust_id: int) -> None:
+    from app.db.models.configuracion import Configuracion
+
+    cfg = db.get(Configuracion, _WATERMARK_KEY)
+    if cfg is None:
+        db.add(Configuracion(clave=_WATERMARK_KEY, valor={"id": int(cust_id)}))
+    else:
+        cfg.valor = {"id": int(cust_id)}
+    db.commit()
+
+
+def _cust_id_int(row: dict[str, str]) -> int | None:
+    try:
+        return int((row.get("cust_id") or "").strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def _alta_desde_row(
+    db: Session, row: dict[str, str], ck: str, dominios_existentes: set[str], rep: ReporteSync
+) -> bool:
+    """Crea el Cliente + contactos/dominios desde una fila del ERP (ck ya validado
+    y CUIT ya chequeado por el caller). Savepoint por fila. True si se creó."""
+    razon = (row.get("cust_name") or "").strip() or f"Cliente {row.get('cust_id')}"
+    telefono = (row.get("cust_phone1") or row.get("cust_phone2") or "").strip()
+    numero = (row.get("cust_id") or "").strip()
+    cliente = Cliente(
+        # Truncado a los límites de cada columna (el ERP a veces trae datos largos).
+        razon_social=razon[:255],
+        cuit=normalizar_cuit(row.get("cust_taxNumber")),
+        numero_cliente=numero[:40] or None,
+        tipo=CK_ID_A_CLASE[ck],
+        telefono=telefono[:50] or None,
+        direccion_facturacion=armar_direccion(
+            row.get("cust_address"), row.get("cust_city"), row.get("cust_zip"), row.get("provincia")
+        ),
+        direccion_envio=(row.get("cust_address4Delivery") or "").strip() or None,
+        activo=True,
+    )
+    try:
+        with db.begin_nested():
+            db.add(cliente)
+            db.flush()
+            _crear_emails(db, cliente, row, dominios_existentes, rep)
+        return True
+    except Exception as exc:  # noqa: BLE001 - un cliente malo no corta la corrida
+        rep.errores += 1
+        if len(rep.detalle_errores) < 20:
+            rep.detalle_errores.append(f"cust_id={row.get('cust_id')}: {str(exc)[:200]}")
+        logger.exception("GBP sync: error creando cust_id=%s", row.get("cust_id"))
+        if not db.is_active:
+            db.rollback()
+        return False
+
+
+def sincronizar_incremental(
+    db: Session,
+    erp,  # noqa: ANN001 - objeto con fetch_customer()
+    *,
+    max_misses: int = 40,
+    on_progress=None,  # noqa: ANN001
+) -> ReporteSync:
+    """Sync RÁPIDO: camina los cust_id nuevos desde el watermark hacia arriba
+    (los ids son incrementales), trae 1 por 1 (~0.3s c/u) y da de alta los de
+    tipo 1/16/17 que no existan. Corta tras `max_misses` ids inexistentes
+    seguidos (= llegó al final; holgura para huecos de borrados).
+
+    Si no hay watermark, hace el scan completo (que lo deja seteado)."""
+    watermark = get_watermark(db)
+    if watermark is None:
+        logger.info("GBP incremental sin watermark -> scan completo inicial")
+        return sincronizar_clientes(db, erp, on_progress=on_progress)
+
+    rep = ReporteSync()
+    cuits_existentes = {solo_digitos(c) for c in db.scalars(select(Cliente.cuit)) if c}
+    dominios_existentes = {d.lower() for d in db.scalars(select(DominioCliente.dominio)) if d}
+    cuits_vistos: set[str] = set()
+
+    cid = watermark
+    highest = watermark
+    misses = 0
+    caminados = 0
+    while misses < max_misses:
+        cid += 1
+        row = erp.fetch_customer(cid)
+        caminados += 1
+        if row is None:
+            misses += 1
+            continue
+        misses = 0
+        highest = cid
+        ck = (row.get("ck_id") or "").strip()
+        if ck in CK_ID_A_CLASE:
+            rep.procesados += 1
+            cuit = normalizar_cuit(row.get("cust_taxNumber"))
+            if cuit is None:
+                rep.omitidos_sin_cuit += 1
+            elif (d := solo_digitos(cuit)) in cuits_existentes or d in cuits_vistos:
+                rep.omitidos_existente += 1
+            else:
+                cuits_vistos.add(d)
+                if _alta_desde_row(db, row, ck, dominios_existentes, rep):
+                    rep.creados += 1
+                db.commit()  # cierra la transacción antes del próximo fetch
+        if on_progress is not None and caminados % 50 == 0:
+            on_progress(rep)
+
+    set_watermark(db, highest)
+    if on_progress is not None:
+        on_progress(rep)
+    logger.info(
+        "GBP incremental: %s | ids caminados=%s watermark %s->%s",
+        rep.resumen(), caminados, watermark, highest,
+    )
+    return rep
+
+
 def sincronizar_clientes(
     db: Session,
     erp,  # noqa: ANN001 - cualquier objeto con iter_customers()
@@ -174,7 +308,9 @@ def sincronizar_clientes(
     limit: int | None = None,
     on_progress=None,  # noqa: ANN001 - callback(ReporteSync) tras cada página
 ) -> ReporteSync:
-    """Recorre los clientes del ERP, filtra por tipo y da de alta los nuevos."""
+    """Recorre TODOS los clientes del ERP (todas las páginas), filtra por tipo y
+    da de alta los nuevos. Al terminar, guarda el watermark (max cust_id visto)
+    para que el sync incremental siga desde ahí."""
     rep = ReporteSync()
 
     # Precarga para dedup (una sola query cada uno).
@@ -186,6 +322,7 @@ def sincronizar_clientes(
     }
     cuits_vistos: set[str] = set()
     cortar = False
+    max_id_visto = get_watermark(db) or 0  # se persiste al final como watermark
 
     # Iteramos PÁGINA por página y commiteamos al final de cada una. Clave:
     # entre página y página el ERP hace un fetch SOAP lento; si dejáramos la
@@ -194,6 +331,9 @@ def sincronizar_clientes(
     # Commiteando por página, la transacción está CERRADA durante el fetch.
     for filas in erp.iter_pages():
         for row in filas:
+            cid = _cust_id_int(row)
+            if cid is not None and cid > max_id_visto:
+                max_id_visto = cid  # trackear el max de TODOS los tipos
             ck = (row.get("ck_id") or "").strip()
             if ck not in CK_ID_A_CLASE:
                 continue  # tipo de cliente que no nos interesa
@@ -214,45 +354,12 @@ def sincronizar_clientes(
                 continue
             cuits_vistos.add(digitos)
 
-            razon = (row.get("cust_name") or "").strip() or f"Cliente {row.get('cust_id')}"
-            telefono = (row.get("cust_phone1") or row.get("cust_phone2") or "").strip()
-            numero = (row.get("cust_id") or "").strip()
-            cliente = Cliente(
-                # Truncamos a los límites de cada columna: el ERP a veces trae datos
-                # más largos (ej. varios teléfonos en cust_phone1) y fallaría el insert.
-                razon_social=razon[:255],
-                cuit=cuit,
-                numero_cliente=numero[:40] or None,
-                tipo=CK_ID_A_CLASE[ck],
-                telefono=telefono[:50] or None,
-                direccion_facturacion=armar_direccion(
-                    row.get("cust_address"),
-                    row.get("cust_city"),
-                    row.get("cust_zip"),
-                    row.get("provincia"),
-                ),
-                direccion_envio=(row.get("cust_address4Delivery") or "").strip() or None,
-                activo=True,
-            )
-
             if dry_run:
                 rep.creados += 1
                 continue
 
-            # Savepoint por fila: si una falla, se revierte SOLO esa fila y sigue.
-            try:
-                with db.begin_nested():
-                    db.add(cliente)
-                    db.flush()
-                    _crear_emails(db, cliente, row, dominios_existentes, rep)
+            if _alta_desde_row(db, row, ck, dominios_existentes, rep):
                 rep.creados += 1
-            except Exception as exc:  # noqa: BLE001 - un cliente malo no corta la corrida
-                rep.errores += 1
-                if len(rep.detalle_errores) < 20:
-                    rep.detalle_errores.append(f"cust_id={row.get('cust_id')}: {str(exc)[:200]}")
-                logger.exception("GBP sync: error creando cust_id=%s", row.get("cust_id"))
-                if not db.is_active:  # sesión rota -> resetear para poder seguir
-                    db.rollback()
 
         # Fin de página: commit (cierra la transacción antes del próximo fetch).
         if not dry_run:
@@ -265,5 +372,12 @@ def sincronizar_clientes(
             on_progress(rep)
         if cortar:
             break
+
+    # Baseline para el sync incremental: el mayor cust_id visto (de todos los tipos).
+    if not dry_run and max_id_visto:
+        try:
+            set_watermark(db, max_id_visto)
+        except Exception:  # noqa: BLE001 - el watermark no debe romper la corrida
+            logger.exception("GBP sync: no se pudo guardar el watermark")
 
     return rep

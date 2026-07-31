@@ -27,10 +27,11 @@ def _verificar_token(token: str) -> None:
 
 
 @router.get("/gbp")
-def disparar_sync(token: str = "", force: int = 0) -> dict:
-    """Dispara la sync (por token, GET para abrirlo desde el navegador)."""
+def disparar_sync(token: str = "", force: int = 0, full: int = 0) -> dict:
+    """Dispara la sync (por token, GET para abrirlo desde el navegador).
+    `full=1` = scan completo; por defecto incremental (ids nuevos)."""
     _verificar_token(token)
-    return lanzar_sync(force=bool(force))
+    return lanzar_sync(force=bool(force), full=bool(full))
 
 
 @router.get("/gbp/estado")
@@ -43,10 +44,12 @@ def estado_sync(token: str = "") -> dict:
 @router.post("/gbp/run")
 def run_sync(
     force: int = 0,
+    full: int = 0,
     _: Usuario = Depends(get_current_admin),
 ) -> dict:
-    """Dispara la sync desde el CRM (admin). Botón 'Sincronizar GBP'."""
-    return lanzar_sync(force=bool(force))
+    """Dispara la sync desde el CRM (admin). Botón 'Sincronizar GBP'.
+    Por defecto incremental; `full=1` para un resync completo."""
+    return lanzar_sync(force=bool(force), full=bool(full))
 
 
 @router.get("/gbp/status")

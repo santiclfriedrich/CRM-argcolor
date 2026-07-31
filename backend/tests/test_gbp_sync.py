@@ -9,14 +9,18 @@ from sqlalchemy.pool import StaticPool
 
 from app.db.base import Base
 from app.db.models.clientes import Cliente
+from app.db.models.configuracion import Configuracion
 from app.db.models.contactos_cliente import ContactoCliente
 from app.db.models.dominios_cliente import DominioCliente
 from app.integrations.gbp.client import parse_tables
 from app.services.gbp_sync import (
     armar_direccion,
     es_dominio_publico,
+    get_watermark,
     normalizar_cuit,
+    set_watermark,
     sincronizar_clientes,
+    sincronizar_incremental,
     split_emails,
 )
 
@@ -25,7 +29,12 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
-_TABLES = [Cliente.__table__, ContactoCliente.__table__, DominioCliente.__table__]
+_TABLES = [
+    Cliente.__table__,
+    ContactoCliente.__table__,
+    DominioCliente.__table__,
+    Configuracion.__table__,
+]
 
 
 @pytest.fixture()
@@ -48,6 +57,9 @@ class FakeERP:
 
     def iter_customers(self) -> Iterator[dict]:
         return iter(self.rows)
+
+    def fetch_customer(self, cust_id: int) -> dict | None:
+        return next((r for r in self.rows if str(r.get("cust_id")) == str(cust_id)), None)
 
 
 # --- helpers puros ---
@@ -175,3 +187,31 @@ def test_sync_dry_run_no_escribe(db: Session) -> None:
     rep = sincronizar_clientes(db, FakeERP(_rows()), dry_run=True)
     assert rep.creados == 2
     assert db.scalar(select(func.count()).select_from(Cliente)) == 0
+
+
+def test_sync_incremental_camina_ids_desde_watermark(db: Session) -> None:
+    # Watermark en 100: solo mira ids nuevos (>100), 1 por 1, hasta el final.
+    set_watermark(db, 100)
+    rows = [
+        {"cust_id": "101", "ck_id": "16", "cust_name": "NUEVO CORP",
+         "cust_taxNumber": "30-11111111-8"},
+        {"cust_id": "102", "ck_id": "5", "cust_name": "ML CLIENTE",  # tipo NO filtrado
+         "cust_taxNumber": "30-22222222-7"},
+        {"cust_id": "103", "ck_id": "1", "cust_name": "NUEVO GREMIO",
+         "cust_taxNumber": "30-33333333-6"},
+    ]
+    rep = sincronizar_incremental(db, FakeERP(rows), max_misses=5)
+
+    assert rep.creados == 2  # 101 y 103; 102 se ignora por tipo
+    nombres = set(db.scalars(select(Cliente.razon_social)))
+    assert {"NUEVO CORP", "NUEVO GREMIO"} <= nombres
+    assert "ML CLIENTE" not in nombres
+    # El watermark avanza al último id existente encontrado.
+    assert get_watermark(db) == 103
+
+
+def test_sync_incremental_sin_watermark_hace_full(db: Session) -> None:
+    # Sin watermark previo -> cae al scan completo (y lo deja seteado).
+    rep = sincronizar_incremental(db, FakeERP(_rows()))
+    assert rep.creados == 2
+    assert get_watermark(db) is not None  # el full dejó el baseline

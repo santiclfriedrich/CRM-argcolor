@@ -171,6 +171,21 @@ class GBPClient:
         )
         return parse_tables(self._call("Customers_funGetXMLData", body, autenticado=True))
 
+    def fetch_customer(self, cust_id: int) -> dict[str, str] | None:
+        """Trae UN cliente por su `cust_id` (o None si no existe). Rápido (~0.3s),
+        base del sync incremental por id."""
+        if self._token is None:
+            self.authenticate()
+        body = (
+            f'<Customers_funGetXMLData xmlns="{self._ns}">'
+            "<pbra_id>-1</pbra_id>"
+            f"<pcust_id>{int(cust_id)}</pcust_id>"
+            "<ppage_number>0</ppage_number>"
+            "</Customers_funGetXMLData>"
+        )
+        filas = parse_tables(self._call("Customers_funGetXMLData", body, autenticado=True))
+        return filas[0] if filas else None
+
     def iter_pages(self) -> Iterator[list[dict[str, str]]]:
         """Itera las PÁGINAS de clientes del ERP (cada una es una lista de filas).
 
