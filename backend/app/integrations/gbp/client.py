@@ -13,6 +13,7 @@ import logging
 import re
 import xml.etree.ElementTree as ET
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from xml.sax.saxutils import escape
 
 import httpx
@@ -25,6 +26,9 @@ logger = logging.getLogger(__name__)
 _CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
 
 _PAGE_SIZE = 500  # el WS pagina de a 500 clientes
+# Páginas que se bajan en paralelo (la paginación es por número → se puede).
+# Conservador para no saturar el ERP; ajustable por env GBP_FETCH_CONCURRENCY.
+_CONCURRENCIA_DEFAULT = 5
 
 
 def _local(tag: str) -> str:
@@ -78,7 +82,21 @@ class GBPClient:
         self._company = s.GBP_COMPANY
         self._ws = s.GBP_WS
         self._verify = s.GBP_VERIFY_SSL
+        self._concurrencia = max(1, int(getattr(s, "GBP_FETCH_CONCURRENCY", _CONCURRENCIA_DEFAULT)))
         self._token: str | None = None
+        # Conexión persistente (keep-alive) reutilizada en todas las páginas:
+        # evita rehacer el handshake TLS en cada request. httpx.Client es
+        # thread-safe, así que sirve para las descargas en paralelo.
+        self._http = httpx.Client(verify=self._verify, timeout=120)
+
+    def close(self) -> None:
+        self._http.close()
+
+    def __enter__(self) -> GBPClient:
+        return self
+
+    def __exit__(self, *_exc) -> None:  # noqa: ANN002
+        self.close()
 
     # --- construcción del sobre SOAP ---
     def _header(self, *, autenticado: bool) -> str:
@@ -115,8 +133,7 @@ class GBPClient:
             "Content-Type": "text/xml; charset=utf-8",
             "SOAPAction": f"{self._ns}{action}",
         }
-        with httpx.Client(verify=self._verify, timeout=120) as http:
-            resp = http.post(self._url, content=envelope.encode("utf-8"), headers=headers)
+        resp = self._http.post(self._url, content=envelope.encode("utf-8"), headers=headers)
         resp.raise_for_status()
         root = ET.fromstring(_clean(resp.text))
         for el in root.iter():
@@ -157,17 +174,35 @@ class GBPClient:
     def iter_pages(self) -> Iterator[list[dict[str, str]]]:
         """Itera las PÁGINAS de clientes del ERP (cada una es una lista de filas).
 
-        Útil para que el consumidor commitee entre páginas y NO mantenga una
-        transacción abierta durante el fetch (lento) de la siguiente página."""
+        Baja las páginas en **lotes concurrentes** (el WS pagina por número, así
+        que se pueden pedir varias a la vez) para acortar el tiempo total, que
+        está dominado por la latencia de red del ERP. Igual las entrega EN ORDEN
+        y de a una, así el consumidor puede commitear entre páginas sin mantener
+        una transacción abierta durante el fetch del próximo lote.
+        """
+        # Autenticar una sola vez ANTES de disparar las requests concurrentes
+        # (si no, todas verían token=None y autenticarían en paralelo).
+        if self._token is None:
+            self.authenticate()
+
+        k = self._concurrencia
         page = 0
-        while True:
-            filas = self.fetch_customers_page(page)
-            if not filas:
-                break
-            yield filas
-            if len(filas) < _PAGE_SIZE:
-                break  # última página
-            page += 1
+        with ThreadPoolExecutor(max_workers=k) as pool:
+            while True:
+                nums = list(range(page, page + k))
+                lotes = list(pool.map(self.fetch_customers_page, nums))
+                fin = False
+                for filas in lotes:
+                    if not filas:
+                        fin = True
+                        break
+                    yield filas
+                    if len(filas) < _PAGE_SIZE:
+                        fin = True  # última página; el resto del lote sobra
+                        break
+                if fin:
+                    break
+                page += k
 
     def iter_customers(self) -> Iterator[dict[str, str]]:
         """Itera TODOS los clientes del ERP (aplana las páginas)."""

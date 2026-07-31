@@ -40,6 +40,7 @@ def main() -> None:
     try:
         rep = sincronizar_clientes(db, erp, dry_run=args.dry_run, limit=args.limit)
     finally:
+        erp.close()
         db.close()
 
     print("\n== Resultado ==")

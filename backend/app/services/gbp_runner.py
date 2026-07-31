@@ -28,18 +28,20 @@ def _correr() -> None:
     from app.services.gbp_sync import sincronizar_clientes
 
     db = SessionLocal()
+    erp = GBPClient()
 
     def _progreso(rep) -> None:  # noqa: ANN001
         _estado["progreso"] = rep.resumen()
 
     try:
-        rep = sincronizar_clientes(db, GBPClient(), on_progress=_progreso)
+        rep = sincronizar_clientes(db, erp, on_progress=_progreso)
         _estado["ultimo_resultado"] = rep.resumen()
         logger.info("Sync GBP terminada: %s", rep.resumen())
     except Exception as exc:  # noqa: BLE001 - frontera del job
         _estado["ultimo_resultado"] = f"ERROR: {type(exc).__name__}: {exc}"
         logger.exception("Sync GBP falló")
     finally:
+        erp.close()
         db.close()
         _estado["corriendo"] = False
 
