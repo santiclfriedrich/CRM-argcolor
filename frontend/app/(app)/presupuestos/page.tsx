@@ -92,7 +92,7 @@ export default function PresupuestosPage() {
       {data && (
         <div className="mt-6 min-h-0 flex-1 overflow-auto rounded-lg border border-line">
           <table className="w-full text-sm [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:border-b [&_thead_th]:border-line [&_thead_th]:bg-surface2">
-            <thead className="bg-surface2 text-left text-ink-2">
+            <thead className="bg-surface2 text-left text-sm font-medium text-ink-2">
               <tr>
                 <th className="px-4 py-2 font-medium">Código</th>
                 <th className="px-4 py-2 font-medium">Oportunidad</th>
