@@ -54,6 +54,15 @@ def _run_seguimiento() -> None:
         db.close()
 
 
+def _run_gbp_sync() -> None:
+    """Sync incremental de clientes GBP -> CRM (dedup por CUIT, solo nuevos).
+    Respeta el lock: si ya hay una corrida (manual o previa), no hace nada."""
+    from app.services.gbp_runner import lanzar_sync
+
+    r = lanzar_sync()
+    logger.info("GBP sync programado: %s", r.get("status"))
+
+
 def _run_recordatorios() -> None:
     """Dispara los recordatorios de tareas cuya hora ya llegó."""
     from app.db.session import SessionLocal
@@ -90,6 +99,12 @@ def start_scheduler() -> None:
     _scheduler.add_job(_run_seguimiento, "cron", hour=11, minute=0, id="seguimiento_diario")
     # Recordatorios de tareas: chequeo frecuente (granularidad de ~5 min).
     _scheduler.add_job(_run_recordatorios, "interval", minutes=5, id="recordatorios")
+
+    # Sync incremental de clientes GBP cada 8h (solo si GBP está configurado).
+    if settings.GBP_USER and settings.GBP_PWD and settings.GBP_WS:
+        _scheduler.add_job(_run_gbp_sync, "interval", hours=8, id="gbp_sync")
+        logger.info("Sync GBP programado cada 8h")
+
     _scheduler.start()
     logger.info("Scheduler activo (seguimiento diario + recordatorios cada 5 min)")
 

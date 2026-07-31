@@ -1,6 +1,7 @@
 "use client";
 
-import { Building2, Plus } from "lucide-react";
+import { Building2, Plus, RefreshCw } from "lucide-react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -12,7 +13,48 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useClientes, useCreateCliente } from "@/lib/clientes";
 import { clearDraft, DRAFT_CLIENTE } from "@/lib/draft";
+import { useGbpSyncStatus, useRunGbpSync } from "@/lib/sync";
 import { errorMessage } from "@/lib/utils";
+
+// Botón (admin) para disparar el sync de clientes GBP -> CRM. El scheduler igual
+// lo corre solo cada 8h; esto es para forzarlo cuando cargan clientes nuevos.
+function SyncGbpBoton() {
+  const { data: session } = useSession();
+  const esAdmin = (session?.usuario as { rol?: string } | undefined)?.rol === "admin";
+  const run = useRunGbpSync();
+  const { data: estado } = useGbpSyncStatus(esAdmin);
+
+  if (!esAdmin) return null;
+  const corriendo = Boolean(estado?.corriendo) || run.isPending;
+
+  return (
+    <div className="flex items-center gap-2">
+      {corriendo ? (
+        <span className="hidden text-xs text-ink-3 sm:inline">
+          Sincronizando… {estado?.progreso ?? ""}
+        </span>
+      ) : (
+        estado?.ultimo_resultado && (
+          <span
+            className="hidden max-w-[16rem] truncate text-xs text-ink-3 sm:inline"
+            title={estado.ultimo_resultado}
+          >
+            Última: {estado.ultimo_resultado}
+          </span>
+        )
+      )}
+      <Button
+        variant="outline"
+        onClick={() => run.mutate()}
+        disabled={corriendo}
+        title="Trae los clientes nuevos del ERP GBP (incremental)"
+      >
+        <RefreshCw size={16} className={corriendo ? "animate-spin" : ""} />
+        {corriendo ? "Sincronizando…" : "Sincronizar GBP"}
+      </Button>
+    </div>
+  );
+}
 
 // Mensaje de error del backend a mostrar bajo el CUIT (solo si es un conflicto
 // de duplicado, HTTP 409).
@@ -36,7 +78,8 @@ export default function CuentasPage() {
           <Building2 size={18} />
         </span>
         <h1 className="text-2xl font-bold text-ink">Cuentas</h1>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <SyncGbpBoton />
           <Button onClick={() => setCreating(true)}>
             <Plus size={16} /> Nueva cuenta
           </Button>

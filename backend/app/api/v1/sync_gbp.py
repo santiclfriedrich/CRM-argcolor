@@ -1,53 +1,23 @@
-"""Disparador de la sincronización GBP -> CRM desde el servidor.
+"""Disparadores de la sincronización GBP -> CRM.
 
-Corre la sync en un hilo del proceso del backend (Railway), así sigue aunque el
-usuario apague su máquina. Protegido por un token secreto (GBP_SYNC_TOKEN).
-Es reanudable: volver a dispararlo saltea los que ya existen (dedup por CUIT).
+- Token (GET, para abrir desde el navegador / cron externo): /sync/gbp?token=…
+- Autenticado (para el botón del CRM): POST /sync/gbp/run, GET /sync/gbp/status
+- El scheduler la corre sola cada 8h (ver app/services/scheduler.py).
+
+Corre en un hilo del backend (Railway), así sigue aunque se cierre la máquina.
+Es incremental: dedup por CUIT, solo da de alta clientes nuevos.
 """
 
 from __future__ import annotations
 
-import logging
-import threading
-from datetime import datetime, timezone
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from fastapi import APIRouter, HTTPException, status
-
+from app.api.deps import get_current_admin, get_current_user
 from app.config import get_settings
-from app.integrations.gbp.client import GBPClient
-from app.services.gbp_sync import sincronizar_clientes
-
-logger = logging.getLogger(__name__)
+from app.db.models.usuarios import Usuario
+from app.services.gbp_runner import estado_con_conteo, lanzar_sync
 
 router = APIRouter(prefix="/sync", tags=["sync-gbp"])
-
-_lock = threading.Lock()
-_estado: dict = {
-    "corriendo": False,
-    "iniciado": None,
-    "progreso": None,  # resumen parcial (se actualiza en cada lote)
-    "ultimo_resultado": None,
-}
-
-
-def _correr() -> None:
-    from app.db.session import SessionLocal
-
-    db = SessionLocal()
-
-    def _progreso(rep) -> None:  # noqa: ANN001
-        _estado["progreso"] = rep.resumen()
-
-    try:
-        rep = sincronizar_clientes(db, GBPClient(), on_progress=_progreso)
-        _estado["ultimo_resultado"] = rep.resumen()
-        logger.info("Sync GBP terminada: %s", rep.resumen())
-    except Exception as exc:  # noqa: BLE001 - frontera del job
-        _estado["ultimo_resultado"] = f"ERROR: {type(exc).__name__}: {exc}"
-        logger.exception("Sync GBP falló")
-    finally:
-        db.close()
-        _estado["corriendo"] = False
 
 
 def _verificar_token(token: str) -> None:
@@ -58,46 +28,28 @@ def _verificar_token(token: str) -> None:
 
 @router.get("/gbp")
 def disparar_sync(token: str = "", force: int = 0) -> dict:
-    """Dispara la sync (una sola vez). GET para poder abrirlo desde el navegador.
-    Corre en segundo plano en el servidor; la respuesta vuelve al instante.
-
-    Si una corrida quedó trabada (corriendo=true pero sin avanzar), usar
-    `&force=1` para reiniciarla."""
+    """Dispara la sync (por token, GET para abrirlo desde el navegador)."""
     _verificar_token(token)
-    with _lock:
-        if _estado["corriendo"] and not force:
-            return {"status": "ya_corriendo", **_estado}
-        _estado["corriendo"] = True
-        _estado["iniciado"] = datetime.now(timezone.utc).isoformat()
-        _estado["progreso"] = None
-        _estado["ultimo_resultado"] = None
-        threading.Thread(target=_correr, daemon=True).start()
-    return {
-        "status": "reiniciado" if force else "iniciado",
-        "detalle": "La migración corre en el servidor. Podés cerrar la Mac.",
-    }
+    return lanzar_sync(force=bool(force))
 
 
 @router.get("/gbp/estado")
 def estado_sync(token: str = "") -> dict:
-    """Estado de la última corrida + conteo real en la base (ground truth)."""
+    """Estado de la última corrida (por token)."""
     _verificar_token(token)
-    out = dict(_estado)
-    try:
-        from sqlalchemy import func, select
+    return estado_con_conteo()
 
-        from app.db.models.clientes import Cliente
-        from app.db.session import SessionLocal
 
-        db = SessionLocal()
-        try:
-            out["clientes_sincronizados_en_db"] = db.scalar(
-                select(func.count())
-                .select_from(Cliente)
-                .where(Cliente.tipo.in_(["Gubernamental", "Corporativo", "Gremio"]))
-            )
-        finally:
-            db.close()
-    except Exception as exc:  # noqa: BLE001 - el conteo no debe romper el estado
-        out["clientes_sincronizados_en_db"] = f"error: {exc}"
-    return out
+@router.post("/gbp/run")
+def run_sync(
+    force: int = 0,
+    _: Usuario = Depends(get_current_admin),
+) -> dict:
+    """Dispara la sync desde el CRM (admin). Botón 'Sincronizar GBP'."""
+    return lanzar_sync(force=bool(force))
+
+
+@router.get("/gbp/status")
+def status_sync(_: Usuario = Depends(get_current_user)) -> dict:
+    """Estado de la última corrida (usuario logueado)."""
+    return estado_con_conteo()
