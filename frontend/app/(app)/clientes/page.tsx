@@ -111,7 +111,7 @@ export default function CuentasPage() {
           </div>
 
           <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-line">
-            <table className="w-full text-sm [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:border-b [&_thead_th]:border-line [&_thead_th]:bg-surface2">
+            <table className="w-full text-sm [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:border-b [&_thead_th]:border-line [&_thead_th]:bg-surface2 [&_thead_th]:text-ink [&_thead_th]:font-semibold">
               <thead className="bg-surface2 text-left text-sm font-medium text-ink-2">
                 <tr>
                   <th className="w-10 px-3 py-2 font-medium">#</th>
