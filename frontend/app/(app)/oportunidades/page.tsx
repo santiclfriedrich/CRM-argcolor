@@ -524,6 +524,18 @@ export default function OportunidadesPage() {
   };
   const oportunidadesDelMes = (data ?? []).filter(enPeriodo);
 
+  // Resumen del set visible (para los chips del encabezado).
+  const valorTotal = oportunidadesDelMes.reduce(
+    (a, o) => a + (Number(o.valor_estimado) || 0),
+    0,
+  );
+  const montoCompacto = (n: number): string =>
+    n >= 1_000_000
+      ? `$${(n / 1_000_000).toFixed(1)} M`
+      : n >= 1_000
+        ? `$${Math.round(n / 1_000)} k`
+        : `$${Math.round(n)}`;
+
   // Cartel "Desde <mes>": solo tiene sentido navegando por mes.
   const esArrastrada = (o: Oportunidad): boolean =>
     periodoModo === "mes" && idxMes(new Date(o.fecha_creacion)) < idxSeleccionado;
@@ -631,21 +643,38 @@ export default function OportunidadesPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">
-            Oportunidades
-          </h1>
+      {/* Encabezado: título + chips de resumen + acciones */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <h1 className="text-2xl font-bold tracking-tight text-ink">
+          Oportunidades
+        </h1>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-surface2 px-2.5 py-1 text-xs font-medium text-ink-2">
+            <span className="font-mono tabular-nums text-ink">
+              {oportunidadesDelMes.length}
+            </span>
+            {oportunidadesDelMes.length === 1 ? "oportunidad" : "oportunidades"}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-surface2 px-2.5 py-1 text-xs font-medium text-ink-2">
+            <span className="font-mono tabular-nums text-ink">
+              {montoCompacto(valorTotal)}
+            </span>
+            en pipeline
+          </span>
         </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus size={16} /> Nueva oportunidad
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <PropuestasIndicator />
+          <TransferenciasPendientes />
+          <Button onClick={() => setCreating(true)}>
+            <Plus size={16} /> Nueva oportunidad
+          </Button>
+        </div>
       </div>
 
-      {/* Controles: Mías/Todas a la izquierda; período centrado. */}
-      <div className="relative z-20 mt-3 flex flex-wrap items-center justify-center gap-3">
-        {/* Mías / Todas (pegado a la izquierda en pantallas grandes) */}
-        <div className="inline-flex rounded-lg border border-line bg-surface2 p-0.5 sm:absolute sm:left-0 sm:top-1/2 sm:-translate-y-1/2">
+      {/* Barra de herramientas: filtros + período + búsqueda (crece para llenar) */}
+      <div className="relative z-20 mt-4 flex flex-wrap items-center gap-2">
+        {/* Mías / Todas */}
+        <div className="inline-flex rounded-lg border border-line bg-surface2 p-0.5">
           {[
             { value: true, label: "Mías" },
             { value: false, label: "Todas" },
@@ -732,37 +761,26 @@ export default function OportunidadesPage() {
           </div>
         )}
 
-        <span className="text-xs text-ink-2">
-          {oportunidadesDelMes.length}{" "}
-          {oportunidadesDelMes.length === 1 ? "oportunidad" : "oportunidades"}
-        </span>
-
-        {/* Propuestas + transferencias pendientes (pegado a la derecha). */}
-        <div className="flex items-center gap-2 sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2">
-          <PropuestasIndicator />
-          <TransferenciasPendientes />
+        {/* Buscador: ocupa el ancho restante de la barra */}
+        <div className="relative min-w-[14rem] flex-1">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3" />
+          <Input
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por cliente, asunto, producto…"
+            className="h-9 pl-8 pr-8 text-sm"
+          />
+          {busqueda && (
+            <button
+              type="button"
+              onClick={() => setBusqueda("")}
+              aria-label="Limpiar búsqueda"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-ink-3 hover:text-ink"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
-      </div>
-
-      {/* Buscador global */}
-      <div className="relative mt-4 w-full max-w-xs">
-        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3" />
-        <Input
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="Buscar oportunidad…"
-          className="h-9 pl-8 pr-8 text-sm"
-        />
-        {busqueda && (
-          <button
-            type="button"
-            onClick={() => setBusqueda("")}
-            aria-label="Limpiar búsqueda"
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-ink-3 hover:text-ink"
-          >
-            <X size={14} />
-          </button>
-        )}
       </div>
 
       {isLoading && <p className="mt-4 text-ink-2">Cargando…</p>}
