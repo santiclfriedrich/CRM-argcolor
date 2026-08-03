@@ -673,49 +673,58 @@ export default function OportunidadesPage() {
 
       {/* Barra de herramientas: filtros + período + búsqueda (crece para llenar) */}
       <div className="relative z-20 mt-4 flex flex-wrap items-center gap-2">
-        {/* Mías / Todas */}
-        <div className="inline-flex rounded-lg border border-line bg-surface2 p-0.5">
-          {[
-            { value: true, label: "Mías" },
-            { value: false, label: "Todas" },
-          ].map((opt) => (
-            <button
-              key={String(opt.value)}
-              type="button"
-              onClick={() => setFiltro({ solo_mias: opt.value })}
-              className={cn(
-                "rounded-md px-3 py-1 text-sm font-medium transition-colors",
-                Boolean(filtros.solo_mias) === opt.value
-                  ? "bg-navy text-white"
-                  : "text-ink-2 hover:bg-surface",
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
+        {/* Alcance: Mías / Todas (con icono de persona para distinguirlo del período) */}
+        <div className="inline-flex items-center gap-1.5">
+          <User size={15} className="shrink-0 text-ink-3" />
+          <div className="inline-flex rounded-lg border border-line bg-surface2 p-0.5">
+            {[
+              { value: true, label: "Mías" },
+              { value: false, label: "Todas" },
+            ].map((opt) => (
+              <button
+                key={String(opt.value)}
+                type="button"
+                onClick={() => setFiltro({ solo_mias: opt.value })}
+                className={cn(
+                  "rounded-md px-3 py-1 text-sm font-medium transition-colors",
+                  Boolean(filtros.solo_mias) === opt.value
+                    ? "bg-navy text-white"
+                    : "text-ink-2 hover:bg-surface",
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Período: Mes / Rango / Todos */}
-        <div className="inline-flex rounded-lg border border-line bg-surface2 p-0.5">
-          {[
-            { value: "mes", label: "Mes" },
-            { value: "rango", label: "Rango" },
-            { value: "todos", label: "Todos" },
-          ].map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setPeriodoModo(opt.value as "mes" | "rango" | "todos")}
-              className={cn(
-                "rounded-md px-3 py-1 text-sm font-medium transition-colors",
-                periodoModo === opt.value
-                  ? "bg-navy text-white"
-                  : "text-ink-2 hover:bg-surface",
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
+        {/* Divisor: separa alcance (quién) de período (cuándo) */}
+        <span className="mx-1 hidden h-6 w-px bg-line sm:block" aria-hidden />
+
+        {/* Período: Mes / Rango / Todos (con icono de calendario) */}
+        <div className="inline-flex items-center gap-1.5">
+          <CalendarClock size={15} className="shrink-0 text-ink-3" />
+          <div className="inline-flex rounded-lg border border-line bg-surface2 p-0.5">
+            {[
+              { value: "mes", label: "Mes" },
+              { value: "rango", label: "Rango" },
+              { value: "todos", label: "Todos" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setPeriodoModo(opt.value as "mes" | "rango" | "todos")}
+                className={cn(
+                  "rounded-md px-3 py-1 text-sm font-medium transition-colors",
+                  periodoModo === opt.value
+                    ? "bg-navy text-white"
+                    : "text-ink-2 hover:bg-surface",
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Detalle del período según el modo */}
