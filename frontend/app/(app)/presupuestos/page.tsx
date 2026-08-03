@@ -123,7 +123,7 @@ export default function PresupuestosPage() {
                         href={`/oportunidades?op=${p.oportunidad_id}`}
                         className="inline-flex items-center rounded-md border border-accent/30 bg-accent-dim px-2 py-0.5 text-xs font-semibold text-accent hover:bg-accent/20"
                       >
-                        #{p.oportunidad_id}
+                        {p.oportunidad_id}
                       </Link>
                       {p.oportunidad?.asunto && (
                         <span className="max-w-[16rem] truncate text-xs text-ink-2">

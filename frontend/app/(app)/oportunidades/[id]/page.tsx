@@ -82,7 +82,7 @@ export default function OportunidadDetallePage() {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold text-ink">
-            {cliente} <span className="text-ink-3">· #{o.id}</span>
+            {cliente} <span className="text-ink-3">· {o.id}</span>
           </h1>
           <div className="mt-1 flex items-center gap-2">
             <Badge className={ESTADO_META[o.estado].color}>{ESTADO_META[o.estado].label}</Badge>

@@ -833,7 +833,7 @@ export default function OportunidadesPage() {
                       <span className="flex h-1.5 w-1.5 shrink-0 items-center justify-center">
                         <PuntoEstado estado={o.estado} />
                       </span>
-                      <span className="leading-none">#{o.id}</span>
+                      <span className="leading-none">{o.id}</span>
                     </span>
                   </td>
                   <td className="max-w-[12rem] px-2 py-1.5 font-medium text-ink">
