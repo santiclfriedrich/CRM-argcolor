@@ -6,6 +6,7 @@ import { useState } from "react";
 import { TareaModal } from "@/components/tareas/tarea-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, Kicker } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   estaVencidaTarea,
@@ -47,7 +48,10 @@ export default function TareasPage() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-ink">Tareas</h1>
+        <div>
+          <Kicker>Agenda</Kicker>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Tareas</h1>
+        </div>
         <Button onClick={() => setCreando(true)}>
           <Plus size={16} /> Nueva tarea
         </Button>
@@ -72,7 +76,7 @@ export default function TareasPage() {
             ))}
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-line">
+          <Card className="overflow-hidden">
             {isLoading && <p className="p-4 text-sm text-ink-2">Cargando…</p>}
             <ul className="max-h-[70vh] divide-y divide-line overflow-y-auto">
               {tareas.map((t) => {
@@ -125,7 +129,7 @@ export default function TareasPage() {
                 </li>
               )}
             </ul>
-          </div>
+          </Card>
         </div>
 
         {/* Detalle */}
@@ -166,7 +170,7 @@ function DetalleTarea({ tarea, onModificar }: { tarea: Tarea; onModificar: () =>
     : (tarea.oportunidad?.asunto ?? null);
 
   return (
-    <div className="rounded-lg border border-line bg-surface shadow-sm">
+    <Card>
       {/* Encabezado + acciones */}
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line p-5">
         <div className="flex items-center gap-3">
@@ -174,8 +178,8 @@ function DetalleTarea({ tarea, onModificar }: { tarea: Tarea; onModificar: () =>
             <ListChecks size={20} />
           </span>
           <div>
-            <p className="text-xs uppercase tracking-wide text-ink-3">Tarea</p>
-            <h2 className="text-xl font-bold text-ink">{tarea.titulo}</h2>
+            <Kicker>Tarea</Kicker>
+            <h2 className="mt-1 text-base font-semibold tracking-tight text-ink">{tarea.titulo}</h2>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -191,7 +195,7 @@ function DetalleTarea({ tarea, onModificar }: { tarea: Tarea; onModificar: () =>
             size="sm"
             onClick={eliminar}
             disabled={borrar.isPending}
-            className="text-red-600"
+            className="text-danger"
           >
             <Trash2 size={14} /> Eliminar
           </Button>
@@ -201,10 +205,10 @@ function DetalleTarea({ tarea, onModificar }: { tarea: Tarea; onModificar: () =>
       {/* Información de la tarea */}
       <div className="p-5">
         <div className="mb-4 flex items-center gap-2">
-          <Badge className={tarea.completada ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}>
+          <Badge tone={tarea.completada ? "success" : "info"}>
             {tarea.completada ? "Completado" : "Abierto"}
           </Badge>
-          <Badge className="bg-surface2 text-ink-2">
+          <Badge>
             Prioridad {PRIORIDAD_META[tarea.prioridad].label}
           </Badge>
         </div>
@@ -235,7 +239,7 @@ function DetalleTarea({ tarea, onModificar }: { tarea: Tarea; onModificar: () =>
           </p>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -245,7 +249,7 @@ function Campo({ label, valor, alerta }: { label: string; valor: string; alerta?
       <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
         {label}
       </p>
-      <p className={`mt-0.5 text-sm ${alerta ? "font-semibold text-red-600" : "text-ink"}`}>
+      <p className={`mt-0.5 text-sm ${alerta ? "font-semibold text-danger" : "text-ink"}`}>
         {valor}
         {alerta ? " (vencida)" : ""}
       </p>

@@ -4,6 +4,7 @@ import { Pencil, Star, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Card, Kicker } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { EmailChips } from "@/components/ui/email-chips";
 import { Input } from "@/components/ui/input";
@@ -25,16 +26,17 @@ export default function ConfiguracionPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-ink">Configuración</h1>
+      <Kicker>Ajustes</Kicker>
+      <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Configuración</h1>
       <p className="mt-1 text-sm text-ink-2">
         Automatización de las respuestas de la IA y destinatarios de Compras.
       </p>
 
       {isLoading && <p className="mt-6 text-ink-2">Cargando…</p>}
-      {isError && <p className="mt-6 text-red-600">No se pudo cargar la configuración.</p>}
+      {isError && <p className="mt-6 text-danger">No se pudo cargar la configuración.</p>}
 
       {data && (
-        <div className="mt-6 divide-y divide-line rounded-lg border border-line">
+        <Card className="mt-6 divide-y divide-line">
           <Row
             titulo="Acuse de recibo automático"
             detalle="Cuando entra un pedido claro, el cliente recibe automáticamente un acuse de recibo."
@@ -49,7 +51,7 @@ export default function ConfiguracionPage() {
             disabled={updateMut.isPending}
             onChange={(v) => updateMut.mutate({ aclaracion_automatica: v })}
           />
-        </div>
+        </Card>
       )}
 
       <GruposCompras />
@@ -125,7 +127,7 @@ function GruposCompras() {
 
   return (
     <div className="mt-8">
-      <h2 className="text-lg font-semibold text-ink">Destinatarios de Compras</h2>
+      <h2 className="text-base font-semibold tracking-tight text-ink">Destinatarios de Compras</h2>
       <p className="mt-1 text-sm text-ink-2">
         Armá tus grupos de destinatarios (a qué mails enviar). Marcá uno por
         defecto; al pedir a Compras podés elegir cuál usar.
@@ -137,7 +139,7 @@ function GruposCompras() {
         <div className="mt-4 space-y-3">
           {(grupos ?? []).map((g) =>
             editId === g.id ? (
-              <div key={g.id} className="space-y-3 rounded-lg border border-accent/40 p-4">
+              <Card key={g.id} className="space-y-3 border-accent/40 p-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <Label htmlFor="e-nombre">Nombre del grupo *</Label>
@@ -173,11 +175,11 @@ function GruposCompras() {
                     Cancelar
                   </Button>
                 </div>
-              </div>
+              </Card>
             ) : (
-              <div
+              <Card
                 key={g.id}
-                className="flex items-start justify-between gap-3 rounded-lg border border-line p-4"
+                className="flex items-start justify-between gap-3 p-4"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -217,14 +219,14 @@ function GruposCompras() {
                     variant="ghost"
                     size="sm"
                     onClick={() => eliminar(g)}
-                    className="text-ink-3 hover:text-red-600"
+                    className="text-ink-3 hover:text-danger"
                     aria-label="Eliminar grupo"
                     title="Eliminar"
                   >
                     <Trash2 size={14} />
                   </Button>
                 </div>
-              </div>
+              </Card>
             )
           )}
 
@@ -236,7 +238,7 @@ function GruposCompras() {
 
           <form
             onSubmit={agregar}
-            className="space-y-3 rounded-lg border border-dashed border-line p-4"
+            className="space-y-3 rounded-xl border border-dashed border-line p-4"
           >
             <p className="text-sm font-semibold text-ink">Nuevo grupo</p>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -272,7 +274,7 @@ function GruposCompras() {
                 {createMut.isPending ? "Agregando…" : "Agregar grupo"}
               </Button>
               {createMut.isError && (
-                <span className="text-xs text-red-600">
+                <span className="text-xs text-danger">
                   No se pudo agregar. Revisá que los emails sean válidos.
                 </span>
               )}

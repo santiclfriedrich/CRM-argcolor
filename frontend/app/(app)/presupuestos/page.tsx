@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Kicker } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
@@ -16,7 +17,15 @@ import {
   useDeletePresupuesto,
   usePresupuestos,
 } from "@/lib/presupuestos";
-import type { Presupuesto } from "@/lib/types";
+import type { EstadoPresupuesto, Presupuesto } from "@/lib/types";
+
+const TONO_PRESUPUESTO = {
+  borrador: "neutral",
+  enviado: "info",
+  aceptado: "success",
+  rechazado: "danger",
+  negociando: "warning",
+} as const satisfies Record<EstadoPresupuesto, string>;
 
 export default function PresupuestosPage() {
   const { data, isLoading, isError } = usePresupuestos();
@@ -57,11 +66,14 @@ export default function PresupuestosPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <h1 className="text-2xl font-bold text-ink">Presupuestos</h1>
-      <p className="mt-1 text-sm text-ink-2">
-        Cotizaciones armadas en el CRM. Para crear una nueva, entrá a una oportunidad y usá
-        “Armar presupuesto”.
-      </p>
+      <div>
+        <Kicker>Presupuestos</Kicker>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Presupuestos</h1>
+        <p className="mt-1 text-sm text-ink-2">
+          Cotizaciones armadas en el CRM. Para crear una nueva, entrá a una oportunidad y usá
+          “Armar presupuesto”.
+        </p>
+      </div>
 
       {data && (
         <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -87,7 +99,7 @@ export default function PresupuestosPage() {
       )}
 
       {isLoading && <p className="mt-4 text-ink-2">Cargando…</p>}
-      {isError && <p className="mt-4 text-red-600">No se pudo cargar.</p>}
+      {isError && <p className="mt-4 text-danger">No se pudo cargar.</p>}
 
       {data && (
         <div className="mt-6 min-h-0 flex-1 overflow-auto rounded-lg border border-line">
@@ -112,7 +124,7 @@ export default function PresupuestosPage() {
                   <td className="px-4 py-2">
                     <Link
                       href={`/presupuestos/${p.id}`}
-                      className="font-medium text-accent hover:underline"
+                      className="font-mono font-medium tabular-nums text-accent hover:underline"
                     >
                       {p.codigo}
                     </Link>
@@ -121,7 +133,7 @@ export default function PresupuestosPage() {
                     <div className="flex flex-col items-start gap-1">
                       <Link
                         href={`/oportunidades?op=${p.oportunidad_id}`}
-                        className="inline-flex items-center rounded-md border border-accent/30 bg-accent-dim px-2 py-0.5 text-xs font-semibold text-accent hover:bg-accent/20"
+                        className="inline-flex items-center rounded-md border border-accent/30 bg-accent-dim px-2 py-0.5 font-mono text-xs font-semibold tabular-nums text-accent hover:bg-accent/20"
                       >
                         {p.oportunidad_id}
                       </Link>
@@ -135,11 +147,11 @@ export default function PresupuestosPage() {
                   <td className="px-4 py-2 text-ink">
                     {p.oportunidad?.cliente?.razon_social ?? "—"}
                   </td>
-                  <td className="px-4 py-2 text-ink">
+                  <td className="px-4 py-2 font-mono tabular-nums text-ink">
                     {fmtMonto(p.monto_total, p.moneda)}
                   </td>
                   <td className="px-4 py-2">
-                    <Badge className={ESTADO_PRESUPUESTO[p.estado].color}>
+                    <Badge tone={TONO_PRESUPUESTO[p.estado]}>
                       {ESTADO_PRESUPUESTO[p.estado].label}
                     </Badge>
                   </td>
@@ -158,7 +170,7 @@ export default function PresupuestosPage() {
                           onClick={() => eliminar(p)}
                           disabled={deleteMut.isPending}
                           aria-label="Eliminar"
-                          className="text-ink-3 hover:text-red-600"
+                          className="text-ink-3 hover:text-danger"
                         >
                           <Trash2 size={14} />
                         </Button>

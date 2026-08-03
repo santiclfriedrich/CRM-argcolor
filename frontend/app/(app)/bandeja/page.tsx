@@ -16,6 +16,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Kicker } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -122,7 +123,8 @@ export default function BandejaPage() {
     <div>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Bandeja inteligente</h1>
+          <Kicker>Ingesta de mails</Kicker>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Bandeja inteligente</h1>
           <p className="mt-1 text-sm text-ink-2">
             La IA identifica la cuenta, extrae el pedido y crea la oportunidad. Podés pegar un
             mail abajo o sincronizar la casilla comercial.
@@ -140,11 +142,11 @@ export default function BandejaPage() {
       </div>
       {syncMut.isSuccess && (
         <div className="mt-2 text-sm">
-          <p className="text-green-600">
+          <p className="text-success">
             Sincronización OK: {syncMut.data.procesados} mail(s) nuevos procesados.
           </p>
           {syncMut.data.errores > 0 && (
-            <p className="text-amber-600">
+            <p className="text-warning">
               {syncMut.data.errores} mail(s) no se pudieron procesar.
               {syncMut.data.ultimo_error ? ` ${syncMut.data.ultimo_error}` : ""}
             </p>
@@ -152,12 +154,12 @@ export default function BandejaPage() {
           {syncMut.data.errores === 0 &&
             syncMut.data.procesados === 0 &&
             syncMut.data.ultimo_error && (
-              <p className="text-amber-600">{syncMut.data.ultimo_error}</p>
+              <p className="text-warning">{syncMut.data.ultimo_error}</p>
             )}
         </div>
       )}
       {syncMut.isError && (
-        <p className="mt-2 text-sm text-red-600">
+        <p className="mt-2 text-sm text-danger">
           {errorMessage(syncMut.error, "No se pudo sincronizar Gmail.")}
         </p>
       )}
@@ -194,7 +196,7 @@ export default function BandejaPage() {
           />
         </div>
         {ingestMut.isError && (
-          <p className="text-sm text-red-600">
+          <p className="text-sm text-danger">
             {errorMessage(ingestMut.error, "No se pudo procesar el mail. Revisá el backend.")}
           </p>
         )}
@@ -217,7 +219,7 @@ export default function BandejaPage() {
       </form>
 
       <div className="mt-8 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-ink">Mails procesados</h2>
+        <h2 className="text-base font-semibold tracking-tight text-ink">Mails procesados</h2>
         <div className="flex rounded-md border border-line p-0.5 text-sm">
           {(["todos", "personal"] as const).map((f) => (
             <button
@@ -282,9 +284,7 @@ function Descartados() {
                 {d.asunto && <span className="ml-2 text-ink-3">· {d.asunto}</span>}
               </div>
               <div className="flex items-center gap-2">
-                <Badge className="bg-surface2 text-ink-2">
-                  {CATEGORIA_LABEL[d.categoria]}
-                </Badge>
+                <Badge>{CATEGORIA_LABEL[d.categoria]}</Badge>
                 <button
                   type="button"
                   onClick={() => reprocesarMut.mutate(d.id)}
@@ -311,7 +311,7 @@ function MailCard({ mail }: { mail: Mail }) {
   const estado = mail.oportunidad?.estado;
   const [chatOpen, setChatOpen] = useState(false);
   return (
-    <article className="rounded-lg border border-line bg-surface p-4 shadow-sm dark:shadow-none">
+    <article className="rounded-xl border border-line bg-surface p-4 shadow-soft">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <span className="font-medium text-ink">{mail.de}</span>
@@ -323,16 +323,16 @@ function MailCard({ mail }: { mail: Mail }) {
                 <span className="font-medium text-ink-2">{casillaReceptora(mail)}</span>
               </span>
             )}
-            <span>{fmtFechaHora(mail.fecha ?? mail.created_at)}</span>
+            <span className="font-mono tabular-nums">
+              {fmtFechaHora(mail.fecha ?? mail.created_at)}
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {mail.oportunidad?.cliente ? (
-            <Badge className="bg-blue-100 text-blue-700">
-              {mail.oportunidad.cliente.razon_social}
-            </Badge>
+            <Badge tone="info">{mail.oportunidad.cliente.razon_social}</Badge>
           ) : (
-            <Badge className="bg-surface2 text-ink-2">cliente por identificar</Badge>
+            <Badge>cliente por identificar</Badge>
           )}
           {estado && <Badge className={ESTADO_META[estado].color}>{ESTADO_META[estado].label}</Badge>}
         </div>
@@ -437,11 +437,11 @@ function ConversacionPanel({ mail }: { mail: Mail }) {
           </span>
           <div className="flex items-center gap-2">
             {responder.isError && (
-              <span className="text-xs text-red-600">
+              <span className="text-xs text-danger">
                 {errorMessage(responder.error, "No se pudo enviar.")}
               </span>
             )}
-            {responder.isSuccess && <span className="text-xs text-green-600">Enviado ✓</span>}
+            {responder.isSuccess && <span className="text-xs text-success">Enviado ✓</span>}
             <Button type="submit" size="sm" disabled={responder.isPending || !texto.trim()}>
               <Send size={14} /> {responder.isPending ? "Enviando…" : "Enviar"}
             </Button>
@@ -516,7 +516,7 @@ function EliminarButton({
       onClick={eliminar}
       disabled={deleteMut.isPending}
       aria-label="Eliminar"
-      className="text-ink-3 hover:text-red-600"
+      className="text-ink-3 hover:text-danger"
     >
       <Trash2 size={14} /> {deleteMut.isPending ? "Eliminando…" : "Eliminar"}
     </Button>
@@ -538,9 +538,9 @@ function ResponderButton({
 
   return (
     <div className="flex items-center gap-2">
-      {mut.isSuccess && <span className="text-xs text-green-600">Enviado ✓</span>}
+      {mut.isSuccess && <span className="text-xs text-success">Enviado ✓</span>}
       {mut.isError && (
-        <span className="text-xs text-red-600">
+        <span className="text-xs text-danger">
           {errorMessage(mut.error, "No se pudo enviar")}
         </span>
       )}
@@ -622,8 +622,8 @@ function Extraccion({ data }: { data: EmailData }) {
         <Field label="Requerimiento" value={data.requerimiento} />
       </dl>
       {data.requiere_aclaracion && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/50 dark:bg-amber-950/30">
-          <p className="mb-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+        <div className="rounded-md border border-warning/30 bg-warning/10 p-3">
+          <p className="mb-1 text-xs font-medium text-warning">
             Requiere aclaración — borrador para el cliente:
           </p>
           <pre className="whitespace-pre-wrap text-xs text-ink">

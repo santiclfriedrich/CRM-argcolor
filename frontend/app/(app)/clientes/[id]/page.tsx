@@ -11,6 +11,7 @@ import { DominiosSection } from "@/components/clientes/dominios-section";
 import { TareaModal } from "@/components/tareas/tarea-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, Kicker } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useCliente, useDeleteCliente, useUpdateCliente } from "@/lib/clientes";
 import { ESTADO_META, useOportunidades } from "@/lib/oportunidades";
@@ -34,7 +35,7 @@ export default function ClienteDetailPage() {
   const confirm = useConfirm();
 
   if (isLoading) return <p className="text-ink-2">Cargando…</p>;
-  if (isError || !cliente) return <p className="text-red-600">No se pudo cargar la cuenta.</p>;
+  if (isError || !cliente) return <p className="text-danger">No se pudo cargar la cuenta.</p>;
 
   const opps = oportunidades ?? [];
   const tareas = (misTareas ?? []).filter((t) => t.cliente_id === clienteId);
@@ -69,8 +70,8 @@ export default function ClienteDetailPage() {
             <Building2 size={22} />
           </span>
           <div>
-            <p className="text-xs uppercase tracking-wide text-ink-3">Cuenta</p>
-            <h1 className="text-2xl font-bold text-ink">
+            <Kicker>Cuenta</Kicker>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">
               {cliente.razon_social}
             </h1>
             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-ink-2">
@@ -96,7 +97,7 @@ export default function ClienteDetailPage() {
           size="sm"
           onClick={eliminar}
           disabled={deleteMut.isPending}
-          className="shrink-0 text-red-600"
+          className="shrink-0 text-danger"
         >
           <Trash2 size={14} /> {deleteMut.isPending ? "Eliminando…" : "Eliminar cuenta"}
         </Button>
@@ -105,8 +106,8 @@ export default function ClienteDetailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Columna principal */}
         <div className="space-y-6 lg:col-span-2">
-          <section className="rounded-lg border border-line p-5">
-            <h2 className="mb-4 text-lg font-semibold text-ink">
+          <Card className="p-5">
+            <h2 className="mb-4 text-base font-semibold tracking-tight text-ink">
               Datos de la cuenta
             </h2>
             <ClienteForm
@@ -123,7 +124,7 @@ export default function ClienteDetailPage() {
               formId="cuenta-datos-form"
               hideSubmit
             />
-          </section>
+          </Card>
 
           <ContactosSection clienteId={clienteId} contactos={cliente.contactos} />
           <DominiosSection clienteId={clienteId} dominios={cliente.dominios} />
@@ -135,14 +136,14 @@ export default function ClienteDetailPage() {
               <Save size={16} /> {updateMut.isPending ? "Guardando…" : "Guardar cambios"}
             </Button>
             {updateMut.isSuccess && (
-              <span className="text-sm font-medium text-green-600">Cambios guardados.</span>
+              <span className="text-sm font-medium text-success">Cambios guardados.</span>
             )}
           </div>
         </div>
 
         {/* Columna lateral: relacionados */}
         <div className="space-y-6">
-          <section className="rounded-lg border border-line">
+          <Card>
             <header className="flex items-center gap-2 border-b border-line px-4 py-3">
               <Target size={16} className="text-orange-500" />
               <span className="font-semibold text-ink">Oportunidades</span>
@@ -160,7 +161,7 @@ export default function ClienteDetailPage() {
                       <span className="block truncate text-sm font-medium text-ink">
                         {o.asunto ?? `Oportunidad #${o.id}`}
                       </span>
-                      <span className="text-xs text-ink-3">
+                      <span className="font-mono tabular-nums text-xs text-ink-3">
                         {o.valor_estimado != null ? fmtMonto(o.valor_estimado, "USD") : "—"}
                       </span>
                     </span>
@@ -174,9 +175,9 @@ export default function ClienteDetailPage() {
                 </li>
               )}
             </ul>
-          </section>
+          </Card>
 
-          <section className="rounded-lg border border-line">
+          <Card>
             <header className="flex items-center gap-2 border-b border-line px-4 py-3">
               <ListChecks size={16} className="text-accent" />
               <span className="font-semibold text-ink">Tareas</span>
@@ -199,7 +200,7 @@ export default function ClienteDetailPage() {
                     >
                       {t.titulo}
                     </span>
-                    <span className="shrink-0 text-xs text-ink-3">
+                    <span className="shrink-0 font-mono tabular-nums text-xs text-ink-3">
                       {fmtDia(t.fecha_vencimiento)}
                     </span>
                   </button>
@@ -211,10 +212,10 @@ export default function ClienteDetailPage() {
                 </li>
               )}
             </ul>
-          </section>
+          </Card>
 
           {cliente.subcuentas.length > 0 && (
-            <section className="rounded-lg border border-line">
+            <Card>
               <header className="flex items-center gap-2 border-b border-line px-4 py-3">
                 <Building2 size={16} className="text-blue-500" />
                 <span className="font-semibold text-ink">Subcuentas</span>
@@ -232,7 +233,7 @@ export default function ClienteDetailPage() {
                   </li>
                 ))}
               </ul>
-            </section>
+            </Card>
           )}
         </div>
       </div>

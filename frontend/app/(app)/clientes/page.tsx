@@ -10,6 +10,7 @@ import { ClienteForm } from "@/components/clientes/cliente-form";
 import { ClientePicker } from "@/components/clientes/cliente-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Kicker } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { useClientes, useCreateCliente } from "@/lib/clientes";
 import { clearDraft, DRAFT_CLIENTE } from "@/lib/draft";
@@ -77,7 +78,10 @@ export default function CuentasPage() {
         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-white">
           <Building2 size={18} />
         </span>
-        <h1 className="text-2xl font-bold text-ink">Cuentas</h1>
+        <div>
+          <Kicker>Cartera de cuentas</Kicker>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Cuentas</h1>
+        </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <SyncGbpBoton />
           <Button onClick={() => setCreating(true)}>
@@ -88,7 +92,7 @@ export default function CuentasPage() {
 
       {isLoading && <p className="mt-4 text-ink-2">Cargando…</p>}
       {isError && (
-        <p className="mt-4 text-red-600">
+        <p className="mt-4 text-danger">
           No se pudo conectar al backend. ¿Está corriendo en {process.env.NEXT_PUBLIC_API_URL}?
         </p>
       )}
@@ -128,23 +132,21 @@ export default function CuentasPage() {
                     className="cursor-pointer border-t border-line hover:bg-surface2"
                     onClick={() => router.push(`/clientes/${c.id}`)}
                   >
-                    <td className="px-3 py-2 text-ink-3">{i + 1}</td>
+                    <td className="px-3 py-2 font-mono tabular-nums text-ink-3">{i + 1}</td>
                     <td className="px-3 py-2 font-medium text-accent">
                       <Link href={`/clientes/${c.id}`} onClick={(e) => e.stopPropagation()}>
                         {c.razon_social}
                       </Link>
                     </td>
-                    <td className="px-3 py-2 text-ink-2">{c.cuit ?? "—"}</td>
+                    <td className="px-3 py-2 font-mono tabular-nums text-ink-2">{c.cuit ?? "—"}</td>
                     <td className="px-3 py-2 text-ink-2">
                       {c.creado_por?.nombre ?? "—"}
                     </td>
                     <td className="px-3 py-2">
                       {c.activo ? (
-                        <Badge className="bg-green-100 text-green-700">activo</Badge>
+                        <Badge tone="success">activo</Badge>
                       ) : (
-                        <Badge className="bg-surface2 text-ink-2">
-                          inactivo
-                        </Badge>
+                        <Badge>inactivo</Badge>
                       )}
                     </td>
                   </tr>

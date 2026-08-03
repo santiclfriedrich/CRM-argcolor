@@ -33,6 +33,7 @@ import { OportunidadForm } from "@/components/oportunidades/oportunidad-form";
 import { SolicitudForm } from "@/components/solicitudes/solicitud-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, Kicker } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
@@ -290,13 +291,13 @@ const CERRADOS: EstadoOportunidad[] = ["ganada", "perdida"];
 //   verde   = pagada ("ganada")
 //   sin punto = perdida ("No avanzó")
 function PuntoEstado({ estado }: { estado: EstadoOportunidad }) {
-  let color: string | null = "bg-red-500";
+  let color: string | null = "bg-danger";
   let title = "Sin cerrar";
   if (estado === "ganada") {
-    color = "bg-green-500";
+    color = "bg-success";
     title = "Pago";
   } else if (estado === "confirmada") {
-    color = "bg-yellow-500";
+    color = "bg-warning";
     title = "Confirmada / pendiente";
   } else if (estado === "perdida") {
     color = null;
@@ -385,7 +386,7 @@ function RowMenu({
       }}
       className={cn(
         "flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-surface2 disabled:opacity-50",
-        opts?.danger ? "text-red-600" : "text-ink",
+        opts?.danger ? "text-danger" : "text-ink",
       )}
     >
       {icon} {label}
@@ -622,7 +623,12 @@ export default function OportunidadesPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-ink">Oportunidades</h1>
+        <div>
+          <Kicker>Pipeline comercial</Kicker>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">
+            Oportunidades
+          </h1>
+        </div>
         <Button onClick={() => setCreating(true)}>
           <Plus size={16} /> Nueva oportunidad
         </Button>
@@ -753,7 +759,7 @@ export default function OportunidadesPage() {
 
       {isLoading && <p className="mt-4 text-ink-2">Cargando…</p>}
       {isError && (
-        <p className="mt-4 text-red-600">
+        <p className="mt-4 text-danger">
           No se pudo cargar. ¿El backend está corriendo en {process.env.NEXT_PUBLIC_API_URL}?
         </p>
       )}
@@ -773,7 +779,7 @@ export default function OportunidadesPage() {
             size="sm"
             onClick={eliminarSeleccionadas}
             disabled={bulkDelete.isPending}
-            className="border-red-500 bg-red-500 text-white hover:bg-red-600"
+            className="border-danger bg-danger text-white hover:bg-danger/90"
           >
             <Trash2 size={14} /> Eliminar ({seleccion.size})
           </Button>
@@ -833,7 +839,7 @@ export default function OportunidadesPage() {
                       <span className="flex h-1.5 w-1.5 shrink-0 items-center justify-center">
                         <PuntoEstado estado={o.estado} />
                       </span>
-                      <span className="leading-none">{o.id}</span>
+                      <span className="font-mono leading-none tabular-nums">{o.id}</span>
                     </span>
                   </td>
                   <td className="max-w-[12rem] px-2 py-1.5 font-medium text-ink">
@@ -842,9 +848,9 @@ export default function OportunidadesPage() {
                         {o.cliente?.razon_social ?? "—"}
                       </span>
                       {esArrastrada(o) && (
-                        <span className="inline-flex shrink-0 items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium capitalize text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                        <Badge tone="warning" className="shrink-0 capitalize">
                           Desde {mesOrigen(o)}
-                        </span>
+                        </Badge>
                       )}
                     </div>
                   </td>
@@ -860,29 +866,29 @@ export default function OportunidadesPage() {
                   <td className="whitespace-nowrap px-2 py-1.5 text-ink-2">
                     {o.numero_pedido ?? "—"}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 text-ink-2">
+                  <td className="whitespace-nowrap px-2 py-1.5 font-mono tabular-nums text-ink-2">
                     {fmtDate(o.fecha_enviado_compras)}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 text-ink-2">
+                  <td className="whitespace-nowrap px-2 py-1.5 font-mono tabular-nums text-ink-2">
                     {fmtDate(o.fecha_respuesta_compras)}
                   </td>
                   <td className="px-2 py-1.5 text-center">
                     {estaCotizada(o) ? (
-                      <Check size={16} className="mx-auto text-green-600" aria-label="Cotizado" />
+                      <Check size={16} className="mx-auto text-success" aria-label="Cotizado" />
                     ) : (
                       <span className="text-ink-3">—</span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 text-ink-2">
+                  <td className="whitespace-nowrap px-2 py-1.5 font-mono tabular-nums text-ink-2">
                     {fmtDate(o.fecha_enviado_cliente)}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5">
+                  <td className="whitespace-nowrap px-2 py-1.5 font-mono tabular-nums">
                     <span
                       className={
                         o.estado === "confirmada" && o.fecha_limite
-                          ? "font-semibold text-yellow-600"
+                          ? "font-semibold text-warning"
                           : estaVencida(o)
-                          ? "font-semibold text-red-600"
+                          ? "font-semibold text-danger"
                           : "text-ink-2"
                       }
                     >
@@ -1020,7 +1026,7 @@ function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad;
                         onClick={() => setExcluidos((s) => new Set(s).add(a.ref))}
                         aria-label={`Quitar ${a.filename}`}
                         title="No adjuntar este archivo"
-                        className="ml-auto shrink-0 text-ink-3 transition-colors hover:text-red-600"
+                        className="ml-auto shrink-0 text-ink-3 transition-colors hover:text-danger"
                       >
                         Quitar
                       </button>
@@ -1042,7 +1048,7 @@ function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad;
             }
           />
           {crearYEnviar.isError && (
-            <p className="text-sm text-red-600">
+            <p className="text-sm text-danger">
               {errorMessage(
                 crearYEnviar.error,
                 "La solicitud se creó pero no se pudo enviar a Compras. Reintentá el envío desde Solicitudes.",
@@ -1228,7 +1234,7 @@ function PropuestaCard({
   const [verMail, setVerMail] = useState(false);
 
   return (
-    <div className="rounded-lg border border-line p-4">
+    <Card className="p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="font-semibold text-ink">{p.cliente ?? "Cliente por identificar"}</p>
@@ -1259,7 +1265,7 @@ function PropuestaCard({
             aria-label="Aceptar"
             onClick={() => resolver.mutate({ id: p.id, accion: "aceptar" })}
             disabled={resolver.isPending}
-            className="rounded-full border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
+            className="rounded-full border-success text-success hover:bg-success hover:text-white"
           >
             <Check size={16} />
           </Button>
@@ -1270,7 +1276,7 @@ function PropuestaCard({
             aria-label="Rechazar"
             onClick={() => resolver.mutate({ id: p.id, accion: "rechazar" })}
             disabled={resolver.isPending}
-            className="rounded-full border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+            className="rounded-full border-danger text-danger hover:bg-danger hover:text-white"
           >
             <X size={16} />
           </Button>
@@ -1323,7 +1329,7 @@ function PropuestaCard({
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 

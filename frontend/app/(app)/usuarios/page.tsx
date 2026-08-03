@@ -7,6 +7,7 @@ import { useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Kicker } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
@@ -47,7 +48,8 @@ export default function UsuariosPage() {
   if (!esAdmin) {
     return (
       <div>
-        <h1 className="text-2xl font-bold text-ink">Usuarios</h1>
+        <Kicker>Equipo</Kicker>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Usuarios</h1>
         <p className="mt-4 text-ink-2">
           Solo un administrador puede gestionar usuarios.
         </p>
@@ -69,7 +71,8 @@ export default function UsuariosPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Usuarios</h1>
+          <Kicker>Equipo</Kicker>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Usuarios</h1>
           <p className="mt-1 text-sm text-ink-2">
             Autorizá vendedores para que puedan iniciar sesión y conectar su Gmail.
           </p>
@@ -106,18 +109,12 @@ export default function UsuariosPage() {
                   <td className="px-4 py-2">
                     <div className="flex flex-wrap items-center gap-1.5">
                       {u.activo ? (
-                        <Badge className="bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400">
-                          Activo
-                        </Badge>
+                        <Badge tone="success">Activo</Badge>
                       ) : (
-                        <Badge className="bg-surface2 text-ink-2">
-                          Inactivo
-                        </Badge>
+                        <Badge>Inactivo</Badge>
                       )}
                       {u.gmail_conectado && (
-                        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
-                          Gmail ✓
-                        </Badge>
+                        <Badge tone="info">Gmail ✓</Badge>
                       )}
                     </div>
                   </td>
@@ -143,7 +140,7 @@ export default function UsuariosPage() {
                         onClick={() => eliminar(u)}
                         disabled={deleteMut.isPending}
                         aria-label="Eliminar"
-                        className="text-ink-3 hover:text-red-600"
+                        className="text-ink-3 hover:text-danger"
                       >
                         <Trash2 size={15} />
                       </Button>
@@ -212,7 +209,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
           />
         </div>
         {createMut.isError && (
-          <p className="text-sm text-red-600">
+          <p className="text-sm text-danger">
             {errorDetail(createMut.error, "No se pudo crear el usuario.")}
           </p>
         )}
@@ -263,7 +260,7 @@ function EditModal({ usuario, onClose }: { usuario: Usuario; onClose: () => void
           </Label>
         </div>
         {updateMut.isError && (
-          <p className="text-sm text-red-600">
+          <p className="text-sm text-danger">
             {errorDetail(updateMut.error, "No se pudo guardar.")}
           </p>
         )}

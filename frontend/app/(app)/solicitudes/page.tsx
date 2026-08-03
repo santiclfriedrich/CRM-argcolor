@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { SolicitudForm } from "@/components/solicitudes/solicitud-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Kicker } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +25,12 @@ import {
 } from "@/lib/solicitudes";
 import type { EstadoSolicitud, SolicitudDetail } from "@/lib/types";
 import { errorMessage as errorMsg } from "@/lib/utils";
+
+const TONO_SOLICITUD = {
+  enviada: "warning",
+  respondida: "success",
+  cerrada: "neutral",
+} as const satisfies Record<EstadoSolicitud, string>;
 
 export default function SolicitudesPage() {
   const [creating, setCreating] = useState(false);
@@ -55,7 +62,10 @@ export default function SolicitudesPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-ink">Solicitudes a Compras</h1>
+        <div>
+          <Kicker>Compras</Kicker>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Solicitudes a Compras</h1>
+        </div>
         <Button onClick={() => setCreating(true)}>
           <Plus size={16} /> Nueva solicitud
         </Button>
@@ -86,7 +96,7 @@ export default function SolicitudesPage() {
 
       {isLoading && <p className="mt-4 text-ink-2">Cargando…</p>}
       {isError && (
-        <p className="mt-4 text-red-600">
+        <p className="mt-4 text-danger">
           No se pudo cargar. ¿El backend está corriendo en {process.env.NEXT_PUBLIC_API_URL}?
         </p>
       )}
@@ -114,13 +124,13 @@ export default function SolicitudesPage() {
                     className="cursor-pointer border-t border-line hover:bg-surface2"
                     onClick={() => setDetailId(s.id)}
                   >
-                    <td className="px-4 py-2 font-mono text-ink-2">{s.id}</td>
+                    <td className="px-4 py-2 font-mono tabular-nums text-ink-2">{s.id}</td>
                     <td className="px-4 py-2">
                       <div className="flex flex-col items-start gap-1">
                         <Link
                           href={`/oportunidades?op=${s.oportunidad_id}`}
                           onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                          className="inline-flex items-center rounded-md border border-accent bg-accent-dim px-2 py-0.5 text-xs font-semibold text-accent hover:bg-accent-dim"
+                          className="inline-flex items-center rounded-md border border-accent bg-accent-dim px-2 py-0.5 font-mono text-xs font-semibold tabular-nums text-accent hover:bg-accent-dim"
                         >
                           {s.oportunidad_id}
                         </Link>
@@ -139,7 +149,7 @@ export default function SolicitudesPage() {
                     </td>
                     <td className="px-4 py-2 text-ink-2">{s.solicitante?.nombre ?? "—"}</td>
                     <td className="px-4 py-2">
-                      <Badge className={meta.color}>{meta.label}</Badge>
+                      <Badge tone={TONO_SOLICITUD[s.estado]}>{meta.label}</Badge>
                     </td>
                     <td className="px-4 py-2 text-right text-ink-3">
                       <Mail size={15} className="inline" />
@@ -201,7 +211,7 @@ function SolicitudDetailModal({ id, onClose }: { id: number; onClose: () => void
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-ink-2">Estado:</span>
-            <Badge className={ESTADO_SOLICITUD_META[solicitud.estado].color}>
+            <Badge tone={TONO_SOLICITUD[solicitud.estado]}>
               {ESTADO_SOLICITUD_META[solicitud.estado].label}
             </Badge>
             <div className="ml-auto flex gap-1">
@@ -257,7 +267,7 @@ function EnvioCompras({ solicitud }: { solicitud: SolicitudDetail }) {
     <div className="rounded-lg border border-line bg-surface2 p-3 text-sm">
       <div className="mb-2 flex items-center justify-between">
         <p className="font-medium text-ink">Mail a Compras</p>
-        {yaEnviado && <span className="text-xs text-green-600">Enviado por Gmail ✓</span>}
+        {yaEnviado && <span className="text-xs text-success">Enviado por Gmail ✓</span>}
       </div>
       <dl className="space-y-1 text-ink-2">
         <Row label="Para" value={solicitud.email_preview.to ?? "(configurar email de Compras)"} />
@@ -289,7 +299,7 @@ function EnvioCompras({ solicitud }: { solicitud: SolicitudDetail }) {
           <Copy size={14} /> {copied ? "¡Copiado!" : "Copiar"}
         </Button>
         {enviarMut.isError && (
-          <span className="text-xs text-red-600">
+          <span className="text-xs text-danger">
             {errorMsg(enviarMut.error, "No se pudo enviar")}
           </span>
         )}
@@ -335,7 +345,7 @@ function RespuestaCompras({
               <Sparkles size={14} /> {parseMut.isPending ? "Parseando…" : "Parsear con IA"}
             </Button>
             {parseMut.isError && (
-              <span className="text-xs text-red-600">
+              <span className="text-xs text-danger">
                 {errorMsg(parseMut.error, "No se pudo parsear")}
               </span>
             )}
@@ -390,7 +400,7 @@ function RespuestaCompras({
               {crearPresupuesto.isPending ? "Creando…" : "Crear presupuesto"}
             </Button>
             {crearPresupuesto.isError && (
-              <span className="text-xs text-red-600">
+              <span className="text-xs text-danger">
                 {errorMsg(crearPresupuesto.error, "No se pudo crear")}
               </span>
             )}

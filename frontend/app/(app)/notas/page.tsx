@@ -197,7 +197,7 @@ export default function NotasPage() {
               <button
                 type="button"
                 onClick={() => borrar(seleccionada)}
-                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-red-600 hover:bg-surface2"
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-danger hover:bg-surface2"
               >
                 <Trash2 size={13} /> Eliminar
               </button>
@@ -232,7 +232,7 @@ function EstadoGuardado({ estado }: { estado: Estado }) {
   }
   if (estado === "guardado") {
     return (
-      <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-500">
+      <span className="flex items-center gap-1 text-xs text-success">
         <Check size={13} /> Guardado
       </span>
     );

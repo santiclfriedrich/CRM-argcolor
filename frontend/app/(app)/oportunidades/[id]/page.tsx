@@ -21,6 +21,7 @@ import { useState, type FormEvent } from "react";
 import { OportunidadForm } from "@/components/oportunidades/oportunidad-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, Kicker } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { descargarAdjuntoMail, useMails } from "@/lib/mails";
@@ -54,7 +55,7 @@ export default function OportunidadDetallePage() {
     return (
       <div className="space-y-4">
         <BackLink />
-        <p className="text-red-600">No se pudo cargar la oportunidad.</p>
+        <p className="text-danger">No se pudo cargar la oportunidad.</p>
       </div>
     );
   }
@@ -81,8 +82,10 @@ export default function OportunidadDetallePage() {
 
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-ink">
-            {cliente} <span className="text-ink-3">· {o.id}</span>
+          <Kicker>Oportunidad</Kicker>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">
+            {cliente}{" "}
+            <span className="font-mono tabular-nums text-ink-3">· {o.id}</span>
           </h1>
           <div className="mt-1 flex items-center gap-2">
             <Badge className={ESTADO_META[o.estado].color}>{ESTADO_META[o.estado].label}</Badge>
@@ -94,7 +97,7 @@ export default function OportunidadDetallePage() {
             Creada por {o.creado_por?.nombre ?? "—"}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={eliminar} disabled={deleteMut.isPending} className="shrink-0 text-red-600">
+        <Button variant="outline" size="sm" onClick={eliminar} disabled={deleteMut.isPending} className="shrink-0 text-danger">
           <Trash2 size={14} /> {deleteMut.isPending ? "Eliminando…" : "Eliminar"}
         </Button>
       </div>
@@ -104,8 +107,8 @@ export default function OportunidadDetallePage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Columna principal: datos + bitácora */}
         <div className="space-y-6 lg:col-span-2">
-          <section className="rounded-lg border border-line p-5">
-            <h2 className="mb-4 text-lg font-semibold text-ink">
+          <Card className="p-5">
+            <h2 className="mb-4 text-base font-semibold tracking-tight text-ink">
               Datos de la oportunidad
             </h2>
             <OportunidadForm
@@ -115,9 +118,9 @@ export default function OportunidadDetallePage() {
               onSubmit={(values: OportunidadCreate) => updateMut.mutate(values)}
             />
             {updateMut.isSuccess && (
-              <p className="mt-2 text-sm font-medium text-green-600">Cambios guardados.</p>
+              <p className="mt-2 text-sm font-medium text-success">Cambios guardados.</p>
             )}
-          </section>
+          </Card>
 
           <Bitacora id={id} comentarios={o.comentarios} />
         </div>
@@ -211,8 +214,8 @@ function Bitacora({
   };
 
   return (
-    <section className="rounded-lg border border-line p-5">
-      <h2 className="mb-3 text-lg font-semibold text-ink">
+    <Card className="p-5">
+      <h2 className="mb-3 text-base font-semibold tracking-tight text-ink">
         Bitácora de seguimiento
       </h2>
       <form onSubmit={agregar} className="mb-3 flex items-start gap-2">
@@ -240,7 +243,9 @@ function Bitacora({
               <div className="mb-0.5 flex items-center justify-between text-[11px] text-ink-3">
                 <span>{c.autor ?? "—"}</span>
                 <div className="flex items-center gap-2">
-                  <span>{new Date(c.fecha).toLocaleString("es-AR")}</span>
+                  <span className="font-mono tabular-nums">
+                    {new Date(c.fecha).toLocaleString("es-AR")}
+                  </span>
                   <button
                     type="button"
                     onClick={async () => {
@@ -256,7 +261,7 @@ function Bitacora({
                     }}
                     disabled={eliminarMut.isPending}
                     aria-label="Eliminar comentario"
-                    className="text-ink-3 hover:text-red-600"
+                    className="text-ink-3 hover:text-danger"
                   >
                     <X size={13} />
                   </button>
@@ -267,7 +272,7 @@ function Bitacora({
           ))
         )}
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -287,8 +292,8 @@ function Adjuntos({
   };
 
   return (
-    <section className="rounded-lg border border-line p-5">
-      <h2 className="mb-3 text-lg font-semibold text-ink">Adjuntos</h2>
+    <Card className="p-5">
+      <h2 className="mb-3 text-base font-semibold tracking-tight text-ink">Adjuntos</h2>
 
       {adjuntos.length === 0 ? (
         <p className="mb-3 text-sm text-ink-3">Sin archivos adjuntos.</p>
@@ -314,7 +319,7 @@ function Adjuntos({
                 onClick={() => eliminar.mutate(a.id)}
                 disabled={eliminar.isPending}
                 aria-label="Eliminar adjunto"
-                className="shrink-0 text-ink-3 hover:text-red-600"
+                className="shrink-0 text-ink-3 hover:text-danger"
               >
                 <X size={15} />
               </button>
@@ -350,7 +355,7 @@ function Adjuntos({
                 <button
                   type="button"
                   onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
-                  className="ml-2 shrink-0 text-ink-3 hover:text-red-600"
+                  className="ml-2 shrink-0 text-ink-3 hover:text-danger"
                 >
                   Quitar
                 </button>
@@ -362,7 +367,7 @@ function Adjuntos({
           </Button>
         </>
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -374,8 +379,8 @@ function Relacionados({ oportunidadId }: { oportunidadId: number }) {
   const archivosMail = (mails.data ?? []).flatMap((m) => m.archivos ?? []);
 
   return (
-    <section className="rounded-lg border border-line p-5">
-      <h2 className="mb-3 text-lg font-semibold text-ink">Relacionados</h2>
+    <Card className="p-5">
+      <h2 className="mb-3 text-base font-semibold tracking-tight text-ink">Relacionados</h2>
       <div className="space-y-4">
         <SubSeccion titulo="Presupuestos" total={presupuestos.data?.length}>
           {(presupuestos.data ?? []).map((p) => (
@@ -389,7 +394,7 @@ function Relacionados({ oportunidadId }: { oportunidadId: number }) {
                 {p.codigo}
               </span>
               <span className="flex shrink-0 items-center gap-2">
-                <span className="text-xs text-ink-2">
+                <span className="font-mono text-xs tabular-nums text-ink-2">
                   {fmtMonto(p.monto_total, p.moneda)}
                 </span>
                 <Badge className={ESTADO_PRESUPUESTO[p.estado].color}>
@@ -447,7 +452,7 @@ function Relacionados({ oportunidadId }: { oportunidadId: number }) {
           ))}
         </SubSeccion>
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -466,7 +471,7 @@ function SubSeccion({
       <div className="mb-1.5 flex items-baseline gap-2">
         <h3 className="text-sm font-semibold text-ink">{titulo}</h3>
         {total != null && (
-          <span className="rounded-full bg-surface2 px-1.5 text-xs font-medium text-ink-2">
+          <span className="rounded-full bg-surface2 px-1.5 font-mono text-xs font-medium tabular-nums text-ink-2">
             {total}
           </span>
         )}

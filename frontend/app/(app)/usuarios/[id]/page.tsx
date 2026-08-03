@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 
 import { Badge } from "@/components/ui/badge";
+import { Kicker } from "@/components/ui/card";
 import { ESTADO_META, useOportunidades } from "@/lib/oportunidades";
 import { ESTADO_PRESUPUESTO, fmtMonto, usePresupuestos } from "@/lib/presupuestos";
 import { ESTADO_SOLICITUD_META, useSolicitudes } from "@/lib/solicitudes";
@@ -33,7 +34,7 @@ export default function PerfilUsuarioPage() {
     return (
       <div className="space-y-4">
         <BackLink />
-        <p className="text-red-600">Solo un administrador puede ver el perfil de otro usuario.</p>
+        <p className="text-danger">Solo un administrador puede ver el perfil de otro usuario.</p>
       </div>
     );
   }
@@ -43,7 +44,8 @@ export default function PerfilUsuarioPage() {
       <BackLink />
 
       <div>
-        <h1 className="text-2xl font-bold text-ink">
+        <Kicker>Usuario</Kicker>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">
           {usuario?.nombre ?? "Cargando…"}
         </h1>
         {usuario && (
@@ -63,7 +65,7 @@ export default function PerfilUsuarioPage() {
           o.cliente?.razon_social ?? "—",
           o.asunto ?? "—",
           <Badge key="e" className={ESTADO_META[o.estado].color}>{ESTADO_META[o.estado].label}</Badge>,
-          fmtDate(o.fecha_ultimo_movimiento),
+          <span key="m" className="font-mono tabular-nums">{fmtDate(o.fecha_ultimo_movimiento)}</span>,
         ])}
       />
 
@@ -79,7 +81,7 @@ export default function PerfilUsuarioPage() {
           <Badge key="e" className={ESTADO_SOLICITUD_META[s.estado].color}>
             {ESTADO_SOLICITUD_META[s.estado].label}
           </Badge>,
-          fmtDate(s.fecha_envio ?? s.created_at),
+          <span key="d" className="font-mono tabular-nums">{fmtDate(s.fecha_envio ?? s.created_at)}</span>,
         ])}
       />
 
@@ -94,7 +96,7 @@ export default function PerfilUsuarioPage() {
             {p.codigo}
           </Link>,
           p.oportunidad?.cliente?.razon_social ?? "—",
-          fmtMonto(p.monto_total, p.moneda),
+          <span key="m" className="font-mono tabular-nums">{fmtMonto(p.monto_total, p.moneda)}</span>,
           <Badge key="e" className={ESTADO_PRESUPUESTO[p.estado].color}>
             {ESTADO_PRESUPUESTO[p.estado].label}
           </Badge>,
@@ -133,11 +135,9 @@ function Section({
   return (
     <section>
       <div className="mb-2 flex items-baseline gap-2">
-        <h2 className="text-lg font-semibold text-ink">{titulo}</h2>
+        <h2 className="text-base font-semibold tracking-tight text-ink">{titulo}</h2>
         {total != null && (
-          <span className="rounded-full bg-surface2 px-2 py-0.5 text-xs font-medium text-ink-2">
-            {total}
-          </span>
+          <Badge className="font-mono tabular-nums">{total}</Badge>
         )}
       </div>
       <div className="overflow-x-auto rounded-lg border border-line">

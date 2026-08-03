@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Kicker } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
@@ -23,6 +24,14 @@ import {
 } from "@/lib/presupuestos";
 import type { EstadoPresupuesto, ItemInput, Presupuesto } from "@/lib/types";
 import { errorMessage } from "@/lib/utils";
+
+const TONO_PRESUPUESTO = {
+  borrador: "neutral",
+  enviado: "info",
+  aceptado: "success",
+  rechazado: "danger",
+  negociando: "warning",
+} as const satisfies Record<EstadoPresupuesto, string>;
 
 type Row = {
   key: string;
@@ -191,7 +200,8 @@ export default function ArmadorPresupuestoPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-ink">
+          <Kicker>Presupuesto</Kicker>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">
             {presupuesto.codigo}
           </h1>
           <p className="text-sm text-ink-2">
@@ -215,7 +225,7 @@ export default function ArmadorPresupuestoPage() {
             )}
           </p>
         </div>
-        <Badge className={ESTADO_PRESUPUESTO[estado].color}>
+        <Badge tone={TONO_PRESUPUESTO[estado]}>
           {ESTADO_PRESUPUESTO[estado].label}
         </Badge>
       </div>
@@ -286,7 +296,7 @@ export default function ArmadorPresupuestoPage() {
                     )}
                   </select>
                 </td>
-                <td className="px-2 py-1 text-right tabular-nums text-ink">
+                <td className="px-2 py-1 text-right font-mono tabular-nums text-ink">
                   {fmtMonto(subtotalRow(r), moneda)}
                 </td>
                 <td className="p-1 min-w-[240px] align-top"><ObservacionCell value={r.observaciones} onChange={(v) => setCampo(r.key, "observaciones", v)} /></td>
@@ -295,7 +305,7 @@ export default function ArmadorPresupuestoPage() {
                     <button
                       type="button"
                       onClick={() => setRows((rs) => rs.filter((x) => x.key !== r.key))}
-                      className="text-ink-3 hover:text-red-600"
+                      className="text-ink-3 hover:text-danger"
                       aria-label="Quitar fila"
                     >
                       <Trash2 size={14} />
@@ -314,7 +324,7 @@ export default function ArmadorPresupuestoPage() {
         </Button>
         <div className="text-right">
           <span className="text-sm text-ink-2">Total</span>
-          <p className="text-xl font-bold text-ink">
+          <p className="text-xl font-bold font-mono tabular-nums text-ink">
             {fmtMonto(total, moneda)}
           </p>
         </div>
@@ -334,8 +344,8 @@ export default function ArmadorPresupuestoPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          {updateMut.isSuccess && <span className="text-xs text-green-600">Guardado ✓</span>}
-          {updateMut.isError && <span className="text-xs text-red-600">No se pudo guardar</span>}
+          {updateMut.isSuccess && <span className="text-xs text-success">Guardado ✓</span>}
+          {updateMut.isError && <span className="text-xs text-danger">No se pudo guardar</span>}
           <Button variant="outline" onClick={verPdf} disabled={updateMut.isPending}>
             <FileText size={15} /> Ver PDF
           </Button>
@@ -400,7 +410,7 @@ function EnviarModal({
             placeholder="cliente@empresa.com"
           />
           {emailError ? (
-            <p className="mt-1 text-xs text-red-600">{emailError}</p>
+            <p className="mt-1 text-xs text-danger">{emailError}</p>
           ) : (
             <p className="mt-1 text-xs text-ink-3">
               Si lo dejás vacío, se usa el email del contacto de la oportunidad.
@@ -418,7 +428,7 @@ function EnviarModal({
           />
         </div>
         {enviar.isError && (
-          <p className="text-sm text-red-600">
+          <p className="text-sm text-danger">
             {errorMessage(enviar.error, "No se pudo enviar el presupuesto.")}
           </p>
         )}
