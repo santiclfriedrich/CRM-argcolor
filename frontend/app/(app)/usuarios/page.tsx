@@ -85,7 +85,7 @@ export default function UsuariosPage() {
         <div className="mt-6 overflow-auto rounded-xl border border-line">
           <table className="w-full text-sm">
             <thead>
-              <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+              <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
                 <th>
                   <span className="inline-flex items-center gap-1.5">
                     <User size={13} className="text-ink-3" /> Nombre
@@ -104,14 +104,14 @@ export default function UsuariosPage() {
             <tbody>
               {data.map((u) => (
                 <tr key={u.id} className="border-t border-line transition-colors hover:bg-surface2">
-                  <td className="px-4 py-3 font-medium text-ink">
+                  <td className="px-3 py-2 font-medium text-ink">
                     {u.nombre}
                   </td>
-                  <td className="px-4 py-3 text-ink-2">{u.email}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2 text-ink-2">{u.email}</td>
+                  <td className="px-3 py-2">
                     <Badge>{ROL_LABEL[u.rol]}</Badge>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <div className="flex flex-wrap items-center gap-1.5">
                       {u.activo ? (
                         <Badge tone="success">Activo</Badge>
@@ -123,7 +123,7 @@ export default function UsuariosPage() {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-3 py-2 text-right">
                     <Tooltip label="Ver perfil">
                       <Link
                         href={`/usuarios/${u.id}`}

@@ -798,7 +798,7 @@ export default function OportunidadesPage() {
         <div className="mt-4 min-h-0 flex-1 overflow-auto rounded-xl border border-line">
           <table className="w-full text-sm">
             <thead>
-              <tr className="whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+              <tr className="whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
                 <th className="w-10">
                   <input
                     type="checkbox"
@@ -836,7 +836,7 @@ export default function OportunidadesPage() {
                   onClick={(e) => setMenu({ o, x: e.clientX, y: e.clientY })}
                   className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
                 >
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={seleccion.has(o.id)}
@@ -845,7 +845,7 @@ export default function OportunidadesPage() {
                       className="h-4 w-4 rounded border-line accent-navy align-middle"
                     />
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 font-medium text-ink-2">
+                  <td className="whitespace-nowrap px-3 py-2 font-medium text-ink-2">
                     <span className="inline-flex items-center gap-1.5 leading-none">
                       {/* Slot fijo para el punto: así los números arrancan siempre alineados. */}
                       <span className="flex h-1.5 w-1.5 shrink-0 items-center justify-center">
@@ -854,12 +854,13 @@ export default function OportunidadesPage() {
                       <span className="font-mono leading-none tabular-nums">{o.id}</span>
                     </span>
                   </td>
-                  <td className="max-w-[14rem] px-4 py-3">
-                    <div className="flex items-center gap-1.5">
+                  <td className="px-3 py-2">
+                    <div className="flex max-w-[13rem] items-center gap-1.5">
                       {o.cliente?.razon_social ? (
                         <RefChip
                           icon={<Building2 size={12} className="shrink-0 text-ink-3" />}
                           title={o.cliente.razon_social}
+                          className="min-w-0"
                         >
                           {o.cliente.razon_social}
                         </RefChip>
@@ -873,35 +874,35 @@ export default function OportunidadesPage() {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-ink-2">
+                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink-2">
                     {o.cliente?.numero_cliente ?? "—"}
                   </td>
-                  <td className="max-w-[11rem] truncate px-4 py-3 text-ink-2" title={o.asunto ?? ""}>
+                  <td className="max-w-[11rem] truncate px-3 py-2 text-ink-2" title={o.asunto ?? ""}>
                     {o.asunto ?? "—"}
                   </td>
-                  <td className="max-w-[8rem] truncate px-4 py-3 text-ink-2" title={o.producto ?? ""}>
+                  <td className="max-w-[8rem] truncate px-3 py-2 text-ink-2" title={o.producto ?? ""}>
                     {o.producto ?? "—"}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-ink-2">
+                  <td className="whitespace-nowrap px-3 py-2 text-ink-2">
                     {o.numero_pedido ?? "—"}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 font-mono tabular-nums text-ink-2">
+                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink-2">
                     {fmtDate(o.fecha_enviado_compras)}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 font-mono tabular-nums text-ink-2">
+                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink-2">
                     {fmtDate(o.fecha_respuesta_compras)}
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-3 py-2 text-center">
                     {estaCotizada(o) ? (
                       <Check size={16} className="mx-auto text-success" aria-label="Cotizado" />
                     ) : (
                       <span className="text-ink-3">—</span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 font-mono tabular-nums text-ink-2">
+                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink-2">
                     {fmtDate(o.fecha_enviado_cliente)}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 font-mono tabular-nums">
+                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums">
                     <span
                       className={
                         o.estado === "confirmada" && o.fecha_limite
@@ -914,13 +915,13 @@ export default function OportunidadesPage() {
                       {fmtDate(o.fecha_limite)}
                     </span>
                   </td>
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                     <IngInput o={o} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <Badge className={ESTADO_META[o.estado].color}>{ESTADO_META[o.estado].label}</Badge>
                   </td>
-                  <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={o.cargada_en_gbp}
@@ -930,7 +931,7 @@ export default function OportunidadesPage() {
                       className="h-4 w-4 rounded border-line accent-navy"
                     />
                   </td>
-                  <td className="max-w-[10rem] truncate px-4 py-3 text-ink-2" title={o.observacion ?? ""}>
+                  <td className="max-w-[10rem] truncate px-3 py-2 text-ink-2" title={o.observacion ?? ""}>
                     {o.observacion ?? "—"}
                   </td>
                 </tr>

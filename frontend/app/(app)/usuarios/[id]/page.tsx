@@ -168,7 +168,7 @@ function Section({
       <div className="overflow-x-auto rounded-xl border border-line">
         <table className="w-full text-sm">
           <thead>
-            <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+            <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
               {cabeceras.map((c) => {
                 const Icono = CABECERA_ICONO[c];
                 return (
@@ -202,7 +202,7 @@ function Section({
               filas.map((fila, i) => (
                 <tr key={i} className="border-t border-line transition-colors hover:bg-surface2">
                   {fila.map((celda, j) => (
-                    <td key={j} className="px-4 py-3 text-ink-2">{celda}</td>
+                    <td key={j} className="px-3 py-2 text-ink-2">{celda}</td>
                   ))}
                 </tr>
               ))

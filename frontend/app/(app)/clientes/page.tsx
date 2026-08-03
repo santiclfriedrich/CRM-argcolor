@@ -116,7 +116,7 @@ export default function CuentasPage() {
           <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-xl border border-line">
             <table className="w-full text-sm">
               <thead>
-                <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+                <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
                   <th className="w-12">#</th>
                   <th>
                     <span className="inline-flex items-center gap-1.5">
@@ -143,14 +143,14 @@ export default function CuentasPage() {
                     className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
                     onClick={() => router.push(`/clientes/${c.id}`)}
                   >
-                    <td className="px-4 py-3 font-mono tabular-nums text-ink-3">{i + 1}</td>
-                    <td className="px-4 py-3 font-medium text-accent">
+                    <td className="px-3 py-2 font-mono tabular-nums text-ink-3">{i + 1}</td>
+                    <td className="px-3 py-2 font-medium text-accent">
                       <Link href={`/clientes/${c.id}`} onClick={(e) => e.stopPropagation()}>
                         {c.razon_social}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 font-mono tabular-nums text-ink-2">{c.cuit ?? "—"}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2 font-mono tabular-nums text-ink-2">{c.cuit ?? "—"}</td>
+                    <td className="px-3 py-2">
                       {c.creado_por?.nombre ? (
                         <RefChip icon={<User size={12} className="shrink-0 text-ink-3" />}>
                           {c.creado_por.nombre}
@@ -159,7 +159,7 @@ export default function CuentasPage() {
                         <span className="text-ink-3">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2">
                       {c.activo ? (
                         <Badge tone="success">activo</Badge>
                       ) : (

@@ -104,7 +104,7 @@ export default function SolicitudesPage() {
         <div className="mt-6 min-h-0 flex-1 overflow-auto rounded-xl border border-line">
           <table className="w-full text-sm">
             <thead>
-              <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+              <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
                 <th className="w-12">
                   <span className="inline-flex items-center gap-1.5">
                     <Hash size={13} className="text-ink-3" /> ID
@@ -143,8 +143,8 @@ export default function SolicitudesPage() {
                     className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
                     onClick={() => setDetailId(s.id)}
                   >
-                    <td className="px-4 py-3 font-mono tabular-nums text-ink-2">{s.id}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2 font-mono tabular-nums text-ink-2">{s.id}</td>
+                    <td className="px-3 py-2">
                       <Link
                         href={`/oportunidades?op=${s.oportunidad_id}`}
                         onClick={(e: React.MouseEvent) => e.stopPropagation()}
@@ -155,7 +155,7 @@ export default function SolicitudesPage() {
                         </RefChip>
                       </Link>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2">
                       {s.oportunidad?.cliente?.razon_social ? (
                         <RefChip icon={<Building2 size={12} className="shrink-0 text-ink-3" />}>
                           {s.oportunidad.cliente.razon_social}
@@ -164,10 +164,10 @@ export default function SolicitudesPage() {
                         <span className="text-ink-3">—</span>
                       )}
                     </td>
-                    <td className="max-w-xs truncate px-4 py-3 text-ink-2">
+                    <td className="max-w-xs truncate px-3 py-2 text-ink-2">
                       {s.requerimiento}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2">
                       {s.solicitante?.nombre ? (
                         <RefChip icon={<User size={12} className="shrink-0 text-ink-3" />}>
                           {s.solicitante.nombre}
@@ -176,10 +176,10 @@ export default function SolicitudesPage() {
                         <span className="text-ink-3">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2">
                       <Badge tone={TONO_SOLICITUD[s.estado]}>{meta.label}</Badge>
                     </td>
-                    <td className="px-4 py-3 text-right text-ink-3">
+                    <td className="px-3 py-2 text-right text-ink-3">
                       <Mail size={15} className="inline" />
                     </td>
                   </tr>
@@ -384,7 +384,7 @@ function RespuestaCompras({
           <div className="overflow-hidden rounded-md border border-line">
             <table className="w-full text-xs">
               <thead>
-                <tr className="[&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+                <tr className="[&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
                   <th>Descripción</th>
                   <th>Cant.</th>
                   <th className="!text-right">P. unit.</th>
@@ -393,12 +393,12 @@ function RespuestaCompras({
               <tbody>
                 {items.map((it, i) => (
                   <tr key={i} className="border-t border-line">
-                    <td className="px-4 py-3 text-ink">
+                    <td className="px-3 py-2 text-ink">
                       {it.fabricante ? `${it.fabricante} · ` : ""}
                       {it.descripcion}
                     </td>
-                    <td className="px-4 py-3 font-mono tabular-nums text-ink-2">{it.cantidad}</td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums text-ink-2">
+                    <td className="px-3 py-2 font-mono tabular-nums text-ink-2">{it.cantidad}</td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums text-ink-2">
                       {it.precio_unitario}
                     </td>
                   </tr>

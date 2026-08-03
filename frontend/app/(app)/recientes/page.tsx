@@ -27,7 +27,7 @@ export default function RecientesPage() {
       <div className="mt-6 overflow-auto rounded-xl border border-line">
         <table className="w-full text-sm">
           <thead>
-            <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+            <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
               <th>Nombre</th>
               <th>Tipo</th>
             </tr>
@@ -41,7 +41,7 @@ export default function RecientesPage() {
                   onClick={() => router.push(r.href)}
                   className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <span className="flex items-center gap-3">
                       <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white ${bg}`}>
                         <Icon size={16} />
@@ -49,7 +49,7 @@ export default function RecientesPage() {
                       <span className="font-medium text-accent">{r.nombre}</span>
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-ink-2">{r.tipo}</td>
+                  <td className="px-3 py-2 text-ink-2">{r.tipo}</td>
                 </tr>
               );
             })}

@@ -104,7 +104,7 @@ export default function PresupuestosPage() {
         <div className="mt-6 min-h-0 flex-1 overflow-auto rounded-xl border border-line">
           <table className="w-full text-sm">
             <thead>
-              <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+              <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
                 <th>
                   <span className="inline-flex items-center gap-1.5">
                     <Hash size={13} className="text-ink-3" /> Código
@@ -140,7 +140,7 @@ export default function PresupuestosPage() {
                   key={p.id}
                   className="border-t border-line transition-colors hover:bg-surface2"
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <Link
                       href={`/presupuestos/${p.id}`}
                       className="font-mono font-medium tabular-nums text-accent hover:underline"
@@ -148,14 +148,14 @@ export default function PresupuestosPage() {
                       {p.codigo}
                     </Link>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <Link href={`/oportunidades?op=${p.oportunidad_id}`} className="inline-flex max-w-full">
                       <RefChip icon={<Target size={12} className="shrink-0 text-ink-3" />}>
                         {p.oportunidad?.asunto ?? `Oportunidad ${p.oportunidad_id}`}
                       </RefChip>
                     </Link>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     {p.oportunidad?.cliente?.razon_social ? (
                       <RefChip icon={<Building2 size={12} className="shrink-0 text-ink-3" />}>
                         {p.oportunidad.cliente.razon_social}
@@ -164,15 +164,15 @@ export default function PresupuestosPage() {
                       <span className="text-ink-3">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 font-mono tabular-nums text-ink">
+                  <td className="px-3 py-2 font-mono tabular-nums text-ink">
                     {fmtMonto(p.monto_total, p.moneda)}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <Badge tone={TONO_PRESUPUESTO[p.estado]}>
                       {ESTADO_PRESUPUESTO[p.estado].label}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     {p.creado_por?.nombre ? (
                       <RefChip icon={<User size={12} className="shrink-0 text-ink-3" />}>
                         {p.creado_por.nombre}
@@ -181,7 +181,7 @@ export default function PresupuestosPage() {
                       <span className="text-ink-3">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <div className="flex items-center justify-end gap-1">
                       <Button size="sm" variant="ghost" onClick={() => abrirPdf(p.id)}>
                         <FileText size={14} /> PDF
