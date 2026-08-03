@@ -365,7 +365,7 @@ export function TareaModal({ open, onClose, tarea, fechaPorDefecto }: Props) {
 
         <div className="flex items-center justify-between gap-2 pt-2">
           {esEdicion ? (
-            <Button type="button" variant="ghost" onClick={eliminar} className="text-red-600">
+            <Button type="button" variant="ghost" onClick={eliminar} className="text-danger">
               Eliminar
             </Button>
           ) : (

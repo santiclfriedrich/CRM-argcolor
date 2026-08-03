@@ -167,7 +167,7 @@ export function SolicitudForm({
           readOnly
           disabled
           placeholder="—"
-          className="font-mono"
+          className="font-mono tabular-nums"
         />
         <p className="mt-1 text-xs text-ink-3">
           {!oportunidadId
@@ -218,6 +218,7 @@ export function SolicitudForm({
             step="0.01"
             value={importe}
             onChange={(e) => setImporte(e.target.value)}
+            className="font-mono tabular-nums"
           />
         </div>
       </div>
@@ -299,7 +300,7 @@ export function SolicitudForm({
                 <button
                   type="button"
                   onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
-                  className="ml-2 shrink-0 text-ink-3 transition-colors hover:text-red-600"
+                  className="ml-2 shrink-0 text-ink-3 transition-colors hover:text-danger"
                 >
                   Quitar
                 </button>

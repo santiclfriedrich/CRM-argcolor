@@ -53,7 +53,7 @@ function Sugerencias({
                 <span className="text-ink-3"> | {c.cuit ?? "—"}</span>
               </span>
               {c.numero_cliente && (
-                <span className="shrink-0 font-mono text-xs text-ink-3">
+                <span className="shrink-0 font-mono tabular-nums text-xs text-ink-3">
                   {c.numero_cliente}
                 </span>
               )}
@@ -142,7 +142,7 @@ export function ClientePicker({ clientes, value, onChange }: Props) {
           placeholder="N° cliente"
           className={cn(
             "font-mono",
-            notFound && "border-red-400 focus:border-red-400 focus:ring-red-400/30",
+            notFound && "border-danger focus:border-danger focus:ring-danger/30",
           )}
           aria-label="Número de cliente"
         />

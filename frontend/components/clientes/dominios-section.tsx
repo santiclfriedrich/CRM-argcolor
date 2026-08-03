@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -72,8 +73,8 @@ export function DominiosSection({ clienteId, dominios }: Props) {
   };
 
   return (
-    <section>
-      <h2 className="mb-3 text-lg font-semibold text-ink">Dominios (sin @)</h2>
+    <Card className="p-5">
+      <h2 className="mb-3 text-base font-semibold tracking-tight text-ink">Dominios (sin @)</h2>
 
       <form onSubmit={agregar} className="mb-3 flex items-center gap-2">
         <Input
@@ -133,7 +134,7 @@ export function DominiosSection({ clienteId, dominios }: Props) {
               <span className="inline-flex items-center gap-2 font-mono text-ink">
                 {d.dominio}
                 {d.es_principal_dominio && (
-                  <Badge className="bg-amber-100 text-amber-700">
+                  <Badge tone="warning">
                     <Star size={11} className="mr-1" fill="currentColor" /> principal
                   </Badge>
                 )}
@@ -156,7 +157,7 @@ export function DominiosSection({ clienteId, dominios }: Props) {
                     onClick={() => eliminar(d)}
                     aria-label="Eliminar"
                   >
-                    <Trash2 size={15} className="text-red-500" />
+                    <Trash2 size={15} className="text-danger" />
                   </Button>
                 </Tooltip>
               </div>
@@ -167,6 +168,6 @@ export function DominiosSection({ clienteId, dominios }: Props) {
           <li className="px-3 py-6 text-center text-ink-3">Sin dominios asociados.</li>
         )}
       </ul>
-    </section>
+    </Card>
   );
 }

@@ -97,10 +97,10 @@ function Seccion({ titulo, children }: { titulo: string; children: ReactNode }) 
 }
 
 // Asterisco rojo para campos obligatorios.
-const Req = () => <span className="text-red-600"> *</span>;
+const Req = () => <span className="text-danger"> *</span>;
 
 const FieldError = ({ msg }: { msg?: string }) =>
-  msg ? <p className="mt-1 text-xs font-medium text-red-600">{msg}</p> : null;
+  msg ? <p className="mt-1 text-xs font-medium text-danger">{msg}</p> : null;
 
 export function ClienteForm({
   initial,
@@ -239,7 +239,7 @@ export function ClienteForm({
           />
           <FieldError msg={errors.cuit?.message} />
           {mostrarCuitError && (
-            <p className="mt-1 text-xs font-medium text-red-600">{cuitError}</p>
+            <p className="mt-1 text-xs font-medium text-danger">{cuitError}</p>
           )}
         </div>
         <div>

@@ -13,13 +13,13 @@ const config: Config = {
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       colors: {
-        // Paleta base ARG COLOR (ajustable). Azul más vivo que el navy anterior.
+        // Paleta base ARG COLOR: violeta de marca (#7118f7).
         brand: {
-          DEFAULT: "#2563eb", // blue-600
-          light: "#60a5fa",
-          dark: "#1d4ed8",
-          50: "#eff6ff",
-          100: "#dbeafe",
+          DEFAULT: "#7118f7",
+          light: "#a37cff",
+          dark: "#5e14cd",
+          50: "#f3ecfe",
+          100: "#e4d3fd",
         },
         // Tokens semánticos: cambian solos entre claro/oscuro (ver globals.css).
         bg: "var(--c-bg)",
@@ -53,7 +53,7 @@ const config: Config = {
       boxShadow: {
         // Sombras suaves para dar profundidad a cards y modales.
         soft: "0 1px 2px rgba(3,35,77,0.04), 0 10px 24px -14px rgba(3,35,77,0.22)",
-        pop: "0 1px 2px rgba(37,99,235,0.15), 0 8px 20px -8px rgba(37,99,235,0.35)",
+        pop: "0 1px 2px rgba(113,24,247,0.15), 0 8px 20px -8px rgba(113,24,247,0.35)",
       },
     },
   },

@@ -258,6 +258,7 @@ export function OportunidadForm({
             value={numeroPedido}
             onChange={(e) => setNumeroPedido(e.target.value)}
             placeholder="Ej: 1-594059"
+            className="font-mono tabular-nums"
           />
         </div>
       </div>
@@ -272,6 +273,7 @@ export function OportunidadForm({
             step="0.01"
             value={valor}
             onChange={(e) => setValor(e.target.value)}
+            className="font-mono tabular-nums"
           />
         </div>
         <div>

@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Tooltip } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,9 +47,9 @@ export function ContactosSection({ clienteId, contactos }: Props) {
   };
 
   return (
-    <section>
+    <Card className="p-5">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-ink">Contactos</h2>
+        <h2 className="text-base font-semibold tracking-tight text-ink">Contactos</h2>
         <Button size="sm" onClick={() => setCreating(true)}>
           <Plus size={16} /> Agregar
         </Button>
@@ -95,7 +96,7 @@ export function ContactosSection({ clienteId, contactos }: Props) {
                       }}
                       aria-label="Eliminar"
                     >
-                      <Trash2 size={15} className="text-red-500" />
+                      <Trash2 size={15} className="text-danger" />
                     </Button>
                   </Tooltip>
                 </td>
@@ -125,7 +126,7 @@ export function ContactosSection({ clienteId, contactos }: Props) {
           onCancel={closeModal}
         />
       </Modal>
-    </section>
+    </Card>
   );
 }
 
