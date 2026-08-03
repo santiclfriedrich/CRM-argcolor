@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, FileText, Mail, Paperclip, Plus, Send, Sparkles } from "lucide-react";
+import { Building2, Copy, FileText, Hash, Mail, Paperclip, Plus, Send, Sparkles, Target, User } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { SolicitudForm } from "@/components/solicitudes/solicitud-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { RefChip } from "@/components/ui/ref-chip";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
@@ -100,17 +101,37 @@ export default function SolicitudesPage() {
       )}
 
       {data && (
-        <div className="mt-6 min-h-0 flex-1 overflow-auto rounded-lg border border-line">
-          <table className="w-full text-sm [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:border-b [&_thead_th]:border-line [&_thead_th]:bg-surface2 [&_thead_th]:text-ink [&_thead_th]:font-semibold">
-            <thead className="bg-surface2 text-left text-sm font-medium text-ink-2">
-              <tr>
-                <th className="px-4 py-2 font-medium">ID</th>
-                <th className="px-4 py-2 font-medium">Oportunidad</th>
-                <th className="px-4 py-2 font-medium">Cliente</th>
-                <th className="px-4 py-2 font-medium">Requerimiento</th>
-                <th className="px-4 py-2 font-medium">Solicitante</th>
-                <th className="px-4 py-2 font-medium">Estado</th>
-                <th className="px-4 py-2" />
+        <div className="mt-6 min-h-0 flex-1 overflow-auto rounded-xl border border-line">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+                <th className="w-12">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Hash size={13} className="text-ink-3" /> ID
+                  </span>
+                </th>
+                <th>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Target size={13} className="text-ink-3" /> Oportunidad
+                  </span>
+                </th>
+                <th>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Building2 size={13} className="text-ink-3" /> Cliente
+                  </span>
+                </th>
+                <th>
+                  <span className="inline-flex items-center gap-1.5">
+                    <FileText size={13} className="text-ink-3" /> Requerimiento
+                  </span>
+                </th>
+                <th>
+                  <span className="inline-flex items-center gap-1.5">
+                    <User size={13} className="text-ink-3" /> Solicitante
+                  </span>
+                </th>
+                <th>Estado</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -119,37 +140,46 @@ export default function SolicitudesPage() {
                 return (
                   <tr
                     key={s.id}
-                    className="cursor-pointer border-t border-line hover:bg-surface2"
+                    className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
                     onClick={() => setDetailId(s.id)}
                   >
-                    <td className="px-4 py-2 font-mono tabular-nums text-ink-2">{s.id}</td>
-                    <td className="px-4 py-2">
-                      <div className="flex flex-col items-start gap-1">
-                        <Link
-                          href={`/oportunidades?op=${s.oportunidad_id}`}
-                          onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                          className="inline-flex items-center rounded-md border border-accent bg-accent-dim px-2 py-0.5 font-mono text-xs font-semibold tabular-nums text-accent hover:bg-accent-dim"
-                        >
-                          {s.oportunidad_id}
-                        </Link>
-                        {s.oportunidad?.asunto && (
-                          <span className="max-w-[16rem] truncate text-xs text-ink-2">
-                            {s.oportunidad.asunto}
-                          </span>
-                        )}
-                      </div>
+                    <td className="px-4 py-3 font-mono tabular-nums text-ink-2">{s.id}</td>
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/oportunidades?op=${s.oportunidad_id}`}
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                        className="inline-flex max-w-full"
+                      >
+                        <RefChip icon={<Target size={12} className="shrink-0 text-ink-3" />}>
+                          {s.oportunidad?.asunto ?? `Oportunidad ${s.oportunidad_id}`}
+                        </RefChip>
+                      </Link>
                     </td>
-                    <td className="px-4 py-2 font-medium text-ink">
-                      {s.oportunidad?.cliente?.razon_social ?? "—"}
+                    <td className="px-4 py-3">
+                      {s.oportunidad?.cliente?.razon_social ? (
+                        <RefChip icon={<Building2 size={12} className="shrink-0 text-ink-3" />}>
+                          {s.oportunidad.cliente.razon_social}
+                        </RefChip>
+                      ) : (
+                        <span className="text-ink-3">—</span>
+                      )}
                     </td>
-                    <td className="max-w-xs truncate px-4 py-2 text-ink-2">
+                    <td className="max-w-xs truncate px-4 py-3 text-ink-2">
                       {s.requerimiento}
                     </td>
-                    <td className="px-4 py-2 text-ink-2">{s.solicitante?.nombre ?? "—"}</td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-3">
+                      {s.solicitante?.nombre ? (
+                        <RefChip icon={<User size={12} className="shrink-0 text-ink-3" />}>
+                          {s.solicitante.nombre}
+                        </RefChip>
+                      ) : (
+                        <span className="text-ink-3">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
                       <Badge tone={TONO_SOLICITUD[s.estado]}>{meta.label}</Badge>
                     </td>
-                    <td className="px-4 py-2 text-right text-ink-3">
+                    <td className="px-4 py-3 text-right text-ink-3">
                       <Mail size={15} className="inline" />
                     </td>
                   </tr>
@@ -353,22 +383,22 @@ function RespuestaCompras({
         <>
           <div className="overflow-hidden rounded-md border border-line">
             <table className="w-full text-xs">
-              <thead className="bg-surface2 text-left text-sm font-medium text-ink-2">
-                <tr>
-                  <th className="px-2 py-1 font-medium">Descripción</th>
-                  <th className="px-2 py-1 font-medium">Cant.</th>
-                  <th className="px-2 py-1 text-right font-medium">P. unit.</th>
+              <thead>
+                <tr className="[&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+                  <th>Descripción</th>
+                  <th>Cant.</th>
+                  <th className="!text-right">P. unit.</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((it, i) => (
                   <tr key={i} className="border-t border-line">
-                    <td className="px-2 py-1 text-ink">
+                    <td className="px-4 py-3 text-ink">
                       {it.fabricante ? `${it.fabricante} · ` : ""}
                       {it.descripcion}
                     </td>
-                    <td className="px-2 py-1 text-ink-2">{it.cantidad}</td>
-                    <td className="px-2 py-1 text-right tabular-nums text-ink-2">
+                    <td className="px-4 py-3 font-mono tabular-nums text-ink-2">{it.cantidad}</td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums text-ink-2">
                       {it.precio_unitario}
                     </td>
                   </tr>

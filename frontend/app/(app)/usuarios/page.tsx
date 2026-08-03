@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, Mail, Pencil, Plus, Trash2, User } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useState, type FormEvent } from "react";
@@ -82,28 +82,36 @@ export default function UsuariosPage() {
       {isLoading && <p className="mt-4 text-ink-2">Cargando…</p>}
 
       {data && (
-        <div className="mt-6 overflow-hidden rounded-lg border border-line">
+        <div className="mt-6 overflow-auto rounded-xl border border-line">
           <table className="w-full text-sm">
-            <thead className="bg-surface2 text-left text-ink-2">
-              <tr>
-                <th className="px-4 py-2 font-medium">Nombre</th>
-                <th className="px-4 py-2 font-medium">Email</th>
-                <th className="px-4 py-2 font-medium">Rol</th>
-                <th className="px-4 py-2 font-medium">Estado</th>
-                <th className="px-4 py-2" />
+            <thead>
+              <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+                <th>
+                  <span className="inline-flex items-center gap-1.5">
+                    <User size={13} className="text-ink-3" /> Nombre
+                  </span>
+                </th>
+                <th>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Mail size={13} className="text-ink-3" /> Email
+                  </span>
+                </th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th />
               </tr>
             </thead>
             <tbody>
               {data.map((u) => (
-                <tr key={u.id} className="border-t border-line">
-                  <td className="px-4 py-2 font-medium text-ink">
+                <tr key={u.id} className="border-t border-line transition-colors hover:bg-surface2">
+                  <td className="px-4 py-3 font-medium text-ink">
                     {u.nombre}
                   </td>
-                  <td className="px-4 py-2 text-ink-2">{u.email}</td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-3 text-ink-2">{u.email}</td>
+                  <td className="px-4 py-3">
                     <Badge>{ROL_LABEL[u.rol]}</Badge>
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-3">
                     <div className="flex flex-wrap items-center gap-1.5">
                       {u.activo ? (
                         <Badge tone="success">Activo</Badge>
@@ -115,7 +123,7 @@ export default function UsuariosPage() {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-2 text-right">
+                  <td className="px-4 py-3 text-right">
                     <Tooltip label="Ver perfil">
                       <Link
                         href={`/usuarios/${u.id}`}

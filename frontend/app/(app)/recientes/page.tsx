@@ -24,12 +24,12 @@ export default function RecientesPage() {
         </p>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-lg border border-line">
+      <div className="mt-6 overflow-auto rounded-xl border border-line">
         <table className="w-full text-sm">
-          <thead className="border-b border-line bg-surface2 text-left text-xs font-medium uppercase tracking-wide text-ink-2">
-            <tr>
-              <th className="px-4 py-3">Nombre</th>
-              <th className="px-4 py-3">Tipo</th>
+          <thead>
+            <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+              <th>Nombre</th>
+              <th>Tipo</th>
             </tr>
           </thead>
           <tbody>
@@ -39,7 +39,7 @@ export default function RecientesPage() {
                 <tr
                   key={r.key}
                   onClick={() => router.push(r.href)}
-                  className="cursor-pointer border-t border-line hover:bg-surface2"
+                  className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
                 >
                   <td className="px-4 py-3">
                     <span className="flex items-center gap-3">

@@ -1,12 +1,13 @@
 "use client";
 
-import { FileText, Trash2 } from "lucide-react";
+import { Building2, DollarSign, FileText, Hash, Target, Trash2, User } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { RefChip } from "@/components/ui/ref-chip";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
@@ -100,26 +101,46 @@ export default function PresupuestosPage() {
       {isError && <p className="mt-4 text-danger">No se pudo cargar.</p>}
 
       {data && (
-        <div className="mt-6 min-h-0 flex-1 overflow-auto rounded-lg border border-line">
-          <table className="w-full text-sm [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:border-b [&_thead_th]:border-line [&_thead_th]:bg-surface2 [&_thead_th]:text-ink [&_thead_th]:font-semibold">
-            <thead className="bg-surface2 text-left text-sm font-medium text-ink-2">
-              <tr>
-                <th className="px-4 py-2 font-medium">Código</th>
-                <th className="px-4 py-2 font-medium">Oportunidad</th>
-                <th className="px-4 py-2 font-medium">Cliente</th>
-                <th className="px-4 py-2 font-medium">Total</th>
-                <th className="px-4 py-2 font-medium">Estado</th>
-                <th className="px-4 py-2 font-medium">Creado por</th>
-                <th className="px-4 py-2" />
+        <div className="mt-6 min-h-0 flex-1 overflow-auto rounded-xl border border-line">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+                <th>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Hash size={13} className="text-ink-3" /> Código
+                  </span>
+                </th>
+                <th>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Target size={13} className="text-ink-3" /> Oportunidad
+                  </span>
+                </th>
+                <th>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Building2 size={13} className="text-ink-3" /> Cliente
+                  </span>
+                </th>
+                <th>
+                  <span className="inline-flex items-center gap-1.5">
+                    <DollarSign size={13} className="text-ink-3" /> Total
+                  </span>
+                </th>
+                <th>Estado</th>
+                <th>
+                  <span className="inline-flex items-center gap-1.5">
+                    <User size={13} className="text-ink-3" /> Creado por
+                  </span>
+                </th>
+                <th />
               </tr>
             </thead>
             <tbody>
               {visibles.map((p) => (
                 <tr
                   key={p.id}
-                  className="border-t border-line"
+                  className="border-t border-line transition-colors hover:bg-surface2"
                 >
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-3">
                     <Link
                       href={`/presupuestos/${p.id}`}
                       className="font-mono font-medium tabular-nums text-accent hover:underline"
@@ -127,36 +148,40 @@ export default function PresupuestosPage() {
                       {p.codigo}
                     </Link>
                   </td>
-                  <td className="px-4 py-2">
-                    <div className="flex flex-col items-start gap-1">
-                      <Link
-                        href={`/oportunidades?op=${p.oportunidad_id}`}
-                        className="inline-flex items-center rounded-md border border-accent/30 bg-accent-dim px-2 py-0.5 font-mono text-xs font-semibold tabular-nums text-accent hover:bg-accent/20"
-                      >
-                        {p.oportunidad_id}
-                      </Link>
-                      {p.oportunidad?.asunto && (
-                        <span className="max-w-[16rem] truncate text-xs text-ink-2">
-                          {p.oportunidad.asunto}
-                        </span>
-                      )}
-                    </div>
+                  <td className="px-4 py-3">
+                    <Link href={`/oportunidades?op=${p.oportunidad_id}`} className="inline-flex max-w-full">
+                      <RefChip icon={<Target size={12} className="shrink-0 text-ink-3" />}>
+                        {p.oportunidad?.asunto ?? `Oportunidad ${p.oportunidad_id}`}
+                      </RefChip>
+                    </Link>
                   </td>
-                  <td className="px-4 py-2 text-ink">
-                    {p.oportunidad?.cliente?.razon_social ?? "—"}
+                  <td className="px-4 py-3">
+                    {p.oportunidad?.cliente?.razon_social ? (
+                      <RefChip icon={<Building2 size={12} className="shrink-0 text-ink-3" />}>
+                        {p.oportunidad.cliente.razon_social}
+                      </RefChip>
+                    ) : (
+                      <span className="text-ink-3">—</span>
+                    )}
                   </td>
-                  <td className="px-4 py-2 font-mono tabular-nums text-ink">
+                  <td className="px-4 py-3 font-mono tabular-nums text-ink">
                     {fmtMonto(p.monto_total, p.moneda)}
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-3">
                     <Badge tone={TONO_PRESUPUESTO[p.estado]}>
                       {ESTADO_PRESUPUESTO[p.estado].label}
                     </Badge>
                   </td>
-                  <td className="px-4 py-2 text-ink-2">
-                    {p.creado_por?.nombre ?? "—"}
+                  <td className="px-4 py-3">
+                    {p.creado_por?.nombre ? (
+                      <RefChip icon={<User size={12} className="shrink-0 text-ink-3" />}>
+                        {p.creado_por.nombre}
+                      </RefChip>
+                    ) : (
+                      <span className="text-ink-3">—</span>
+                    )}
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
                       <Button size="sm" variant="ghost" onClick={() => abrirPdf(p.id)}>
                         <FileText size={14} /> PDF

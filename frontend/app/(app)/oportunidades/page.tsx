@@ -4,6 +4,8 @@ import {
   ArrowDown,
   ArrowRightLeft,
   ArrowUp,
+  Building2,
+  CalendarClock,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -11,12 +13,14 @@ import {
   Eye,
   FileText,
   Filter,
+  Hash,
   Inbox,
   Paperclip,
   Pencil,
   Plus,
   Search,
   Trash2,
+  User,
   X,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -37,6 +41,7 @@ import { Card } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
+import { RefChip } from "@/components/ui/ref-chip";
 import {
   ESTADO_META,
   subirAdjuntosOportunidad,
@@ -162,6 +167,7 @@ const CAMPOS_BUSQUEDA: ((o: Oportunidad) => string)[] = [
 
 // Encabezado con menú de orden (asc/desc) + filtro por valores específicos.
 function FiltroColumna({
+  icon,
   label,
   colKey,
   tipo,
@@ -171,6 +177,7 @@ function FiltroColumna({
   seleccion,
   onSeleccion,
 }: {
+  icon?: ReactNode;
   label: string;
   colKey: ColKey;
   tipo: ColTipo;
@@ -219,7 +226,8 @@ function FiltroColumna({
     "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-surface2";
 
   return (
-    <span className="inline-flex items-center gap-1">
+    <span className="inline-flex items-center gap-1.5">
+      {icon}
       {label}
       <button
         ref={btnRef}
@@ -583,9 +591,10 @@ export default function OportunidadesPage() {
   };
 
   // Encabezado con orden/filtro para una columna.
-  const th = (colKey: ColKey, label: string, extra = "") => (
-    <th className={cn("px-2 py-1.5 font-medium", extra)}>
+  const th = (colKey: ColKey, label: string, icon?: ReactNode, extra = "") => (
+    <th className={cn(extra)}>
       <FiltroColumna
+        icon={icon}
         label={label}
         colKey={colKey}
         tipo={ACCESOR[colKey].tipo}
@@ -786,11 +795,11 @@ export default function OportunidadesPage() {
       )}
 
       {data && (
-        <div className="mt-4 min-h-0 flex-1 overflow-auto rounded-lg border border-line">
-          <table className="w-full text-sm [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:border-b [&_thead_th]:border-line [&_thead_th]:bg-surface2 [&_thead_th]:text-ink [&_thead_th]:font-semibold">
-            <thead className="bg-surface2 text-left text-sm font-medium text-ink-2">
-              <tr className="whitespace-nowrap">
-                <th className="px-2 py-1.5">
+        <div className="mt-4 min-h-0 flex-1 overflow-auto rounded-xl border border-line">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+                <th className="w-10">
                   <input
                     type="checkbox"
                     checked={todosSel}
@@ -799,20 +808,24 @@ export default function OportunidadesPage() {
                     className="h-4 w-4 rounded border-line accent-navy align-middle"
                   />
                 </th>
-                <th className="px-2 py-1.5 font-medium">ID</th>
-                {th("cliente", "Cliente")}
-                {th("cl", "CL N°")}
+                <th>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Hash size={13} className="text-ink-3" /> ID
+                  </span>
+                </th>
+                {th("cliente", "Cliente", <Building2 size={13} className="text-ink-3" />)}
+                {th("cl", "CL N°", <Hash size={13} className="text-ink-3" />)}
                 {th("asunto", "Asunto")}
                 {th("producto", "Producto")}
                 {th("pedido", "Pedido")}
-                {th("ecompra", "E/Compra")}
-                {th("rcompra", "R/Compra")}
+                {th("ecompra", "E/Compra", <CalendarClock size={13} className="text-ink-3" />)}
+                {th("rcompra", "R/Compra", <CalendarClock size={13} className="text-ink-3" />)}
                 {th("cotizado", "Cotizado")}
-                {th("ecliente", "E/Cliente")}
-                {th("validez", "Validez")}
-                {th("ing", "Ing.")}
+                {th("ecliente", "E/Cliente", <CalendarClock size={13} className="text-ink-3" />)}
+                {th("validez", "Validez", <CalendarClock size={13} className="text-ink-3" />)}
+                {th("ing", "Ing.", <User size={13} className="text-ink-3" />)}
                 {th("estado", "Estado")}
-                <th className="px-2 py-1.5 text-center font-medium">GBP</th>
+                <th className="text-center">GBP</th>
                 {th("observacion", "Observación")}
               </tr>
             </thead>
@@ -821,9 +834,9 @@ export default function OportunidadesPage() {
                 <tr
                   key={o.id}
                   onClick={(e) => setMenu({ o, x: e.clientX, y: e.clientY })}
-                  className="cursor-pointer border-t border-line hover:bg-surface2"
+                  className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
                 >
-                  <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={seleccion.has(o.id)}
@@ -832,7 +845,7 @@ export default function OportunidadesPage() {
                       className="h-4 w-4 rounded border-line accent-navy align-middle"
                     />
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 font-medium text-ink-2">
+                  <td className="whitespace-nowrap px-4 py-3 font-medium text-ink-2">
                     <span className="inline-flex items-center gap-1.5 leading-none">
                       {/* Slot fijo para el punto: así los números arrancan siempre alineados. */}
                       <span className="flex h-1.5 w-1.5 shrink-0 items-center justify-center">
@@ -841,11 +854,18 @@ export default function OportunidadesPage() {
                       <span className="font-mono leading-none tabular-nums">{o.id}</span>
                     </span>
                   </td>
-                  <td className="max-w-[12rem] px-2 py-1.5 font-medium text-ink">
+                  <td className="max-w-[14rem] px-4 py-3">
                     <div className="flex items-center gap-1.5">
-                      <span className="truncate" title={o.cliente?.razon_social ?? ""}>
-                        {o.cliente?.razon_social ?? "—"}
-                      </span>
+                      {o.cliente?.razon_social ? (
+                        <RefChip
+                          icon={<Building2 size={12} className="shrink-0 text-ink-3" />}
+                          title={o.cliente.razon_social}
+                        >
+                          {o.cliente.razon_social}
+                        </RefChip>
+                      ) : (
+                        <span className="text-ink-3">—</span>
+                      )}
                       {esArrastrada(o) && (
                         <Badge tone="warning" className="shrink-0 capitalize">
                           Desde {mesOrigen(o)}
@@ -853,35 +873,35 @@ export default function OportunidadesPage() {
                       )}
                     </div>
                   </td>
-                  <td className="px-2 py-1.5 text-ink-2">
+                  <td className="px-4 py-3 text-ink-2">
                     {o.cliente?.numero_cliente ?? "—"}
                   </td>
-                  <td className="max-w-[11rem] truncate px-2 py-1.5 text-ink-2" title={o.asunto ?? ""}>
+                  <td className="max-w-[11rem] truncate px-4 py-3 text-ink-2" title={o.asunto ?? ""}>
                     {o.asunto ?? "—"}
                   </td>
-                  <td className="max-w-[8rem] truncate px-2 py-1.5 text-ink-2" title={o.producto ?? ""}>
+                  <td className="max-w-[8rem] truncate px-4 py-3 text-ink-2" title={o.producto ?? ""}>
                     {o.producto ?? "—"}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 text-ink-2">
+                  <td className="whitespace-nowrap px-4 py-3 text-ink-2">
                     {o.numero_pedido ?? "—"}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 font-mono tabular-nums text-ink-2">
+                  <td className="whitespace-nowrap px-4 py-3 font-mono tabular-nums text-ink-2">
                     {fmtDate(o.fecha_enviado_compras)}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 font-mono tabular-nums text-ink-2">
+                  <td className="whitespace-nowrap px-4 py-3 font-mono tabular-nums text-ink-2">
                     {fmtDate(o.fecha_respuesta_compras)}
                   </td>
-                  <td className="px-2 py-1.5 text-center">
+                  <td className="px-4 py-3 text-center">
                     {estaCotizada(o) ? (
                       <Check size={16} className="mx-auto text-success" aria-label="Cotizado" />
                     ) : (
                       <span className="text-ink-3">—</span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 font-mono tabular-nums text-ink-2">
+                  <td className="whitespace-nowrap px-4 py-3 font-mono tabular-nums text-ink-2">
                     {fmtDate(o.fecha_enviado_cliente)}
                   </td>
-                  <td className="whitespace-nowrap px-2 py-1.5 font-mono tabular-nums">
+                  <td className="whitespace-nowrap px-4 py-3 font-mono tabular-nums">
                     <span
                       className={
                         o.estado === "confirmada" && o.fecha_limite
@@ -894,13 +914,13 @@ export default function OportunidadesPage() {
                       {fmtDate(o.fecha_limite)}
                     </span>
                   </td>
-                  <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <IngInput o={o} />
                   </td>
-                  <td className="px-2 py-1.5">
+                  <td className="px-4 py-3">
                     <Badge className={ESTADO_META[o.estado].color}>{ESTADO_META[o.estado].label}</Badge>
                   </td>
-                  <td className="px-2 py-1.5 text-center" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={o.cargada_en_gbp}
@@ -910,7 +930,7 @@ export default function OportunidadesPage() {
                       className="h-4 w-4 rounded border-line accent-navy"
                     />
                   </td>
-                  <td className="max-w-[10rem] truncate px-2 py-1.5 text-ink-2" title={o.observacion ?? ""}>
+                  <td className="max-w-[10rem] truncate px-4 py-3 text-ink-2" title={o.observacion ?? ""}>
                     {o.observacion ?? "—"}
                   </td>
                 </tr>

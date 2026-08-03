@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Plus, RefreshCw } from "lucide-react";
+import { Building2, Hash, Plus, RefreshCw, User } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,7 @@ import { useState } from "react";
 import { ClienteForm } from "@/components/clientes/cliente-form";
 import { ClientePicker } from "@/components/clientes/cliente-picker";
 import { Badge } from "@/components/ui/badge";
+import { RefChip } from "@/components/ui/ref-chip";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useClientes, useCreateCliente } from "@/lib/clientes";
@@ -112,35 +113,53 @@ export default function CuentasPage() {
             </p>
           </div>
 
-          <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-line">
-            <table className="w-full text-sm [&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:border-b [&_thead_th]:border-line [&_thead_th]:bg-surface2 [&_thead_th]:text-ink [&_thead_th]:font-semibold">
-              <thead className="bg-surface2 text-left text-sm font-medium text-ink-2">
-                <tr>
-                  <th className="w-10 px-3 py-2 font-medium">#</th>
-                  <th className="px-3 py-2 font-medium">Nombre de la cuenta</th>
-                  <th className="px-3 py-2 font-medium">CUIT</th>
-                  <th className="px-3 py-2 font-medium">Creada por</th>
-                  <th className="px-3 py-2 font-medium">Estado</th>
+          <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-xl border border-line">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+                  <th className="w-12">#</th>
+                  <th>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Building2 size={13} className="text-ink-3" /> Nombre de la cuenta
+                    </span>
+                  </th>
+                  <th>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Hash size={13} className="text-ink-3" /> CUIT
+                    </span>
+                  </th>
+                  <th>
+                    <span className="inline-flex items-center gap-1.5">
+                      <User size={13} className="text-ink-3" /> Creada por
+                    </span>
+                  </th>
+                  <th>Estado</th>
                 </tr>
               </thead>
               <tbody>
                 {cuentas.map((c, i) => (
                   <tr
                     key={c.id}
-                    className="cursor-pointer border-t border-line hover:bg-surface2"
+                    className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
                     onClick={() => router.push(`/clientes/${c.id}`)}
                   >
-                    <td className="px-3 py-2 font-mono tabular-nums text-ink-3">{i + 1}</td>
-                    <td className="px-3 py-2 font-medium text-accent">
+                    <td className="px-4 py-3 font-mono tabular-nums text-ink-3">{i + 1}</td>
+                    <td className="px-4 py-3 font-medium text-accent">
                       <Link href={`/clientes/${c.id}`} onClick={(e) => e.stopPropagation()}>
                         {c.razon_social}
                       </Link>
                     </td>
-                    <td className="px-3 py-2 font-mono tabular-nums text-ink-2">{c.cuit ?? "—"}</td>
-                    <td className="px-3 py-2 text-ink-2">
-                      {c.creado_por?.nombre ?? "—"}
+                    <td className="px-4 py-3 font-mono tabular-nums text-ink-2">{c.cuit ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      {c.creado_por?.nombre ? (
+                        <RefChip icon={<User size={12} className="shrink-0 text-ink-3" />}>
+                          {c.creado_por.nombre}
+                        </RefChip>
+                      ) : (
+                        <span className="text-ink-3">—</span>
+                      )}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-3">
                       {c.activo ? (
                         <Badge tone="success">activo</Badge>
                       ) : (
