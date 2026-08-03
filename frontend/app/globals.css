@@ -27,6 +27,16 @@
 
   /* Neutro frío: estados dormidos/neutros y metadatos (no es un acento). */
   --c-muted: #6d7495;
+
+  /* Colores semánticos de estado (semáforo comercial). RGB triplet para poder
+     usar modificadores de opacidad (bg-success/12). Afinados para contraste
+     de TEXTO sobre superficie clara — los rellenos de gráficos usan la paleta
+     vívida de STATUS_CHART en lib/status.ts. */
+  --c-success: 21 128 87;   /* verde   */
+  --c-warning: 176 111 8;   /* ámbar   */
+  --c-danger: 199 62 42;    /* rojo    */
+  --c-info: 42 108 190;     /* azul    */
+  --c-neutral: 90 96 122;   /* gris    */
 }
 
 .dark {
@@ -51,6 +61,13 @@
   --c-navy-hover: #063a78;
 
   --c-muted: #6d7495;
+
+  /* Versiones más luminosas para leer sobre superficies oscuras. */
+  --c-success: 74 200 140;
+  --c-warning: 240 180 70;
+  --c-danger: 240 122 96;
+  --c-info: 96 160 230;
+  --c-neutral: 140 146 170;
 }
 
 body {

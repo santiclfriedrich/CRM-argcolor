@@ -42,10 +42,17 @@ const config: Config = {
           hover: "var(--c-navy-hover)",
         },
         muted: "var(--c-muted)",
+        // Semánticos de estado: soportan modificadores de opacidad
+        // (text-danger, bg-warning/12, border-success/40…).
+        success: "rgb(var(--c-success) / <alpha-value>)",
+        warning: "rgb(var(--c-warning) / <alpha-value>)",
+        danger: "rgb(var(--c-danger) / <alpha-value>)",
+        info: "rgb(var(--c-info) / <alpha-value>)",
+        neutral: "rgb(var(--c-neutral) / <alpha-value>)",
       },
       boxShadow: {
         // Sombras suaves para dar profundidad a cards y modales.
-        soft: "0 1px 2px rgba(15,23,42,0.04), 0 12px 28px -16px rgba(15,23,42,0.25)",
+        soft: "0 1px 2px rgba(3,35,77,0.04), 0 10px 24px -14px rgba(3,35,77,0.22)",
         pop: "0 1px 2px rgba(37,99,235,0.15), 0 8px 20px -8px rgba(37,99,235,0.35)",
       },
     },

@@ -71,7 +71,12 @@ export default function LoginPage() {
           className="h-12 w-auto brightness-0 invert sm:h-14"
         />
 
-        <h1 className="mt-10 text-2xl font-bold text-white">CRM Comercial</h1>
+        <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.2em] text-white/40">
+          CRM Comercial
+        </p>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-white">
+          Ingresá a tu panel
+        </h1>
 
         {error && (
           <p className="mt-6 w-full rounded-lg bg-red-500/15 px-4 py-2.5 text-sm text-red-100 ring-1 ring-red-400/30">
