@@ -21,10 +21,12 @@
   --c-accent-dim: rgba(113, 24, 247, 0.1);
   --c-accent-hover: 94 20 205;
 
-  /* Azul marino de marca: chrome estructural (navbar) y acciones primarias.
-     Valor fijo en ambos modos. */
-  --c-navy: #03234d;
-  --c-navy-hover: #063a78;
+  /* Violeta oscuro de marca (violet-950): chrome estructural (navbar, To-Do bar,
+     tooltips, fondo del login) y estados seleccionados. Valor fijo en ambos modos.
+     Mantiene el nombre "navy" por compatibilidad; los botones de acción usan el
+     violeta brillante (brand). */
+  --c-navy: #2e1065;
+  --c-navy-hover: #4c1d95;
 
   /* Neutro frío: estados dormidos/neutros y metadatos (no es un acento). */
   --c-muted: #6d7495;
@@ -59,8 +61,8 @@
   --c-accent-dim: rgba(163, 124, 255, 0.15);
   --c-accent-hover: 185 156 255;
 
-  --c-navy: #03234d;
-  --c-navy-hover: #063a78;
+  --c-navy: #2e1065;
+  --c-navy-hover: #4c1d95;
 
   --c-muted: #6d7495;
 

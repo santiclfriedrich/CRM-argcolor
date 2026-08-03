@@ -145,7 +145,7 @@ export default function NotasPage() {
             type="button"
             onClick={nueva}
             disabled={crear.isPending}
-            className="inline-flex items-center gap-1 rounded-md bg-navy px-2 py-1 text-xs font-medium text-white hover:bg-navy-hover disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-md bg-brand px-2 py-1 text-xs font-medium text-white hover:bg-brand-dark disabled:opacity-50"
           >
             <Plus size={13} /> Nueva
           </button>
