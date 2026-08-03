@@ -33,7 +33,7 @@ import { OportunidadForm } from "@/components/oportunidades/oportunidad-form";
 import { SolicitudForm } from "@/components/solicitudes/solicitud-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, Kicker } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
@@ -624,8 +624,7 @@ export default function OportunidadesPage() {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between">
         <div>
-          <Kicker>Pipeline comercial</Kicker>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">
+          <h1 className="text-2xl font-bold tracking-tight text-ink">
             Oportunidades
           </h1>
         </div>

@@ -7,7 +7,6 @@ import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Kicker } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
@@ -67,8 +66,7 @@ export default function PresupuestosPage() {
   return (
     <div className="flex h-full flex-col">
       <div>
-        <Kicker>Presupuestos</Kicker>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Presupuestos</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Presupuestos</h1>
         <p className="mt-1 text-sm text-ink-2">
           Cotizaciones armadas en el CRM. Para crear una nueva, entrá a una oportunidad y usá
           “Armar presupuesto”.

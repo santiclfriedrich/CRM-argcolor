@@ -10,7 +10,6 @@ import { ClienteForm } from "@/components/clientes/cliente-form";
 import { ClientePicker } from "@/components/clientes/cliente-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Kicker } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { useClientes, useCreateCliente } from "@/lib/clientes";
 import { clearDraft, DRAFT_CLIENTE } from "@/lib/draft";
@@ -79,8 +78,7 @@ export default function CuentasPage() {
           <Building2 size={18} />
         </span>
         <div>
-          <Kicker>Cartera de cuentas</Kicker>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Cuentas</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Cuentas</h1>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <SyncGbpBoton />

@@ -6,7 +6,6 @@ import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 
 import { Badge } from "@/components/ui/badge";
-import { Kicker } from "@/components/ui/card";
 import { ESTADO_META, useOportunidades } from "@/lib/oportunidades";
 import { ESTADO_PRESUPUESTO, fmtMonto, usePresupuestos } from "@/lib/presupuestos";
 import { ESTADO_SOLICITUD_META, useSolicitudes } from "@/lib/solicitudes";
@@ -44,8 +43,7 @@ export default function PerfilUsuarioPage() {
       <BackLink />
 
       <div>
-        <Kicker>Usuario</Kicker>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">
+        <h1 className="text-2xl font-bold tracking-tight text-ink">
           {usuario?.nombre ?? "Cargando…"}
         </h1>
         {usuario && (

@@ -7,7 +7,6 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Kicker } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
@@ -200,8 +199,7 @@ export default function ArmadorPresupuestoPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <Kicker>Presupuesto</Kicker>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">
+          <h1 className="text-2xl font-bold tracking-tight text-ink">
             {presupuesto.codigo}
           </h1>
           <p className="text-sm text-ink-2">

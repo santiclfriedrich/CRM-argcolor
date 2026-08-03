@@ -4,7 +4,7 @@ import { Pencil, Star, Trash2 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card, Kicker } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { EmailChips } from "@/components/ui/email-chips";
 import { Input } from "@/components/ui/input";
@@ -26,8 +26,7 @@ export default function ConfiguracionPage() {
 
   return (
     <div className="max-w-2xl">
-      <Kicker>Ajustes</Kicker>
-      <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Configuración</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-ink">Configuración</h1>
       <p className="mt-1 text-sm text-ink-2">
         Automatización de las respuestas de la IA y destinatarios de Compras.
       </p>

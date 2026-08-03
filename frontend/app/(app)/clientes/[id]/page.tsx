@@ -11,7 +11,7 @@ import { DominiosSection } from "@/components/clientes/dominios-section";
 import { TareaModal } from "@/components/tareas/tarea-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, Kicker } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useCliente, useDeleteCliente, useUpdateCliente } from "@/lib/clientes";
 import { ESTADO_META, useOportunidades } from "@/lib/oportunidades";
@@ -70,8 +70,7 @@ export default function ClienteDetailPage() {
             <Building2 size={22} />
           </span>
           <div>
-            <Kicker>Cuenta</Kicker>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">
+            <h1 className="text-2xl font-bold tracking-tight text-ink">
               {cliente.razon_social}
             </h1>
             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-ink-2">

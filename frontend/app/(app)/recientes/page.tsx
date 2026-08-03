@@ -3,7 +3,6 @@
 import { Building2, FileText, Target } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import { Kicker } from "@/components/ui/card";
 import { type TipoRegistro, useRegistrosRecientes } from "@/lib/recientes";
 
 const ICONO: Record<TipoRegistro, { icon: typeof Target; bg: string }> = {
@@ -19,8 +18,7 @@ export default function RecientesPage() {
   return (
     <div>
       <div>
-        <Kicker>Actividad</Kicker>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Registros recientes</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Registros recientes</h1>
         <p className="mt-1 text-sm text-ink-2">
           {isLoading ? "Cargando…" : `${data.length} elemento${data.length === 1 ? "" : "s"}`}
         </p>

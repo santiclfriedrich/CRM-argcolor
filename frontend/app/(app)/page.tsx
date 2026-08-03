@@ -140,8 +140,7 @@ export default function InicioPage() {
     <div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <Kicker>Panel de ventas</Kicker>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">
+          <h1 className="text-2xl font-bold tracking-tight text-ink">
             {saludo()}
             {nombre ? `, ${nombre.split(" ")[0]}` : ""}
           </h1>

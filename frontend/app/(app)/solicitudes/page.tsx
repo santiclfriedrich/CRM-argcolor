@@ -9,7 +9,6 @@ import { useEffect, useRef, useState } from "react";
 import { SolicitudForm } from "@/components/solicitudes/solicitud-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Kicker } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
@@ -63,8 +62,7 @@ export default function SolicitudesPage() {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between">
         <div>
-          <Kicker>Compras</Kicker>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Solicitudes a Compras</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Solicitudes a Compras</h1>
         </div>
         <Button onClick={() => setCreating(true)}>
           <Plus size={16} /> Nueva solicitud

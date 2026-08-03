@@ -7,7 +7,6 @@ import { useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Kicker } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Tooltip } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
@@ -48,8 +47,7 @@ export default function UsuariosPage() {
   if (!esAdmin) {
     return (
       <div>
-        <Kicker>Equipo</Kicker>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Usuarios</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Usuarios</h1>
         <p className="mt-4 text-ink-2">
           Solo un administrador puede gestionar usuarios.
         </p>
@@ -71,8 +69,7 @@ export default function UsuariosPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <Kicker>Equipo</Kicker>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Usuarios</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Usuarios</h1>
           <p className="mt-1 text-sm text-ink-2">
             Autorizá vendedores para que puedan iniciar sesión y conectar su Gmail.
           </p>

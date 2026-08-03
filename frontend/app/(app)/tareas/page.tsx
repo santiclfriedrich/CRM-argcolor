@@ -6,7 +6,7 @@ import { useState } from "react";
 import { TareaModal } from "@/components/tareas/tarea-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, Kicker } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   estaVencidaTarea,
@@ -49,8 +49,7 @@ export default function TareasPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <Kicker>Agenda</Kicker>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Tareas</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Tareas</h1>
         </div>
         <Button onClick={() => setCreando(true)}>
           <Plus size={16} /> Nueva tarea
@@ -178,8 +177,7 @@ function DetalleTarea({ tarea, onModificar }: { tarea: Tarea; onModificar: () =>
             <ListChecks size={20} />
           </span>
           <div>
-            <Kicker>Tarea</Kicker>
-            <h2 className="mt-1 text-base font-semibold tracking-tight text-ink">{tarea.titulo}</h2>
+            <h2 className="text-base font-semibold tracking-tight text-ink">{tarea.titulo}</h2>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">

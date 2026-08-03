@@ -21,7 +21,7 @@ import { useState, type FormEvent } from "react";
 import { OportunidadForm } from "@/components/oportunidades/oportunidad-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, Kicker } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { descargarAdjuntoMail, useMails } from "@/lib/mails";
@@ -82,8 +82,7 @@ export default function OportunidadDetallePage() {
 
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <Kicker>Oportunidad</Kicker>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">
+          <h1 className="text-2xl font-bold tracking-tight text-ink">
             {cliente}{" "}
             <span className="font-mono tabular-nums text-ink-3">· {o.id}</span>
           </h1>

@@ -16,7 +16,6 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Kicker } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -123,8 +122,7 @@ export default function BandejaPage() {
     <div>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <Kicker>Ingesta de mails</Kicker>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink">Bandeja inteligente</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Bandeja inteligente</h1>
           <p className="mt-1 text-sm text-ink-2">
             La IA identifica la cuenta, extrae el pedido y crea la oportunidad. Podés pegar un
             mail abajo o sincronizar la casilla comercial.
