@@ -45,7 +45,7 @@ export function CardCta({
     <Link
       href={href}
       className={cn(
-        "inline-flex items-center justify-center rounded-full border border-line px-5 py-2 text-sm font-semibold text-accent transition-colors",
+        "inline-flex items-center justify-center rounded-full border border-ink-3 px-5 py-2 text-sm font-semibold text-accent transition-colors",
         "hover:border-accent hover:bg-accent-dim",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
         className

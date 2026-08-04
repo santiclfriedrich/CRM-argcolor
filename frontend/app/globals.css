@@ -12,7 +12,7 @@
   --c-surface: #ffffff;
   --c-surface-2: #f8fafc;
   --c-surface-3: #f1f5f9;
-  --c-line: #cbd5e1;
+  --c-line: #b4bece;
   --c-ink: #0f172a;
   --c-ink-2: #64748b;
   --c-ink-3: #94a3b8;
@@ -52,7 +52,7 @@
   --c-surface: #101120;
   --c-surface-2: #171826;
   --c-surface-3: #1e2030;
-  --c-line: rgba(255, 255, 255, 0.12);
+  --c-line: rgba(255, 255, 255, 0.17);
   --c-ink: #f4f5ff;
   --c-ink-2: #a6aac2;
   --c-ink-3: #71748c;
