@@ -14,7 +14,7 @@ export function RefChip({
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-md border border-line bg-surface px-2 py-1 text-xs font-medium text-ink-2",
+        "inline-flex max-w-full items-center gap-1.5 rounded-lg border border-line bg-surface px-2 py-1 text-xs font-medium text-ink-2",
         className
       )}
       {...props}

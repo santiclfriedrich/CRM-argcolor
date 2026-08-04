@@ -76,12 +76,12 @@ export default function PresupuestosPage() {
 
       {data && (
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <div className="inline-flex rounded-lg border border-line bg-surface2 p-0.5 text-sm">
+          <div className="inline-flex rounded-full border border-line bg-surface2 p-0.5 text-sm">
             {(["todas", "mias"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFiltro(f)}
-                className={`rounded-md px-3 py-1 font-medium transition ${
+                className={`rounded-full px-3 py-1 font-medium transition ${
                   filtro === f
                     ? "bg-navy text-white"
                     : "text-ink-2 hover:bg-surface"
@@ -101,10 +101,10 @@ export default function PresupuestosPage() {
       {isError && <p className="mt-4 text-danger">No se pudo cargar.</p>}
 
       {data && (
-        <div className="mt-6 min-h-0 flex-1 overflow-auto rounded-xl border border-line">
+        <div className="mt-6 min-h-0 flex-1 overflow-auto rounded-2xl border border-line">
           <table className="w-full text-sm">
             <thead>
-              <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+              <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink">
                 <th>
                   <span className="inline-flex items-center gap-1.5">
                     <Hash size={13} className="text-ink-3" /> Código

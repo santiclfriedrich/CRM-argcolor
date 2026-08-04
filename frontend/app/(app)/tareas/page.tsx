@@ -59,12 +59,12 @@ export default function TareasPage() {
       <div className="mt-4 grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
         {/* Lista */}
         <div className="flex flex-col gap-3">
-          <div className="flex rounded-md border border-line p-0.5 text-sm">
+          <div className="flex rounded-full border border-line p-0.5 text-sm">
             {(["pendientes", "completadas"] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`flex-1 rounded px-3 py-1 font-medium transition ${
+                className={`flex-1 rounded-full px-3 py-1 font-medium transition ${
                   tab === t
                     ? "bg-navy text-white"
                     : "text-ink-2 hover:bg-surface2"

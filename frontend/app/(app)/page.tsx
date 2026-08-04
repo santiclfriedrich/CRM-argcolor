@@ -148,12 +148,12 @@ export default function InicioPage() {
             Tu pipeline y lo que necesita acción hoy.
           </p>
         </div>
-        <div className="flex rounded-lg border border-line bg-surface p-0.5 text-sm shadow-soft">
+        <div className="flex rounded-full border border-line bg-surface p-0.5 text-sm shadow-soft">
           {(["todas", "mias"] as Filtro[]).map((f) => (
             <button
               key={f}
               onClick={() => setFiltro(f)}
-              className={`rounded-md px-3.5 py-1.5 font-medium transition ${
+              className={`rounded-full px-3.5 py-1.5 font-medium transition ${
                 filtro === f
                   ? "bg-navy text-white shadow-sm"
                   : "text-ink-2 hover:bg-surface2"

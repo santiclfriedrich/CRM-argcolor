@@ -223,7 +223,7 @@ export default function BandejaPage() {
             <button
               key={f}
               onClick={() => setFiltro(f)}
-              className={`rounded px-3 py-1 font-medium transition ${
+              className={`rounded-full px-3 py-1 font-medium transition ${
                 filtro === f
                   ? "bg-navy text-white hover:bg-navy-hover"
                   : "text-ink-2 hover:bg-surface2"

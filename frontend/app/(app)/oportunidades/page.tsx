@@ -676,7 +676,7 @@ export default function OportunidadesPage() {
         {/* Alcance: Mías / Todas (con icono de persona para distinguirlo del período) */}
         <div className="inline-flex items-center gap-1.5">
           <User size={15} className="shrink-0 text-ink-3" />
-          <div className="inline-flex rounded-lg border border-line bg-surface2 p-0.5">
+          <div className="inline-flex rounded-full border border-line bg-surface2 p-0.5">
             {[
               { value: true, label: "Mías" },
               { value: false, label: "Todas" },
@@ -686,7 +686,7 @@ export default function OportunidadesPage() {
                 type="button"
                 onClick={() => setFiltro({ solo_mias: opt.value })}
                 className={cn(
-                  "rounded-md px-3 py-1 text-sm font-medium transition-colors",
+                  "rounded-full px-3 py-1 text-sm font-medium transition-colors",
                   Boolean(filtros.solo_mias) === opt.value
                     ? "bg-navy text-white"
                     : "text-ink-2 hover:bg-surface",
@@ -704,7 +704,7 @@ export default function OportunidadesPage() {
         {/* Período: Mes / Rango / Todos (con icono de calendario) */}
         <div className="inline-flex items-center gap-1.5">
           <CalendarClock size={15} className="shrink-0 text-ink-3" />
-          <div className="inline-flex rounded-lg border border-line bg-surface2 p-0.5">
+          <div className="inline-flex rounded-full border border-line bg-surface2 p-0.5">
             {[
               { value: "mes", label: "Mes" },
               { value: "rango", label: "Rango" },
@@ -715,7 +715,7 @@ export default function OportunidadesPage() {
                 type="button"
                 onClick={() => setPeriodoModo(opt.value as "mes" | "rango" | "todos")}
                 className={cn(
-                  "rounded-md px-3 py-1 text-sm font-medium transition-colors",
+                  "rounded-full px-3 py-1 text-sm font-medium transition-colors",
                   periodoModo === opt.value
                     ? "bg-navy text-white"
                     : "text-ink-2 hover:bg-surface",
@@ -729,7 +729,7 @@ export default function OportunidadesPage() {
 
         {/* Detalle del período según el modo */}
         {periodoModo === "mes" && (
-          <div className="inline-flex items-center rounded-lg border border-line bg-surface2 p-0.5">
+          <div className="inline-flex items-center rounded-full border border-line bg-surface2 p-0.5">
             <button
               type="button"
               onClick={() => cambiarMes(-1)}
@@ -777,7 +777,7 @@ export default function OportunidadesPage() {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar por cliente, asunto, producto…"
-            className="h-9 pl-8 pr-8 text-sm"
+            className="h-9 rounded-full pl-8 pr-8 text-sm"
           />
           {busqueda && (
             <button
@@ -822,10 +822,10 @@ export default function OportunidadesPage() {
       )}
 
       {data && (
-        <div className="mt-4 min-h-0 flex-1 overflow-auto rounded-xl border border-line">
+        <div className="mt-4 min-h-0 flex-1 overflow-auto rounded-2xl border border-line">
           <table className="w-full text-sm">
             <thead>
-              <tr className="whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink-2">
+              <tr className="whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink">
                 <th className="w-10">
                   <input
                     type="checkbox"
@@ -1238,14 +1238,14 @@ function PropuestasModal({ onClose }: { onClose: () => void }) {
           Mails que entraron y proponen una oportunidad. Revisá y aceptá para sumarla a
           Oportunidades, o descartala.
         </p>
-        <div className="inline-flex shrink-0 rounded-lg border border-line bg-surface2 p-0.5 text-sm">
+        <div className="inline-flex shrink-0 rounded-full border border-line bg-surface2 p-0.5 text-sm">
           {(["mias", "todos"] as const).map((f) => (
             <button
               key={f}
               type="button"
               onClick={() => setFiltro(f)}
               className={cn(
-                "rounded-md px-3 py-1 font-medium transition-colors",
+                "rounded-full px-3 py-1 font-medium transition-colors",
                 filtro === f ? "bg-navy text-white" : "text-ink-2 hover:bg-surface",
               )}
             >

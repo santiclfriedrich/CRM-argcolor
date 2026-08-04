@@ -37,7 +37,7 @@ export function GlobalSearch() {
           }}
           onFocus={() => setOpen(true)}
           placeholder="Buscar…"
-          className="w-full rounded-md border border-white/15 bg-white/10 py-1.5 pl-8 pr-2 text-sm text-white placeholder:text-white/50 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/30"
+          className="w-full rounded-full border border-white/15 bg-white/10 py-1.5 pl-8 pr-2 text-sm text-white placeholder:text-white/50 focus:border-white/30 focus:outline-none focus:ring-1 focus:ring-white/30"
         />
       </div>
 

@@ -41,7 +41,7 @@ export function SelectMenu({
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-line bg-surface px-3.5 text-sm transition-colors",
+          "flex h-11 w-full items-center justify-between gap-2 rounded-xl border border-line bg-surface px-3.5 text-sm transition-colors",
           "focus:outline-none",
           "disabled:cursor-not-allowed disabled:opacity-50",
           open && "border-accent ring-2 ring-accent/30",
@@ -71,7 +71,7 @@ export function SelectMenu({
             className="fixed inset-0 z-40 cursor-default"
             onClick={() => setOpen(false)}
           />
-          <ul className="absolute left-0 top-[calc(100%+4px)] z-50 max-h-60 w-full overflow-y-auto rounded-lg border border-line bg-surface p-1 shadow-soft">
+          <ul className="absolute left-0 top-[calc(100%+4px)] z-50 max-h-60 w-full overflow-y-auto rounded-xl border border-line bg-surface p-1 shadow-soft">
             {options.map((o) => {
               const activa = o.value === value;
               return (
@@ -83,7 +83,7 @@ export function SelectMenu({
                       setOpen(false);
                     }}
                     className={cn(
-                      "flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors",
+                      "flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors",
                       activa
                         ? "bg-accent-dim font-medium text-accent"
                         : "text-ink hover:bg-surface2"
