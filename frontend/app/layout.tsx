@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { DM_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { Archivo_Narrow, DM_Mono } from "next/font/google";
 
 import { Providers } from "@/components/providers";
 
 import "./globals.css";
 
 // Fuentes self-hosted por Next (no dependemos de CDNs externos).
-const sans = Plus_Jakarta_Sans({
+const sans = Archivo_Narrow({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
