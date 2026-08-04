@@ -319,7 +319,7 @@ function TareasDeHoy() {
         </ul>
       )}
 
-      <div className="mt-4 border-t border-line pt-4">
+      <div className="mt-4 flex justify-center border-t border-line pt-4">
         <CardCta href="/tareas">Ver todas</CardCta>
       </div>
 
@@ -377,7 +377,7 @@ function DashCard({
           ))}
         </ul>
       </div>
-      <div className="mt-5 border-t border-line pt-4">
+      <div className="mt-5 flex justify-center border-t border-line pt-4">
         <CardCta href={href}>{hrefLabel}</CardCta>
       </div>
     </Card>
@@ -611,7 +611,7 @@ function RegistrosRecientes() {
           })}
         </ul>
       )}
-      <div className="mt-4 border-t border-line pt-4">
+      <div className="mt-4 flex justify-center border-t border-line pt-4">
         <CardCta href="/recientes">Ver todos</CardCta>
       </div>
     </Card>

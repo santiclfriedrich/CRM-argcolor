@@ -1,4 +1,3 @@
-import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { type HTMLAttributes } from "react";
 
@@ -32,8 +31,7 @@ export function Kicker({ className, ...props }: HTMLAttributes<HTMLSpanElement>)
   );
 }
 
-// CTA de pie de card: link limpio con flecha (reemplaza la píldora de borde
-// negro). La flecha se desplaza en hover — micro-interacción discreta.
+// CTA de pie de card: píldora con borde y texto violeta (estilo Pipedrive).
 export function CardCta({
   href,
   children,
@@ -47,16 +45,13 @@ export function CardCta({
     <Link
       href={href}
       className={cn(
-        "group inline-flex items-center gap-1.5 text-sm font-semibold text-accent transition-colors hover:text-accent-hover",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface rounded",
+        "inline-flex items-center justify-center rounded-full border border-line px-5 py-2 text-sm font-semibold text-accent transition-colors",
+        "hover:border-accent hover:bg-accent-dim",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
         className
       )}
     >
       {children}
-      <ArrowRight
-        size={15}
-        className="transition-transform group-hover:translate-x-0.5"
-      />
     </Link>
   );
 }
