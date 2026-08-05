@@ -46,6 +46,11 @@ export function useResizableColumns(storageKey: string, defaults: number[]) {
   const colRefs = useRef<(HTMLTableColElement | null)[]>([]);
   const tableRef = useRef<HTMLTableElement | null>(null);
   const cargado = useRef(false);
+  // true una vez que hay un ancho guardado o el usuario ajustó manualmente.
+  // Mientras sea false, las columnas se calculan para llenar el contenedor.
+  const custom = useRef(false);
+  const defsRef = useRef(defaults);
+  defsRef.current = defaults;
 
   // Escribe los anchos actuales en el DOM (sin render): cada <col> y el ancho
   // total de la tabla, para que el scroll horizontal siga a la suma.
@@ -68,6 +73,24 @@ export function useResizableColumns(storageKey: string, defaults: number[]) {
     }
   }, [key]);
 
+  // Anchos por defecto que LLENAN el contenedor: se parte de `defaults` y el
+  // sobrante hasta el ancho visible se suma a la columna más ancha (la natural
+  // "flexible", ej. Nombre). Si el contenedor es más angosto que la suma, se
+  // dejan los defaults (aparece scroll horizontal).
+  const computeFill = useCallback(() => {
+    const defs = defsRef.current;
+    const next = defs.slice();
+    const avail = scrollParent(tableRef.current)?.clientWidth ?? 0;
+    const base = defs.reduce((a, b) => a + b, 0);
+    const surplus = avail - base;
+    if (surplus > 0 && base > 0) {
+      let flex = 0;
+      for (let i = 1; i < defs.length; i++) if (defs[i] > defs[flex]) flex = i;
+      next[flex] += surplus;
+    }
+    return next;
+  }, []);
+
   // Después de cada render (barato: ~5 escrituras de style): reaplica los anchos
   // al DOM. La primera vez además carga lo guardado. Corre antes del paint del
   // navegador, así no hay parpadeo en la carga.
@@ -84,12 +107,16 @@ export function useResizableColumns(storageKey: string, defaults: number[]) {
             saved.every((n) => typeof n === "number" && n > 0)
           ) {
             live.current = (saved as number[]).slice();
+            custom.current = true;
           }
         }
       } catch {
         /* usamos defaults */
       }
     }
+    // Sin ancho guardado ni ajuste manual: llenar el contenedor. Se recalcula en
+    // cada render, así se adapta al tamaño real (scrollbar, ancho de ventana).
+    if (!custom.current) live.current = computeFill();
     paint();
   });
 
@@ -141,6 +168,7 @@ export function useResizableColumns(storageKey: string, defaults: number[]) {
       e.currentTarget.releasePointerCapture?.(e.pointerId);
       drag.current = null;
       quitarGuia();
+      custom.current = true;
       paint(); // único reflow, con el ancho final
       persist();
     },
@@ -153,23 +181,25 @@ export function useResizableColumns(storageKey: string, defaults: number[]) {
       e.currentTarget.releasePointerCapture?.(e.pointerId);
       drag.current = null;
       quitarGuia();
+      custom.current = true;
       paint();
       persist();
     },
     [paint, persist]
   );
 
-  // Doble click en el borde: reinicia esa columna a su ancho por defecto.
-  const onDoubleClick = useCallback(
-    (index: number) => () => {
-      live.current[index] = defaults[index];
-      paint();
-      persist();
-    },
-    // defaults es estable (mismo literal en cada render del caller).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [paint, persist]
-  );
+  // Doble click en cualquier borde: reinicia TODAS las columnas al ancho por
+  // defecto que llena el contenedor (borra lo guardado).
+  const onDoubleClick = useCallback(() => {
+    custom.current = false;
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      /* ignore */
+    }
+    live.current = computeFill();
+    paint();
+  }, [computeFill, paint, key]);
 
   // Manija a renderizar dentro de cada <th> (que debe ser position: relative).
   const handle = (index: number) => (
@@ -180,7 +210,7 @@ export function useResizableColumns(storageKey: string, defaults: number[]) {
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
-      onDoubleClick={onDoubleClick(index)}
+      onDoubleClick={onDoubleClick}
       className="absolute right-0 top-0 z-10 h-full w-2 translate-x-1/2 cursor-col-resize touch-none select-none hover:bg-accent/40"
     />
   );
