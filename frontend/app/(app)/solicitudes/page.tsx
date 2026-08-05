@@ -221,7 +221,7 @@ export default function SolicitudesPage() {
                     <td className="truncate px-3 py-2">
                       <Badge tone={TONO_SOLICITUD[s.estado]}>{meta.label}</Badge>
                     </td>
-                    <td className="px-3 py-2 text-right text-ink-3">
+                    <td className="px-3 py-2 text-center text-ink-3">
                       <Mail size={15} className="inline" />
                     </td>
                   </tr>
