@@ -152,6 +152,9 @@ export interface AdjuntoOportunidad {
   id: number;
   filename: string;
   mime_type: string | null;
+  // "requerimiento" = imagen pegada en el texto del requerimiento (se muestra
+  // aparte de los adjuntos del cliente). Ausente en los adjuntos comunes.
+  origen?: string | null;
 }
 
 export interface Oportunidad {

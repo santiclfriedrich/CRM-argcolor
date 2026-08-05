@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { FileText, X } from "lucide-react";
+import { useEffect, useMemo, useState, type ClipboardEvent, type FormEvent } from "react";
 
 import { ClientePicker } from "@/components/clientes/cliente-picker";
 import { Button } from "@/components/ui/button";
@@ -8,20 +9,95 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { Textarea } from "@/components/ui/textarea";
+import { imagenesPegadas, sumarSinDuplicados, useImagePreviews } from "@/lib/attachments";
 import { useCliente, useClientes } from "@/lib/clientes";
 import { loadDraft, saveDraft } from "@/lib/draft";
-import { ESTADOS } from "@/lib/oportunidades";
-import type { EstadoOportunidad, Oportunidad, OportunidadCreate } from "@/lib/types";
+import { ESTADOS, objectUrlAdjuntoOportunidad } from "@/lib/oportunidades";
+import type { AdjuntoOportunidad, EstadoOportunidad, Oportunidad, OportunidadCreate } from "@/lib/types";
 import { useUsuarios } from "@/lib/usuarios";
 
 interface Props {
   initial?: Oportunidad;
   defaultVendedorId?: number | null;
   isPending: boolean;
-  onSubmit: (values: OportunidadCreate, files: File[]) => void;
+  // files: adjuntos comunes. imagenesReq: imágenes pegadas en el requerimiento
+  // (se guardan marcadas como origen="requerimiento").
+  onSubmit: (values: OportunidadCreate, files: File[], imagenesReq: File[]) => void;
   onCancel: () => void;
+  // Borrar una imagen del requerimiento ya guardada (solo en edición).
+  onEliminarImagenReq?: (adjuntoId: number) => void;
   // Si se pasa (solo al crear), persiste un borrador en localStorage con esta clave.
   draftKey?: string;
+}
+
+// Marca que identifica las imágenes pegadas en el requerimiento.
+const ORIGEN_REQ = "requerimiento";
+
+// Miniatura de una imagen del requerimiento ya guardada: baja el blob con auth
+// (un <img src> no manda el token) y lo muestra.
+function ImagenReqGuardada({
+  oportunidadId,
+  adjunto,
+  onEliminar,
+}: {
+  oportunidadId: number;
+  adjunto: AdjuntoOportunidad;
+  onEliminar?: (adjuntoId: number) => void;
+}) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    let creada: string | null = null;
+    objectUrlAdjuntoOportunidad(oportunidadId, adjunto.id)
+      .then((u) => {
+        creada = u;
+        if (vivo) setUrl(u);
+        else URL.revokeObjectURL(u);
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+      if (creada) URL.revokeObjectURL(creada);
+    };
+  }, [oportunidadId, adjunto.id]);
+
+  return (
+    <ThumbBox alt={adjunto.filename} src={url} onQuitar={onEliminar ? () => onEliminar(adjunto.id) : undefined} />
+  );
+}
+
+// Caja de miniatura reutilizable (imagen guardada o recién pegada).
+function ThumbBox({
+  src,
+  alt,
+  onQuitar,
+}: {
+  src: string | null;
+  alt: string;
+  onQuitar?: () => void;
+}) {
+  return (
+    <div className="group relative h-20 w-20 overflow-hidden rounded-lg border border-line bg-surface2">
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt={alt} title={alt} className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <FileText size={18} className="text-ink-3" />
+        </div>
+      )}
+      {onQuitar && (
+        <button
+          type="button"
+          onClick={onQuitar}
+          aria-label="Quitar imagen"
+          className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity hover:bg-black/75 group-hover:opacity-100"
+        >
+          <X size={12} />
+        </button>
+      )}
+    </div>
+  );
 }
 
 type Snapshot = {
@@ -54,6 +130,7 @@ export function OportunidadForm({
   isPending,
   onSubmit,
   onCancel,
+  onEliminarImagenReq,
   draftKey,
 }: Props) {
   // Borrador guardado (solo al crear): se carga una vez al montar.
@@ -109,6 +186,10 @@ export function OportunidadForm({
     draft?.fechaLimite ?? initial?.fecha_limite ?? ""
   );
   const [files, setFiles] = useState<File[]>([]);
+  // Imágenes pegadas en el requerimiento (nuevas, aún sin subir).
+  const [imagenesReq, setImagenesReq] = useState<File[]>([]);
+  // Imágenes del requerimiento ya guardadas en la oportunidad (en edición).
+  const savedReq = (initial?.archivos_adjuntos ?? []).filter((a) => a.origen === ORIGEN_REQ);
 
   // Guarda el borrador ante cada cambio (solo al crear con draftKey).
   useEffect(() => {
@@ -183,8 +264,30 @@ export function OportunidadForm({
       fecha_respuesta_compras: fechaRespCompras || null,
       fecha_enviado_cliente: fechaCliente || null,
       fecha_limite: fechaLimite || null,
-    }, files);
+    }, files, imagenesReq);
+    // Limpiamos el estado local: los archivos ya se pasaron al handler (que los
+    // sube). En el detalle (form persistente) esto evita ver duplicadas las
+    // imágenes nuevas junto a las que quedan guardadas tras el refetch.
+    setFiles([]);
+    setImagenesReq([]);
   };
+
+  const agregarFiles = (nuevos: File[]) =>
+    setFiles((prev) => sumarSinDuplicados(prev, nuevos));
+
+  // Pegar imagen del portapapeles (Ctrl/Cmd+V) dentro del requerimiento: se
+  // suma como imagen del requerimiento (se envía a Compras junto con el texto),
+  // no como adjunto del cliente.
+  const onPasteReq = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+    const imgs = imagenesPegadas(e);
+    if (imgs.length > 0) {
+      e.preventDefault();
+      setImagenesReq((prev) => sumarSinDuplicados(prev, imgs));
+    }
+  };
+
+  const previews = useImagePreviews(files);
+  const previewsReq = useImagePreviews(imagenesReq);
 
   return (
     <form onSubmit={submit} className="space-y-4">
@@ -237,8 +340,32 @@ export function OportunidadForm({
           rows={4}
           value={requerimiento}
           onChange={(e) => setRequerimiento(e.target.value)}
+          onPaste={onPasteReq}
           placeholder="Qué pidió el cliente: producto, cantidad, detalle, plazo…"
         />
+        <p className="mt-1 text-xs text-ink-3">
+          Pegá una imagen (Ctrl/Cmd+V) para sumarla al requerimiento; se envía a Compras junto con el texto.
+        </p>
+        {(savedReq.length > 0 || imagenesReq.length > 0) && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {savedReq.map((a) => (
+              <ImagenReqGuardada
+                key={a.id}
+                oportunidadId={initial!.id}
+                adjunto={a}
+                onEliminar={onEliminarImagenReq}
+              />
+            ))}
+            {imagenesReq.map((f, i) => (
+              <ThumbBox
+                key={`nueva-${i}`}
+                src={(previewsReq[i] as string) ?? null}
+                alt={f.name}
+                onQuitar={() => setImagenesReq((prev) => prev.filter((_, j) => j !== i))}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -400,13 +527,40 @@ export function OportunidadForm({
           type="file"
           multiple
           accept=".pdf,image/*"
-          onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+          onChange={(e) => {
+            agregarFiles(Array.from(e.target.files ?? []));
+            e.target.value = "";
+          }}
           className="block w-full text-sm text-ink-2 file:mr-3 file:rounded-md file:border-0 file:bg-surface2 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink hover:file:bg-surface3"
         />
         {files.length > 0 && (
-          <p className="mt-1 text-xs text-ink-3">
-            {files.length} archivo(s) seleccionado(s)
-          </p>
+          <ul className="mt-2 space-y-1">
+            {files.map((f, i) => (
+              <li
+                key={i}
+                className="flex items-center gap-2 rounded-md bg-surface2 px-2.5 py-1.5 text-xs text-ink-2"
+              >
+                {previews[i] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={previews[i] as string}
+                    alt={f.name}
+                    className="h-9 w-9 shrink-0 rounded object-cover ring-1 ring-line"
+                  />
+                ) : (
+                  <FileText size={16} className="shrink-0 text-ink-3" />
+                )}
+                <span className="min-w-0 flex-1 truncate">{f.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
+                  className="shrink-0 text-ink-3 transition-colors hover:text-danger"
+                >
+                  Quitar
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 

@@ -48,6 +48,7 @@ import {
   useBulkDeleteOportunidades,
   useCreateOportunidad,
   useDeleteOportunidad,
+  useEliminarAdjuntoOportunidad,
   useOportunidades,
   usePropuestas,
   useResolverPropuesta,
@@ -996,11 +997,12 @@ export default function OportunidadesPage() {
             clearDraft(DRAFT_OPORTUNIDAD);
             setCreating(false);
           }}
-          onSubmit={(values, files) =>
+          onSubmit={(values, files, imagenesReq) =>
             createMut.mutate(values, {
               onSuccess: async (nueva) => {
                 try {
                   await subirAdjuntosOportunidad(nueva.id, files);
+                  await subirAdjuntosOportunidad(nueva.id, imagenesReq, "requerimiento");
                 } catch {
                   /* la oportunidad se creó igual; los adjuntos se pueden
                      reintentar desde el detalle */
@@ -1116,11 +1118,13 @@ function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad;
 
 function EditOportunidadModal({ oportunidad, onClose }: { oportunidad: Oportunidad; onClose: () => void }) {
   const updateMut = useUpdateOportunidad(oportunidad.id);
-  const handleSubmit = (values: OportunidadCreate, files: File[]) =>
+  const eliminarAdjunto = useEliminarAdjuntoOportunidad(oportunidad.id);
+  const handleSubmit = (values: OportunidadCreate, files: File[], imagenesReq: File[]) =>
     updateMut.mutate(values, {
       onSuccess: async () => {
         try {
           await subirAdjuntosOportunidad(oportunidad.id, files);
+          await subirAdjuntosOportunidad(oportunidad.id, imagenesReq, "requerimiento");
         } catch {
           /* los adjuntos se pueden reintentar desde el detalle */
         }
@@ -1134,6 +1138,7 @@ function EditOportunidadModal({ oportunidad, onClose }: { oportunidad: Oportunid
         initial={oportunidad}
         isPending={updateMut.isPending}
         onCancel={onClose}
+        onEliminarImagenReq={(adjuntoId) => eliminarAdjunto.mutate(adjuntoId)}
         onSubmit={handleSubmit}
       />
     </Modal>

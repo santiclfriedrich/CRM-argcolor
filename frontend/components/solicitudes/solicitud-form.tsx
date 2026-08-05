@@ -3,7 +3,6 @@
 import { FileText } from "lucide-react";
 import {
   useEffect,
-  useMemo,
   useState,
   type ClipboardEvent,
   type FormEvent,
@@ -16,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { Textarea } from "@/components/ui/textarea";
+import { imagenesPegadas, sumarSinDuplicados, useImagePreviews } from "@/lib/attachments";
 import { useClientes } from "@/lib/clientes";
 import { useGruposCompras } from "@/lib/config";
 import { useOportunidades } from "@/lib/oportunidades";
@@ -79,44 +79,19 @@ export function SolicitudForm({
     setGrupoId((grupos.find((g) => g.es_default) ?? grupos[0]).id);
   }, [grupos, grupoId]);
 
-  // Agrega archivos evitando duplicados (por nombre+tamaño).
-  const agregarFiles = (nuevos: File[]) => {
-    if (nuevos.length === 0) return;
-    setFiles((prev) => {
-      const clave = (f: File) => `${f.name}:${f.size}`;
-      const vistos = new Set(prev.map(clave));
-      return [...prev, ...nuevos.filter((f) => !vistos.has(clave(f)))];
-    });
-  };
+  const agregarFiles = (nuevos: File[]) =>
+    setFiles((prev) => sumarSinDuplicados(prev, nuevos));
 
   // Pegar imagen del portapapeles (Ctrl/Cmd+V): se adjunta como un archivo más.
-  // Las capturas suelen venir como "image.png" sin nombre útil → le damos uno único.
   const onPasteImagen = (e: ClipboardEvent<HTMLFormElement>) => {
-    const imgs = Array.from(e.clipboardData.items)
-      .filter((it) => it.kind === "file" && it.type.startsWith("image/"))
-      .map((it) => it.getAsFile())
-      .filter((f): f is File => f != null)
-      .map((f) => {
-        const ext = f.type.split("/")[1] || "png";
-        const nombre =
-          f.name && f.name !== "image.png" ? f.name : `pegado-${Date.now()}.${ext}`;
-        return new File([f], nombre, { type: f.type });
-      });
+    const imgs = imagenesPegadas(e);
     if (imgs.length > 0) {
       e.preventDefault(); // que no intente pegar la imagen dentro del textarea
       agregarFiles(imgs);
     }
   };
 
-  // Miniaturas de preview para los adjuntos que son imágenes (object URLs,
-  // liberadas al cambiar la lista o al desmontar).
-  const previews = useMemo(
-    () => files.map((f) => (f.type.startsWith("image/") ? URL.createObjectURL(f) : null)),
-    [files],
-  );
-  useEffect(() => {
-    return () => previews.forEach((u) => u && URL.revokeObjectURL(u));
-  }, [previews]);
+  const previews = useImagePreviews(files);
 
   // Oportunidades del cliente elegido (para el segundo paso del buscador).
   const opsDelCliente = (oportunidades ?? []).filter(

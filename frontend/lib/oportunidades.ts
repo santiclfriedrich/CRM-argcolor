@@ -190,13 +190,18 @@ export function useUpdateOportunidad(id: number) {
 }
 
 // --- Adjuntos de la oportunidad ---
-export function useSubirAdjuntosOportunidad(id: number) {
+// `origen` marca los adjuntos (ej. "requerimiento" para imágenes pegadas en el
+// texto del requerimiento), para mostrarlos aparte de los del cliente.
+export function useSubirAdjuntosOportunidad(id: number, origen?: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (files: File[]) => {
       const fd = new FormData();
       files.forEach((f) => fd.append("files", f));
-      return (await api.post<Oportunidad>(`${BASE}/${id}/adjuntos`, fd)).data;
+      const url = origen
+        ? `${BASE}/${id}/adjuntos?origen=${encodeURIComponent(origen)}`
+        : `${BASE}/${id}/adjuntos`;
+      return (await api.post<Oportunidad>(url, fd)).data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: oportunidadKeys.detail(id) });
@@ -207,11 +212,18 @@ export function useSubirAdjuntosOportunidad(id: number) {
 
 // Subida directa (sin hook) para usar tras crear una oportunidad, cuando el id
 // recién existe. Sube al mismo endpoint que useSubirAdjuntosOportunidad.
-export async function subirAdjuntosOportunidad(id: number, files: File[]): Promise<void> {
+export async function subirAdjuntosOportunidad(
+  id: number,
+  files: File[],
+  origen?: string,
+): Promise<void> {
   if (!files.length) return;
   const fd = new FormData();
   files.forEach((f) => fd.append("files", f));
-  await api.post(`${BASE}/${id}/adjuntos`, fd);
+  const url = origen
+    ? `${BASE}/${id}/adjuntos?origen=${encodeURIComponent(origen)}`
+    : `${BASE}/${id}/adjuntos`;
+  await api.post(url, fd);
 }
 
 export function useEliminarAdjuntoOportunidad(id: number) {
@@ -225,6 +237,18 @@ export function useEliminarAdjuntoOportunidad(id: number) {
       qc.invalidateQueries({ queryKey: oportunidadKeys.all });
     },
   });
+}
+
+// Object URL de un adjunto (imagen) para mostrarlo como miniatura, respetando
+// el auth (un <img src> no manda el token). El caller debe revocar la URL.
+export async function objectUrlAdjuntoOportunidad(
+  oportunidadId: number,
+  adjuntoId: number,
+): Promise<string> {
+  const res = await api.get(`${BASE}/${oportunidadId}/adjuntos/${adjuntoId}`, {
+    responseType: "blob",
+  });
+  return URL.createObjectURL(res.data as Blob);
 }
 
 // Descarga un adjunto respetando el auth (fetch blob -> link temporal).

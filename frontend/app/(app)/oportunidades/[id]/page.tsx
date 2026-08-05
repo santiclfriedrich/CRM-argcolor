@@ -48,6 +48,9 @@ export default function OportunidadDetallePage() {
   const { data: o, isLoading, isError } = useOportunidad(id);
   const updateMut = useUpdateOportunidad(id);
   const deleteMut = useDeleteOportunidad();
+  const subirAdjuntos = useSubirAdjuntosOportunidad(id);
+  const subirImagenesReq = useSubirAdjuntosOportunidad(id, "requerimiento");
+  const eliminarAdjunto = useEliminarAdjuntoOportunidad(id);
   const confirm = useConfirm();
 
   if (isLoading) return <p className="text-ink-2">Cargando…</p>;
@@ -114,7 +117,15 @@ export default function OportunidadDetallePage() {
               initial={o}
               isPending={updateMut.isPending}
               onCancel={() => router.push("/oportunidades")}
-              onSubmit={(values: OportunidadCreate) => updateMut.mutate(values)}
+              onEliminarImagenReq={(adjuntoId) => eliminarAdjunto.mutate(adjuntoId)}
+              onSubmit={(values: OportunidadCreate, files, imagenesReq) =>
+                updateMut.mutate(values, {
+                  onSuccess: () => {
+                    if (files.length) subirAdjuntos.mutate(files);
+                    if (imagenesReq.length) subirImagenesReq.mutate(imagenesReq);
+                  },
+                })
+              }
             />
             {updateMut.isSuccess && (
               <p className="mt-2 text-sm font-medium text-success">Cambios guardados.</p>
@@ -283,7 +294,10 @@ function Adjuntos({
   const subir = useSubirAdjuntosOportunidad(oportunidad.id);
   const eliminar = useEliminarAdjuntoOportunidad(oportunidad.id);
   const [files, setFiles] = useState<File[]>([]);
-  const adjuntos = oportunidad.archivos_adjuntos ?? [];
+  // Las imágenes del requerimiento se muestran bajo el texto (en el form), no acá.
+  const adjuntos = (oportunidad.archivos_adjuntos ?? []).filter(
+    (a) => a.origen !== "requerimiento"
+  );
 
   const onSubir = () => {
     if (files.length === 0) return;

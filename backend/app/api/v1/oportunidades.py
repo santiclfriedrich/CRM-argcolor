@@ -442,10 +442,12 @@ def update_oportunidad(
 def subir_adjuntos_oportunidad(
     oportunidad_id: int,
     files: list[UploadFile] = File(...),
+    origen: str | None = None,
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ) -> Oportunidad:
-    """Adjunta archivos (presupuestos, planos, mails del cliente, etc.) a la oportunidad."""
+    """Adjunta archivos (presupuestos, planos, mails del cliente, etc.) a la oportunidad.
+    `origen=requerimiento` marca las imágenes pegadas en el texto del requerimiento."""
     oportunidad = db.get(Oportunidad, oportunidad_id)
     if oportunidad is None:
         raise NotFoundError("Oportunidad no encontrada")
@@ -453,7 +455,7 @@ def subir_adjuntos_oportunidad(
         {"filename": f.filename, "mime_type": f.content_type, "data": f.file.read()}
         for f in files
     ]
-    guardar_adjuntos_oportunidad(db, oportunidad, archivos)
+    guardar_adjuntos_oportunidad(db, oportunidad, archivos, origen=origen)
     return oportunidad
 
 
