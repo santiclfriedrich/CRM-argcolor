@@ -36,7 +36,9 @@ function scrollParent(el: HTMLElement | null): HTMLElement | null {
 //     <thead><tr className="... [&_th]:relative">
 //       <th>#{cols.handle(0)}</th> ...
 export function useResizableColumns(storageKey: string, defaults: number[]) {
-  const key = `colw:${storageKey}`;
+  // v2: invalida anchos guardados durante una versión previa con bug (podían
+  // quedar columnas colapsadas al mínimo). Subir la versión = empezar limpio.
+  const key = `colw:v2:${storageKey}`;
 
   // Anchos actuales (fuente de verdad, fuera de React). Arranca en defaults y se
   // reemplaza con lo guardado en el primer layout effect.
