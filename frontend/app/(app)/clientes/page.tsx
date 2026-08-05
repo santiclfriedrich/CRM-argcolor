@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { RefChip } from "@/components/ui/ref-chip";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { useResizableColumns } from "@/components/ui/resizable-columns";
 import { useClientes, useCreateCliente } from "@/lib/clientes";
 import { clearDraft, DRAFT_CLIENTE } from "@/lib/draft";
 import { useGbpSyncStatus, useRunGbpSync } from "@/lib/sync";
@@ -72,6 +73,9 @@ export default function CuentasPage() {
 
   const cuentas = data ?? [];
 
+  // Anchos ajustables por columna (#, Nombre, CUIT, Creada por, Estado).
+  const cols = useResizableColumns("cuentas", [56, 460, 190, 210, 120]);
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-3">
@@ -114,26 +118,32 @@ export default function CuentasPage() {
           </div>
 
           <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-2xl border border-line">
-            <table className="w-full text-sm">
+            <table className="text-sm" style={cols.tableStyle}>
+              <colgroup>{cols.colgroup}</colgroup>
               <thead>
-                <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink">
-                  <th className="w-12">#</th>
+                <tr className="[&_th]:relative [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink">
+                  <th>#{cols.handle(0)}</th>
                   <th>
-                    <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1.5 truncate">
                       <Building2 size={13} className="text-ink-3" /> Nombre de la cuenta
                     </span>
+                    {cols.handle(1)}
                   </th>
                   <th>
-                    <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1.5 truncate">
                       <Hash size={13} className="text-ink-3" /> CUIT
                     </span>
+                    {cols.handle(2)}
                   </th>
                   <th>
-                    <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1.5 truncate">
                       <User size={13} className="text-ink-3" /> Creada por
                     </span>
+                    {cols.handle(3)}
                   </th>
-                  <th>Estado</th>
+                  <th>
+                    Estado{cols.handle(4)}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -143,14 +153,14 @@ export default function CuentasPage() {
                     className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
                     onClick={() => router.push(`/clientes/${c.id}`)}
                   >
-                    <td className="px-3 py-2 font-mono tabular-nums text-ink-3">{i + 1}</td>
-                    <td className="px-3 py-2 font-medium text-accent">
+                    <td className="truncate px-3 py-2 font-mono tabular-nums text-ink-3">{i + 1}</td>
+                    <td className="truncate px-3 py-2 font-medium text-accent">
                       <Link href={`/clientes/${c.id}`} onClick={(e) => e.stopPropagation()}>
                         {c.razon_social}
                       </Link>
                     </td>
-                    <td className="px-3 py-2 font-mono tabular-nums text-ink-2">{c.cuit ?? "—"}</td>
-                    <td className="px-3 py-2">
+                    <td className="truncate px-3 py-2 font-mono tabular-nums text-ink-2">{c.cuit ?? "—"}</td>
+                    <td className="truncate px-3 py-2">
                       {c.creado_por?.nombre ? (
                         <RefChip icon={<User size={12} className="shrink-0 text-ink-3" />}>
                           {c.creado_por.nombre}
