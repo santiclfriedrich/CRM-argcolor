@@ -16,10 +16,10 @@
   --c-ink: #0f172a;
   --c-ink-2: #64748b;
   --c-ink-3: #94a3b8;
-  /* Acento violeta de marca (#7118f7). RGB triplet para modificadores de opacidad. */
-  --c-accent: 113 24 247;
-  --c-accent-dim: rgba(113, 24, 247, 0.1);
-  --c-accent-hover: 94 20 205;
+  /* Acento violeta de marca, oscurecido (#5813c1). RGB triplet para modificadores de opacidad. */
+  --c-accent: 88 19 193;
+  --c-accent-dim: rgba(88, 19, 193, 0.1);
+  --c-accent-hover: 70 15 155;
 
   /* Violeta oscuro de marca (violet-950): chrome estructural (navbar, To-Do bar,
      tooltips, fondo del login) y estados seleccionados. Valor fijo en ambos modos.
