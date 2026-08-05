@@ -865,7 +865,7 @@ export default function OportunidadesPage() {
                   onClick={(e) => setMenu({ o, x: e.clientX, y: e.clientY })}
                   className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
                 >
-                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={seleccion.has(o.id)}
