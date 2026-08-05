@@ -173,11 +173,17 @@ def _fmt(value: object | None) -> str:
 
 
 def sugerir_requerimiento(db: Session, oportunidad_id: int) -> str:
-    """Arma un requerimiento para Compras a partir de lo que la IA ya extrajo
-    del mail original del cliente (producto, cantidad, detalle, plazo).
+    """Requerimiento pre-armado para el pedido a Compras.
 
-    Toma el primer mail entrante de la oportunidad con datos de IA (el pedido
-    original). Devuelve "" si no hay nada para sugerir."""
+    Prioriza el `requerimiento` cargado en la oportunidad (sea manual o el que
+    compuso el ingest desde el mail); así una oportunidad manual también llega
+    con su requerimiento al modal. Si está vacío, cae a lo que la IA extrajo del
+    primer mail entrante (producto, cantidad, detalle, plazo). Devuelve "" si no
+    hay nada para sugerir."""
+    op = db.get(Oportunidad, oportunidad_id)
+    if op is not None and (op.requerimiento or "").strip():
+        return op.requerimiento.strip()
+
     mail = db.scalar(
         select(Mail)
         .where(
