@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefChip } from "@/components/ui/ref-chip";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { OrdenEntradaToggle, useOrdenEntrada } from "@/components/ui/orden-entrada";
 import { useResizableColumns } from "@/components/ui/resizable-columns";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,6 +62,10 @@ export default function SolicitudesPage() {
     (s) => filtro === "todas" || s.solicitante?.id === currentUserId
   );
 
+  // Orden de entrada (default: nuevas arriba, como viene del backend por fecha desc).
+  const { nuevasArriba, toggle: toggleOrden } = useOrdenEntrada("solicitudes", true);
+  const filas = [...visibles].sort((a, b) => (nuevasArriba ? b.id - a.id : a.id - b.id));
+
   // Columnas de ancho ajustable (ID, Oportunidad, Cliente, Requerimiento,
   // Solicitante, Estado, acciones).
   const cols = useResizableColumns("solicitudes", [80, 240, 240, 320, 200, 130, 60]);
@@ -68,7 +73,7 @@ export default function SolicitudesPage() {
   // Virtualización: solo se montan las filas visibles.
   const scrollRef = useRef<HTMLDivElement>(null);
   const rowVirtualizer = useVirtualizer({
-    count: visibles.length,
+    count: filas.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => 45,
     overscan: 12,
@@ -110,6 +115,11 @@ export default function SolicitudesPage() {
           <p className="text-sm text-ink-2">
             {visibles.length} {visibles.length === 1 ? "solicitud" : "solicitudes"}
           </p>
+          <OrdenEntradaToggle
+            nuevasArriba={nuevasArriba}
+            onToggle={toggleOrden}
+            className="ml-auto"
+          />
         </div>
       )}
 
@@ -165,7 +175,7 @@ export default function SolicitudesPage() {
                 </tr>
               )}
               {vItems.map((vi) => {
-                const s = visibles[vi.index];
+                const s = filas[vi.index];
                 const meta = ESTADO_SOLICITUD_META[s.estado];
                 return (
                   <tr

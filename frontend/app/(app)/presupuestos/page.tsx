@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefChip } from "@/components/ui/ref-chip";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { OrdenEntradaToggle, useOrdenEntrada } from "@/components/ui/orden-entrada";
 import { useResizableColumns } from "@/components/ui/resizable-columns";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
@@ -54,6 +55,10 @@ export default function PresupuestosPage() {
     (p) => filtro === "todas" || p.creado_por?.id === currentUserId
   );
 
+  // Orden de entrada (default: nuevas arriba, como viene del backend id desc).
+  const { nuevasArriba, toggle: toggleOrden } = useOrdenEntrada("presupuestos", true);
+  const filas = [...visibles].sort((a, b) => (nuevasArriba ? b.id - a.id : a.id - b.id));
+
   // Columnas de ancho ajustable (Código, Oportunidad, Cliente, Total, Estado,
   // Creado por, acciones).
   const cols = useResizableColumns("presupuestos", [150, 260, 260, 150, 130, 200, 90]);
@@ -61,7 +66,7 @@ export default function PresupuestosPage() {
   // Virtualización: solo se montan las filas visibles.
   const scrollRef = useRef<HTMLDivElement>(null);
   const rowVirtualizer = useVirtualizer({
-    count: visibles.length,
+    count: filas.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => 45,
     overscan: 12,
@@ -114,6 +119,11 @@ export default function PresupuestosPage() {
           <p className="text-sm text-ink-2">
             {visibles.length} {visibles.length === 1 ? "presupuesto" : "presupuestos"}
           </p>
+          <OrdenEntradaToggle
+            nuevasArriba={nuevasArriba}
+            onToggle={toggleOrden}
+            className="ml-auto"
+          />
         </div>
       )}
 
@@ -165,7 +175,7 @@ export default function PresupuestosPage() {
                 </tr>
               )}
               {vItems.map((vi) => {
-                const p = visibles[vi.index];
+                const p = filas[vi.index];
                 return (
                   <tr
                     key={p.id}

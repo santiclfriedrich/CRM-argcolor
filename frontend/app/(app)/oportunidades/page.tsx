@@ -39,6 +39,7 @@ import { Card } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
+import { OrdenEntradaToggle, useOrdenEntrada } from "@/components/ui/orden-entrada";
 import { RefChip } from "@/components/ui/ref-chip";
 import { useResizableColumns } from "@/components/ui/resizable-columns";
 import {
@@ -547,6 +548,10 @@ export default function OportunidadesPage() {
     return m;
   }, [oportunidadesDelMes]);
 
+  // Orden de entrada de las filas nuevas (arriba/abajo). Default: abajo (las más
+  // nuevas al final, como venía).
+  const { nuevasArriba, toggle: toggleOrden } = useOrdenEntrada("oportunidades", false);
+
   // Buscador global -> filtro por columnas -> orden.
   const filas = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -563,12 +568,11 @@ export default function OportunidadesPage() {
         (a, b) => comparar(ACCESOR[key].get(a), ACCESOR[key].get(b), ACCESOR[key].tipo) * factor
       );
     } else {
-      // Orden por llegada: la más antigua arriba y la más nueva abajo (se cargan
-      // "desde abajo", no como una pila). El backend las trae id desc.
-      res = [...res].sort((a, b) => a.id - b.id);
+      // Orden por llegada: según la preferencia, las más nuevas arriba o abajo.
+      res = [...res].sort((a, b) => (nuevasArriba ? b.id - a.id : a.id - b.id));
     }
     return res;
-  }, [oportunidadesDelMes, busqueda, colFiltros, sort]);
+  }, [oportunidadesDelMes, busqueda, colFiltros, sort, nuevasArriba]);
 
   // Columnas de ancho ajustable (16: checkbox, ID, Cliente, CL N°, Asunto,
   // Producto, Pedido, E/Compra, R/Compra, Cotiz, E/Cliente, Validez, Ing.,
@@ -794,6 +798,8 @@ export default function OportunidadesPage() {
             </button>
           )}
         </div>
+
+        <OrdenEntradaToggle nuevasArriba={nuevasArriba} onToggle={toggleOrden} className="h-9" />
       </div>
 
       {isLoading && <p className="mt-4 text-ink-2">Cargando…</p>}
