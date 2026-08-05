@@ -1,10 +1,11 @@
 "use client";
 
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Building2, Hash, Plus, RefreshCw, User } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { ClienteForm } from "@/components/clientes/cliente-form";
 import { ClientePicker } from "@/components/clientes/cliente-picker";
@@ -76,6 +77,23 @@ export default function CuentasPage() {
   // Anchos ajustables por columna (#, Nombre, CUIT, Creada por, Estado).
   const cols = useResizableColumns("cuentas", [56, 460, 190, 210, 120]);
 
+  // Virtualización: la tabla puede tener miles de cuentas. Montamos solo las
+  // filas visibles (+overscan) y reciclamos al hacer scroll, así el DOM tiene
+  // ~30 filas en vez de miles y el layout (scroll, resize de columnas) es
+  // instantáneo. El contenedor de scroll es el div con overflow-auto.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: cuentas.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 41,
+    overscan: 12,
+  });
+  const vItems = rowVirtualizer.getVirtualItems();
+  const padTop = vItems.length ? vItems[0].start : 0;
+  const padBottom = vItems.length
+    ? rowVirtualizer.getTotalSize() - vItems[vItems.length - 1].end
+    : 0;
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-3">
@@ -117,7 +135,10 @@ export default function CuentasPage() {
             </p>
           </div>
 
-          <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-2xl border border-line">
+          <div
+            ref={scrollRef}
+            className="mt-3 min-h-0 flex-1 overflow-auto rounded-2xl border border-line"
+          >
             <table
               {...cols.tableProps}
               className="text-sm [&_td]:border-r [&_td]:border-line [&_th]:border-r [&_th]:border-line [&_td:last-child]:border-r-0 [&_th:last-child]:border-r-0"
@@ -150,37 +171,56 @@ export default function CuentasPage() {
                 </tr>
               </thead>
               <tbody>
-                {cuentas.map((c, i) => (
-                  <tr
-                    key={c.id}
-                    className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
-                    onClick={() => router.push(`/clientes/${c.id}`)}
-                  >
-                    <td className="truncate px-3 py-2 font-mono tabular-nums text-ink-3">{i + 1}</td>
-                    <td className="truncate px-3 py-2 font-medium text-accent">
-                      <Link href={`/clientes/${c.id}`} onClick={(e) => e.stopPropagation()}>
-                        {c.razon_social}
-                      </Link>
-                    </td>
-                    <td className="truncate px-3 py-2 font-mono tabular-nums text-ink-2">{c.cuit ?? "—"}</td>
-                    <td className="truncate px-3 py-2">
-                      {c.creado_por?.nombre ? (
-                        <RefChip icon={<User size={12} className="shrink-0 text-ink-3" />}>
-                          {c.creado_por.nombre}
-                        </RefChip>
-                      ) : (
-                        <span className="text-ink-3">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {c.activo ? (
-                        <Badge tone="success">activo</Badge>
-                      ) : (
-                        <Badge>inactivo</Badge>
-                      )}
-                    </td>
+                {padTop > 0 && (
+                  <tr aria-hidden>
+                    <td colSpan={5} className="border-0 p-0" style={{ height: padTop }} />
                   </tr>
-                ))}
+                )}
+                {vItems.map((vi) => {
+                  const c = cuentas[vi.index];
+                  return (
+                    <tr
+                      key={c.id}
+                      data-index={vi.index}
+                      ref={rowVirtualizer.measureElement}
+                      className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
+                      onClick={() => router.push(`/clientes/${c.id}`)}
+                    >
+                      <td className="truncate px-3 py-2 font-mono tabular-nums text-ink-3">
+                        {vi.index + 1}
+                      </td>
+                      <td className="truncate px-3 py-2 font-medium text-accent">
+                        <Link href={`/clientes/${c.id}`} onClick={(e) => e.stopPropagation()}>
+                          {c.razon_social}
+                        </Link>
+                      </td>
+                      <td className="truncate px-3 py-2 font-mono tabular-nums text-ink-2">
+                        {c.cuit ?? "—"}
+                      </td>
+                      <td className="truncate px-3 py-2">
+                        {c.creado_por?.nombre ? (
+                          <RefChip icon={<User size={12} className="shrink-0 text-ink-3" />}>
+                            {c.creado_por.nombre}
+                          </RefChip>
+                        ) : (
+                          <span className="text-ink-3">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        {c.activo ? (
+                          <Badge tone="success">activo</Badge>
+                        ) : (
+                          <Badge>inactivo</Badge>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {padBottom > 0 && (
+                  <tr aria-hidden>
+                    <td colSpan={5} className="border-0 p-0" style={{ height: padBottom }} />
+                  </tr>
+                )}
                 {cuentas.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-4 py-6 text-center text-ink-3">
