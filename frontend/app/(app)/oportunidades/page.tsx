@@ -529,6 +529,12 @@ export default function OportunidadesPage() {
     periodoModo === "mes" && idxMes(new Date(o.fecha_creacion)) < idxSeleccionado;
   const mesOrigen = (o: Oportunidad): string =>
     new Date(o.fecha_creacion).toLocaleDateString("es-AR", { month: "long" });
+  // Mes abreviado a 3 letras (sin el punto que agrega el locale), para el chip
+  // compacto de "arrastrada".
+  const mesOrigenCorto = (o: Oportunidad): string =>
+    new Date(o.fecha_creacion)
+      .toLocaleDateString("es-AR", { month: "short" })
+      .replace(".", "");
 
   // Valores distintos por columna (para los checkboxes del filtro).
   const valoresPorColumna = useMemo(() => {
@@ -890,8 +896,13 @@ export default function OportunidadesPage() {
                         <span className="text-ink-3">—</span>
                       )}
                       {esArrastrada(o) && (
-                        <Badge tone="warning" className="shrink-0 capitalize">
-                          Desde {mesOrigen(o)}
+                        <Badge
+                          tone="warning"
+                          className="shrink-0 gap-0.5 capitalize"
+                          title={`Arrastrada desde ${mesOrigen(o)}`}
+                        >
+                          <CalendarClock size={11} className="shrink-0" />
+                          {mesOrigenCorto(o)}
                         </Badge>
                       )}
                     </div>
