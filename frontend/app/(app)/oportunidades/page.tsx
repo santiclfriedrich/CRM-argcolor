@@ -295,21 +295,23 @@ const CERRADOS: EstadoOportunidad[] = ["ganada", "perdida"];
 //   amarillo = confirmada / pendiente
 //   verde   = pagada ("ganada")
 //   sin punto = perdida ("No avanzó")
-function PuntoEstado({ estado }: { estado: EstadoOportunidad }) {
-  let color: string | null = "bg-danger";
-  let title = "Sin cerrar";
-  if (estado === "ganada") {
-    color = "bg-success";
-    title = "Pago";
-  } else if (estado === "confirmada") {
-    color = "bg-warning";
-    title = "Confirmada / pendiente";
-  } else if (estado === "perdida") {
-    color = null;
-  }
-  if (!color) return null;
+// Color del número de ID según el estado (reemplaza el puntito de color):
+// verde = pago/ganada, amarillo = confirmada/pendiente, rojo = sin cerrar,
+// gris = perdida.
+function colorIdEstado(estado: EstadoOportunidad): { className: string; title: string } {
+  if (estado === "ganada") return { className: "text-success", title: "Pago" };
+  if (estado === "confirmada")
+    return { className: "text-warning", title: "Confirmada / pendiente" };
+  if (estado === "perdida") return { className: "text-ink-3", title: "Perdida" };
+  return { className: "text-danger", title: "Sin cerrar" };
+}
+
+function IdEstado({ estado, id }: { estado: EstadoOportunidad; id: number }) {
+  const m = colorIdEstado(estado);
   return (
-    <span className={`h-1.5 w-1.5 rounded-full ${color}`} title={title} aria-label={title} />
+    <span className={`font-mono font-semibold leading-none tabular-nums ${m.className}`} title={m.title}>
+      {id}
+    </span>
   );
 }
 
@@ -883,14 +885,8 @@ export default function OportunidadesPage() {
                       className="h-4 w-4 rounded border-line accent-navy align-middle"
                     />
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-medium text-ink-2">
-                    <span className="inline-flex items-center gap-1.5 leading-none">
-                      {/* Slot fijo para el punto: así los números arrancan siempre alineados. */}
-                      <span className="flex h-1.5 w-1.5 shrink-0 items-center justify-center">
-                        <PuntoEstado estado={o.estado} />
-                      </span>
-                      <span className="font-mono leading-none tabular-nums">{o.id}</span>
-                    </span>
+                  <td className="whitespace-nowrap px-3 py-2 font-medium">
+                    <IdEstado estado={o.estado} id={o.id} />
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex min-w-0 items-center gap-1.5">
