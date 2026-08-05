@@ -833,7 +833,7 @@ export default function OportunidadesPage() {
                     checked={todosSel}
                     onChange={toggleTodos}
                     aria-label="Seleccionar todas"
-                    className="h-4 w-4 rounded border-line accent-navy align-middle"
+                    className="m-0 mx-auto block h-4 w-4 rounded border-line accent-navy"
                   />
                   {cols.handle(0)}
                 </th>
@@ -871,7 +871,7 @@ export default function OportunidadesPage() {
                       checked={seleccion.has(o.id)}
                       onChange={() => toggleSel(o.id)}
                       aria-label={`Seleccionar #${o.id}`}
-                      className="h-4 w-4 rounded border-line accent-navy align-middle"
+                      className="m-0 mx-auto block h-4 w-4 rounded border-line accent-navy"
                     />
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 font-medium text-ink">
@@ -950,7 +950,7 @@ export default function OportunidadesPage() {
                       onChange={(e) => toggleGbp.mutate({ id: o.id, valor: e.target.checked })}
                       aria-label="Cargada en GBP"
                       title="Cargada en GBP"
-                      className="h-4 w-4 rounded border-line accent-navy"
+                      className="m-0 mx-auto block h-4 w-4 rounded border-line accent-navy"
                     />
                   </td>
                   <td className="truncate px-3 py-2 text-ink" title={o.observacion ?? ""}>
