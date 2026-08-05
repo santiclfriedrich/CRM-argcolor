@@ -10,10 +10,11 @@ const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : use
 // tabla, así el usuario mantiene su layout entre sesiones.
 //
 // Rendimiento: el ancho de las columnas es 100% imperativo (DOM). Un resize
-// NUNCA dispara un render de React — sería carísimo con tablas de miles de
-// filas (era el pico de ~1.7s que medía el INP). Durante el arrastre solo
-// mutamos el style de los <col> y de la <table>; al soltar persistimos a
-// localStorage. React solo maneja qué columnas existen, no su ancho.
+// NUNCA dispara un render de React. Además, durante el arrastre NO tocamos la
+// tabla real: con table-layout:fixed cambiar el ancho de una columna reflowea
+// todas las filas (miles) en cada pixel → bloqueaba el hilo ~1s. En su lugar
+// mostramos una línea guía vertical que sigue al cursor (solo transform, puro
+// compositor, cero reflow) y aplicamos el ancho real UNA sola vez al soltar.
 //
 // Uso:
 //   const cols = useResizableColumns("cuentas", [56, 460, 190, 210, 120]);
@@ -78,6 +79,12 @@ export function useResizableColumns(storageKey: string, defaults: number[]) {
   });
 
   const drag = useRef<{ index: number; startX: number; startW: number } | null>(null);
+  const guia = useRef<HTMLDivElement | null>(null);
+
+  const quitarGuia = () => {
+    guia.current?.remove();
+    guia.current = null;
+  };
 
   const onPointerDown = useCallback(
     (index: number) => (e: React.PointerEvent<HTMLSpanElement>) => {
@@ -85,28 +92,54 @@ export function useResizableColumns(storageKey: string, defaults: number[]) {
       e.stopPropagation();
       drag.current = { index, startX: e.clientX, startW: live.current[index] ?? 120 };
       e.currentTarget.setPointerCapture(e.pointerId);
+
+      // Línea guía vertical anclada a la altura visible de la tabla. Se mueve por
+      // transform durante el drag; no toca la tabla ni provoca reflow.
+      const rect = tableRef.current?.getBoundingClientRect();
+      const top = rect ? Math.max(rect.top, 0) : 0;
+      const bottom = rect ? Math.min(rect.bottom, window.innerHeight) : window.innerHeight;
+      const g = document.createElement("div");
+      g.className = "pointer-events-none fixed z-[9999] w-0.5 bg-accent";
+      g.style.left = `${e.clientX}px`;
+      g.style.top = `${top}px`;
+      g.style.height = `${Math.max(0, bottom - top)}px`;
+      document.body.appendChild(g);
+      quitarGuia();
+      guia.current = g;
     },
     []
   );
 
-  const onPointerMove = useCallback(
-    (e: React.PointerEvent<HTMLSpanElement>) => {
-      if (!drag.current) return;
-      const { index, startX, startW } = drag.current;
-      live.current[index] = Math.max(48, Math.round(startW + (e.clientX - startX)));
-      paint(); // solo DOM, sin render
-    },
-    [paint]
-  );
+  const onPointerMove = useCallback((e: React.PointerEvent<HTMLSpanElement>) => {
+    if (!drag.current) return;
+    const { index, startX, startW } = drag.current;
+    const next = Math.max(48, Math.round(startW + (e.clientX - startX)));
+    live.current[index] = next; // guardamos, pero NO repintamos la tabla
+    if (guia.current) guia.current.style.transform = `translateX(${next - startW}px)`;
+  }, []);
 
   const onPointerUp = useCallback(
     (e: React.PointerEvent<HTMLSpanElement>) => {
       if (!drag.current) return;
       e.currentTarget.releasePointerCapture?.(e.pointerId);
       drag.current = null;
+      quitarGuia();
+      paint(); // único reflow, con el ancho final
       persist();
     },
-    [persist]
+    [paint, persist]
+  );
+
+  const onPointerCancel = useCallback(
+    (e: React.PointerEvent<HTMLSpanElement>) => {
+      if (!drag.current) return;
+      e.currentTarget.releasePointerCapture?.(e.pointerId);
+      drag.current = null;
+      quitarGuia();
+      paint();
+      persist();
+    },
+    [paint, persist]
   );
 
   // Doble click en el borde: reinicia esa columna a su ancho por defecto.
@@ -129,6 +162,7 @@ export function useResizableColumns(storageKey: string, defaults: number[]) {
       onPointerDown={onPointerDown(index)}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
       onDoubleClick={onDoubleClick(index)}
       className="absolute right-0 top-0 z-10 h-full w-2 translate-x-1/2 cursor-col-resize touch-none select-none hover:bg-accent/40"
     />
