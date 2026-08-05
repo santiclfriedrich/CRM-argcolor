@@ -13,7 +13,6 @@ import {
   Eye,
   FileText,
   Filter,
-  Hash,
   Inbox,
   Paperclip,
   Pencil,
@@ -42,6 +41,7 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { RefChip } from "@/components/ui/ref-chip";
+import { useResizableColumns } from "@/components/ui/resizable-columns";
 import {
   ESTADO_META,
   subirAdjuntosOportunidad,
@@ -167,7 +167,6 @@ const CAMPOS_BUSQUEDA: ((o: Oportunidad) => string)[] = [
 
 // Encabezado con menú de orden (asc/desc) + filtro por valores específicos.
 function FiltroColumna({
-  icon,
   label,
   colKey,
   tipo,
@@ -177,7 +176,6 @@ function FiltroColumna({
   seleccion,
   onSeleccion,
 }: {
-  icon?: ReactNode;
   label: string;
   colKey: ColKey;
   tipo: ColTipo;
@@ -227,7 +225,6 @@ function FiltroColumna({
 
   return (
     <span className="inline-flex items-center gap-1.5">
-      {icon}
       {label}
       <button
         ref={btnRef}
@@ -235,8 +232,8 @@ function FiltroColumna({
         onClick={abrir}
         aria-label={`Ordenar o filtrar ${label}`}
         className={cn(
-          "rounded p-0.5 transition-colors",
-          activo ? "text-accent" : "text-ink-3 hover:text-ink"
+          "rounded p-0.5 text-accent transition-colors hover:text-accent/70",
+          activo && "text-accent"
         )}
       >
         {dir === "asc" ? <ArrowUp size={13} /> : dir === "desc" ? <ArrowDown size={13} /> : <Filter size={12} />}
@@ -575,6 +572,14 @@ export default function OportunidadesPage() {
     return res;
   }, [oportunidadesDelMes, busqueda, colFiltros, sort]);
 
+  // Columnas de ancho ajustable (16: checkbox, ID, Cliente, CL N°, Asunto,
+  // Producto, Pedido, E/Compra, R/Compra, Cotiz, E/Cliente, Validez, Ing.,
+  // Estado, GBP, Observación).
+  const cols = useResizableColumns(
+    "oportunidades",
+    [44, 70, 220, 90, 200, 150, 110, 100, 100, 80, 100, 100, 90, 130, 60, 180]
+  );
+
   // Selección múltiple (sobre las filas visibles).
   const idsVisibles = filas.map((o) => o.id);
   const todosSel = idsVisibles.length > 0 && idsVisibles.every((id) => seleccion.has(id));
@@ -602,11 +607,11 @@ export default function OportunidadesPage() {
     }
   };
 
-  // Encabezado con orden/filtro para una columna.
-  const th = (colKey: ColKey, label: string, icon?: ReactNode, extra = "") => (
+  // Encabezado con orden/filtro para una columna. `idx` = índice de columna
+  // para la manija de redimensionado.
+  const th = (idx: number, colKey: ColKey, label: string, extra = "") => (
     <th className={cn(extra)}>
       <FiltroColumna
-        icon={icon}
         label={label}
         colKey={colKey}
         tipo={ACCESOR[colKey].tipo}
@@ -616,6 +621,7 @@ export default function OportunidadesPage() {
         seleccion={colFiltros[colKey]}
         onSeleccion={(sel) => onSeleccion(colKey, sel)}
       />
+      {cols.handle(idx)}
     </th>
   );
 
@@ -823,10 +829,14 @@ export default function OportunidadesPage() {
 
       {data && (
         <div className="mt-4 min-h-0 flex-1 overflow-auto rounded-2xl border border-line">
-          <table className="w-full text-sm">
+          <table
+            {...cols.tableProps}
+            className="text-sm [&_td]:overflow-hidden [&_td]:border-r [&_td]:border-line [&_th]:border-r [&_th]:border-line [&_td:last-child]:border-r-0 [&_th:last-child]:border-r-0"
+          >
+            <colgroup>{cols.colgroup}</colgroup>
             <thead>
-              <tr className="whitespace-nowrap [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink">
-                <th className="w-10">
+              <tr className="whitespace-nowrap [&_th]:relative [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink">
+                <th className="text-center">
                   <input
                     type="checkbox"
                     checked={todosSel}
@@ -834,26 +844,27 @@ export default function OportunidadesPage() {
                     aria-label="Seleccionar todas"
                     className="h-4 w-4 rounded border-line accent-navy align-middle"
                   />
+                  {cols.handle(0)}
                 </th>
                 <th>
-                  <span className="inline-flex items-center gap-1.5">
-                    <Hash size={13} className="text-ink-3" /> ID
-                  </span>
+                  ID{cols.handle(1)}
                 </th>
-                {th("cliente", "Cliente", <Building2 size={13} className="text-ink-3" />)}
-                {th("cl", "CL N°", <Hash size={13} className="text-ink-3" />)}
-                {th("asunto", "Asunto")}
-                {th("producto", "Producto")}
-                {th("pedido", "Pedido")}
-                {th("ecompra", "E/Compra", <CalendarClock size={13} className="text-ink-3" />)}
-                {th("rcompra", "R/Compra", <CalendarClock size={13} className="text-ink-3" />)}
-                {th("cotizado", "Cotizado")}
-                {th("ecliente", "E/Cliente", <CalendarClock size={13} className="text-ink-3" />)}
-                {th("validez", "Validez", <CalendarClock size={13} className="text-ink-3" />)}
-                {th("ing", "Ing.", <User size={13} className="text-ink-3" />)}
-                {th("estado", "Estado")}
-                <th className="text-center">GBP</th>
-                {th("observacion", "Observación")}
+                {th(2, "cliente", "Cliente")}
+                {th(3, "cl", "CL N°")}
+                {th(4, "asunto", "Asunto")}
+                {th(5, "producto", "Producto")}
+                {th(6, "pedido", "Pedido")}
+                {th(7, "ecompra", "E/Compra")}
+                {th(8, "rcompra", "R/Compra")}
+                {th(9, "cotizado", "Cotiz")}
+                {th(10, "ecliente", "E/Cliente")}
+                {th(11, "validez", "Validez")}
+                {th(12, "ing", "Ing.")}
+                {th(13, "estado", "Estado")}
+                <th className="text-center">
+                  GBP{cols.handle(14)}
+                </th>
+                {th(15, "observacion", "Observación")}
               </tr>
             </thead>
             <tbody>
@@ -882,7 +893,7 @@ export default function OportunidadesPage() {
                     </span>
                   </td>
                   <td className="px-3 py-2">
-                    <div className="flex max-w-[13rem] items-center gap-1.5">
+                    <div className="flex min-w-0 items-center gap-1.5">
                       {o.cliente?.razon_social ? (
                         <RefChip
                           icon={<Building2 size={12} className="shrink-0 text-ink-3" />}
@@ -904,10 +915,10 @@ export default function OportunidadesPage() {
                   <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink-2">
                     {o.cliente?.numero_cliente ?? "—"}
                   </td>
-                  <td className="max-w-[11rem] truncate px-3 py-2 text-ink-2" title={o.asunto ?? ""}>
+                  <td className="truncate px-3 py-2 text-ink-2" title={o.asunto ?? ""}>
                     {o.asunto ?? "—"}
                   </td>
-                  <td className="max-w-[8rem] truncate px-3 py-2 text-ink-2" title={o.producto ?? ""}>
+                  <td className="truncate px-3 py-2 text-ink-2" title={o.producto ?? ""}>
                     {o.producto ?? "—"}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 text-ink-2">
@@ -958,7 +969,7 @@ export default function OportunidadesPage() {
                       className="h-4 w-4 rounded border-line accent-navy"
                     />
                   </td>
-                  <td className="max-w-[10rem] truncate px-3 py-2 text-ink-2" title={o.observacion ?? ""}>
+                  <td className="truncate px-3 py-2 text-ink-2" title={o.observacion ?? ""}>
                     {o.observacion ?? "—"}
                   </td>
                 </tr>

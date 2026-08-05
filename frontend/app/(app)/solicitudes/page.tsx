@@ -1,5 +1,6 @@
 "use client";
 
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Building2, Copy, FileText, Hash, Mail, Paperclip, Plus, Send, Sparkles, Target, User } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -11,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefChip } from "@/components/ui/ref-chip";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useResizableColumns } from "@/components/ui/resizable-columns";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { useCrearDesdeSolicitud } from "@/lib/presupuestos";
@@ -59,6 +61,24 @@ export default function SolicitudesPage() {
     (s) => filtro === "todas" || s.solicitante?.id === currentUserId
   );
 
+  // Columnas de ancho ajustable (ID, Oportunidad, Cliente, Requerimiento,
+  // Solicitante, Estado, acciones).
+  const cols = useResizableColumns("solicitudes", [80, 240, 240, 320, 200, 130, 60]);
+
+  // Virtualización: solo se montan las filas visibles.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: visibles.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 45,
+    overscan: 12,
+  });
+  const vItems = rowVirtualizer.getVirtualItems();
+  const padTop = vItems.length ? vItems[0].start : 0;
+  const padBottom = vItems.length
+    ? rowVirtualizer.getTotalSize() - vItems[vItems.length - 1].end
+    : 0;
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between">
@@ -101,50 +121,72 @@ export default function SolicitudesPage() {
       )}
 
       {data && (
-        <div className="mt-6 min-h-0 flex-1 overflow-auto rounded-2xl border border-line">
-          <table className="w-full text-sm">
+        <div
+          ref={scrollRef}
+          className="mt-6 min-h-0 flex-1 overflow-auto rounded-2xl border border-line"
+        >
+          <table
+            {...cols.tableProps}
+            className="text-sm [&_td]:border-r [&_td]:border-line [&_th]:border-r [&_th]:border-line [&_td:last-child]:border-r-0 [&_th:last-child]:border-r-0"
+          >
+            <colgroup>{cols.colgroup}</colgroup>
             <thead>
-              <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink">
-                <th className="w-12">
-                  <span className="inline-flex items-center gap-1.5">
+              <tr className="[&_th]:relative [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink">
+                <th>
+                  <span className="inline-flex items-center gap-1.5 truncate">
                     <Hash size={13} className="text-ink-3" /> ID
                   </span>
+                  {cols.handle(0)}
                 </th>
                 <th>
-                  <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 truncate">
                     <Target size={13} className="text-ink-3" /> Oportunidad
                   </span>
+                  {cols.handle(1)}
                 </th>
                 <th>
-                  <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 truncate">
                     <Building2 size={13} className="text-ink-3" /> Cliente
                   </span>
+                  {cols.handle(2)}
                 </th>
                 <th>
-                  <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 truncate">
                     <FileText size={13} className="text-ink-3" /> Requerimiento
                   </span>
+                  {cols.handle(3)}
                 </th>
                 <th>
-                  <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 truncate">
                     <User size={13} className="text-ink-3" /> Solicitante
                   </span>
+                  {cols.handle(4)}
                 </th>
-                <th>Estado</th>
-                <th />
+                <th>
+                  Estado{cols.handle(5)}
+                </th>
+                <th>{cols.handle(6)}</th>
               </tr>
             </thead>
             <tbody>
-              {visibles.map((s) => {
+              {padTop > 0 && (
+                <tr aria-hidden>
+                  <td colSpan={7} className="border-0 p-0" style={{ height: padTop }} />
+                </tr>
+              )}
+              {vItems.map((vi) => {
+                const s = visibles[vi.index];
                 const meta = ESTADO_SOLICITUD_META[s.estado];
                 return (
                   <tr
                     key={s.id}
+                    data-index={vi.index}
+                    ref={rowVirtualizer.measureElement}
                     className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
                     onClick={() => setDetailId(s.id)}
                   >
-                    <td className="px-3 py-2 font-mono tabular-nums text-ink-2">{s.id}</td>
-                    <td className="px-3 py-2">
+                    <td className="truncate px-3 py-2 font-mono tabular-nums text-ink-2">{s.id}</td>
+                    <td className="truncate px-3 py-2">
                       <Link
                         href={`/oportunidades?op=${s.oportunidad_id}`}
                         onClick={(e: React.MouseEvent) => e.stopPropagation()}
@@ -155,7 +197,7 @@ export default function SolicitudesPage() {
                         </RefChip>
                       </Link>
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="truncate px-3 py-2">
                       {s.oportunidad?.cliente?.razon_social ? (
                         <RefChip icon={<Building2 size={12} className="shrink-0 text-ink-3" />}>
                           {s.oportunidad.cliente.razon_social}
@@ -164,10 +206,10 @@ export default function SolicitudesPage() {
                         <span className="text-ink-3">—</span>
                       )}
                     </td>
-                    <td className="max-w-xs truncate px-3 py-2 text-ink-2">
+                    <td className="truncate px-3 py-2 text-ink-2">
                       {s.requerimiento}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="truncate px-3 py-2">
                       {s.solicitante?.nombre ? (
                         <RefChip icon={<User size={12} className="shrink-0 text-ink-3" />}>
                           {s.solicitante.nombre}
@@ -176,7 +218,7 @@ export default function SolicitudesPage() {
                         <span className="text-ink-3">—</span>
                       )}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="truncate px-3 py-2">
                       <Badge tone={TONO_SOLICITUD[s.estado]}>{meta.label}</Badge>
                     </td>
                     <td className="px-3 py-2 text-right text-ink-3">
@@ -185,6 +227,11 @@ export default function SolicitudesPage() {
                   </tr>
                 );
               })}
+              {padBottom > 0 && (
+                <tr aria-hidden>
+                  <td colSpan={7} className="border-0 p-0" style={{ height: padBottom }} />
+                </tr>
+              )}
               {visibles.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-6 text-center text-ink-3">
