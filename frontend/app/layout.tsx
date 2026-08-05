@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Archivo_Narrow, DM_Mono } from "next/font/google";
+import { DM_Mono, Inter } from "next/font/google";
 
 import { Providers } from "@/components/providers";
 
 import "./globals.css";
 
 // Fuentes self-hosted por Next (no dependemos de CDNs externos).
-const sans = Archivo_Narrow({
+const sans = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
