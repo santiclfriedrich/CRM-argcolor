@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { FileText } from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ClipboardEvent,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 
 import { ClientePicker } from "@/components/clientes/cliente-picker";
 import { Button } from "@/components/ui/button";
@@ -71,6 +79,45 @@ export function SolicitudForm({
     setGrupoId((grupos.find((g) => g.es_default) ?? grupos[0]).id);
   }, [grupos, grupoId]);
 
+  // Agrega archivos evitando duplicados (por nombre+tamaño).
+  const agregarFiles = (nuevos: File[]) => {
+    if (nuevos.length === 0) return;
+    setFiles((prev) => {
+      const clave = (f: File) => `${f.name}:${f.size}`;
+      const vistos = new Set(prev.map(clave));
+      return [...prev, ...nuevos.filter((f) => !vistos.has(clave(f)))];
+    });
+  };
+
+  // Pegar imagen del portapapeles (Ctrl/Cmd+V): se adjunta como un archivo más.
+  // Las capturas suelen venir como "image.png" sin nombre útil → le damos uno único.
+  const onPasteImagen = (e: ClipboardEvent<HTMLFormElement>) => {
+    const imgs = Array.from(e.clipboardData.items)
+      .filter((it) => it.kind === "file" && it.type.startsWith("image/"))
+      .map((it) => it.getAsFile())
+      .filter((f): f is File => f != null)
+      .map((f) => {
+        const ext = f.type.split("/")[1] || "png";
+        const nombre =
+          f.name && f.name !== "image.png" ? f.name : `pegado-${Date.now()}.${ext}`;
+        return new File([f], nombre, { type: f.type });
+      });
+    if (imgs.length > 0) {
+      e.preventDefault(); // que no intente pegar la imagen dentro del textarea
+      agregarFiles(imgs);
+    }
+  };
+
+  // Miniaturas de preview para los adjuntos que son imágenes (object URLs,
+  // liberadas al cambiar la lista o al desmontar).
+  const previews = useMemo(
+    () => files.map((f) => (f.type.startsWith("image/") ? URL.createObjectURL(f) : null)),
+    [files],
+  );
+  useEffect(() => {
+    return () => previews.forEach((u) => u && URL.revokeObjectURL(u));
+  }, [previews]);
+
   // Oportunidades del cliente elegido (para el segundo paso del buscador).
   const opsDelCliente = (oportunidades ?? []).filter(
     (o) => clienteId != null && o.cliente?.id === clienteId
@@ -101,7 +148,7 @@ export function SolicitudForm({
   };
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form onSubmit={submit} onPaste={onPasteImagen} className="space-y-4">
       {lockOportunidad ? (
         <div>
           <Label htmlFor="s-op">Oportunidad *</Label>
@@ -188,6 +235,10 @@ export function SolicitudForm({
           placeholder="Detalle de lo que se necesita cotizar…"
           required
         />
+        <p className="mt-1 text-xs text-ink-3">
+          Podés pegar una imagen (Ctrl/Cmd+V) y se adjunta al pedido; se envía a
+          Compras junto con la solicitud.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -270,20 +321,16 @@ export function SolicitudForm({
       </div>
 
       <div>
-        <Label htmlFor="s-files">Adjuntos (PDF o imágenes que mandó el cliente)</Label>
+        <Label htmlFor="s-files">
+          Adjuntos (PDF o imágenes — también podés pegar una captura)
+        </Label>
         <input
           id="s-files"
           type="file"
           multiple
           accept=".pdf,image/*"
           onChange={(e) => {
-            const nuevos = Array.from(e.target.files ?? []);
-            // Acumular: sumamos los nuevos a los ya elegidos, sin duplicar (nombre+tamaño).
-            setFiles((prev) => {
-              const clave = (f: File) => `${f.name}:${f.size}`;
-              const vistos = new Set(prev.map(clave));
-              return [...prev, ...nuevos.filter((f) => !vistos.has(clave(f)))];
-            });
+            agregarFiles(Array.from(e.target.files ?? []));
             // Limpiamos el input para poder volver a elegir el mismo archivo.
             e.target.value = "";
           }}
@@ -294,13 +341,23 @@ export function SolicitudForm({
             {files.map((f, i) => (
               <li
                 key={i}
-                className="flex items-center justify-between rounded-md bg-surface2 px-2.5 py-1 text-xs text-ink-2"
+                className="flex items-center gap-2 rounded-md bg-surface2 px-2.5 py-1.5 text-xs text-ink-2"
               >
-                <span className="truncate">{f.name}</span>
+                {previews[i] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={previews[i] as string}
+                    alt={f.name}
+                    className="h-9 w-9 shrink-0 rounded object-cover ring-1 ring-line"
+                  />
+                ) : (
+                  <FileText size={16} className="shrink-0 text-ink-3" />
+                )}
+                <span className="min-w-0 flex-1 truncate">{f.name}</span>
                 <button
                   type="button"
                   onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
-                  className="ml-2 shrink-0 text-ink-3 transition-colors hover:text-danger"
+                  className="shrink-0 text-ink-3 transition-colors hover:text-danger"
                 >
                   Quitar
                 </button>
