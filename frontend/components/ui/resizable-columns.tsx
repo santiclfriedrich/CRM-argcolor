@@ -5,6 +5,19 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 // useLayoutEffect avisa en SSR; en el server usamos useEffect (no corre igual).
 const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
+// Contenedor scrolleable más cercano (para anclar la línea guía a la parte
+// visible de la tabla, no al <table> entero que con virtualización mide miles
+// de px de alto).
+function scrollParent(el: HTMLElement | null): HTMLElement | null {
+  let n = el?.parentElement ?? null;
+  while (n) {
+    const oy = getComputedStyle(n).overflowY;
+    if (oy === "auto" || oy === "scroll") return n;
+    n = n.parentElement;
+  }
+  return el?.parentElement ?? null;
+}
+
 // Columnas de tabla con ancho ajustable arrastrando el borde derecho de cada
 // encabezado (estilo Salesforce). Los anchos se guardan en localStorage por
 // tabla, así el usuario mantiene su layout entre sesiones.
@@ -93,9 +106,11 @@ export function useResizableColumns(storageKey: string, defaults: number[]) {
       drag.current = { index, startX: e.clientX, startW: live.current[index] ?? 120 };
       e.currentTarget.setPointerCapture(e.pointerId);
 
-      // Línea guía vertical anclada a la altura visible de la tabla. Se mueve por
-      // transform durante el drag; no toca la tabla ni provoca reflow.
-      const rect = tableRef.current?.getBoundingClientRect();
+      // Línea guía vertical anclada a la parte VISIBLE de la tabla (el contenedor
+      // con scroll), no al <table> entero. Se mueve por transform durante el
+      // drag; no toca la tabla ni provoca reflow.
+      const cont = scrollParent(tableRef.current);
+      const rect = (cont ?? tableRef.current)?.getBoundingClientRect();
       const top = rect ? Math.max(rect.top, 0) : 0;
       const bottom = rect ? Math.min(rect.bottom, window.innerHeight) : window.innerHeight;
       const g = document.createElement("div");
@@ -179,11 +194,15 @@ export function useResizableColumns(storageKey: string, defaults: number[]) {
     />
   ));
 
+  // La tabla mide EXACTAMENTE la suma de anchos (la setea paint()). Sin
+  // min-width:100%: si pusiéramos 100%, con la suma < contenedor el layout
+  // fixed reparte el sobrante entre columnas e ignora los anchos exactos (el
+  // resize no se notaría y quedaban huecos). Si la suma < contenedor queda
+  // espacio a la derecha, como en Salesforce.
   const tableProps = {
     ref: tableRef,
     style: {
       tableLayout: "fixed",
-      minWidth: "100%",
     } as React.CSSProperties,
   };
 
