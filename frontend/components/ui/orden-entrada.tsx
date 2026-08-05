@@ -50,11 +50,13 @@ export function OrdenEntradaToggle({
       onClick={onToggle}
       title="Dónde aparecen las filas nuevas (arriba o abajo)"
       className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface2 px-3 py-2 text-sm font-medium text-ink-2 transition-colors hover:bg-surface",
+        "group inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-accent/30 bg-accent-dim px-3 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent hover:text-white",
         className
       )}
     >
-      {nuevasArriba ? <ArrowUp size={15} /> : <ArrowDown size={15} />}
+      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-accent text-white transition-colors group-hover:bg-white/20">
+        {nuevasArriba ? <ArrowUp size={13} /> : <ArrowDown size={13} />}
+      </span>
       Nuevas {nuevasArriba ? "arriba" : "abajo"}
     </button>
   );
