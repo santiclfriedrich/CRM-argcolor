@@ -897,7 +897,7 @@ export default function OportunidadesPage() {
                       )}
                       {esArrastrada(o) && (
                         <Badge
-                          tone="warning"
+                          tone="neutral"
                           className="shrink-0 gap-0.5 capitalize"
                           title={`Arrastrada desde ${mesOrigen(o)}`}
                         >
