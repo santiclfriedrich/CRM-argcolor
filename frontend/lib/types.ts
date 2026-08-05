@@ -105,6 +105,7 @@ export interface Usuario {
   nombre: string;
   rol: RolUsuario;
   activo: boolean;
+  sync_mail_activo: boolean;
   created_at: string;
   gmail_conectado?: boolean;
 }
@@ -119,6 +120,7 @@ export type UsuarioUpdate = {
   nombre?: string;
   rol?: RolUsuario;
   activo?: boolean;
+  sync_mail_activo?: boolean;
 };
 
 // ---- Oportunidades ----

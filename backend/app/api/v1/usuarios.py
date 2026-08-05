@@ -11,7 +11,7 @@ from app.db.models.clientes import Cliente
 from app.db.models.oportunidades import Oportunidad
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
-from app.schemas.usuario import UsuarioCreate, UsuarioRead, UsuarioUpdate
+from app.schemas.usuario import MiSyncUpdate, UsuarioCreate, UsuarioRead, UsuarioUpdate
 
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
 
@@ -21,6 +21,26 @@ def list_usuarios(
     db: Session = Depends(get_db), _: Usuario = Depends(get_current_user)
 ) -> list[Usuario]:
     return list(db.scalars(select(Usuario).order_by(Usuario.nombre)))
+
+
+# --- Auto-servicio: el propio usuario (se declaran antes de /{usuario_id} para
+# que "me" no lo capture la ruta por id). ---
+@router.get("/me", response_model=UsuarioRead)
+def get_me(current_user: Usuario = Depends(get_current_user)) -> Usuario:
+    return current_user
+
+
+@router.patch("/me/sync-mail", response_model=UsuarioRead)
+def update_mi_sync_mail(
+    body: MiSyncUpdate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> Usuario:
+    """El usuario logueado pausa/activa su propia sincronización de mails."""
+    current_user.sync_mail_activo = body.sync_mail_activo
+    db.commit()
+    db.refresh(current_user)
+    return current_user
 
 
 @router.post("", response_model=UsuarioRead, status_code=201)

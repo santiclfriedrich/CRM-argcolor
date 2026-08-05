@@ -168,6 +168,15 @@ def poll_user_mailbox(
     from app.core.crypto import decrypt
     from app.integrations.gmail.client import GmailClient
 
+    if not usuario.sync_mail_activo:
+        return {
+            "procesados": 0,
+            "errores": 0,
+            "ultimo_error": (
+                "Tu sincronización de mails está pausada. Activala en "
+                "Configuración para volver a recibir mails en la bandeja."
+            ),
+        }
     if not usuario.gmail_refresh_token:
         return {
             "procesados": 0,
@@ -214,7 +223,13 @@ def poll_all_mailboxes(
 
     if settings.GMAIL_SERVICE_ACCOUNT_FILE:
         # Camino B: impersonación de cada casilla activa vía service account.
-        usuarios = list(db.scalars(select(Usuario).where(Usuario.activo.is_(True))))
+        usuarios = list(
+            db.scalars(
+                select(Usuario).where(
+                    Usuario.activo.is_(True), Usuario.sync_mail_activo.is_(True)
+                )
+            )
+        )
         for usuario in usuarios:
             try:
                 gmail = GmailClient(usuario.email)
@@ -229,7 +244,9 @@ def poll_all_mailboxes(
     conectados = list(
         db.scalars(
             select(Usuario).where(
-                Usuario.activo.is_(True), Usuario.gmail_refresh_token.is_not(None)
+                Usuario.activo.is_(True),
+                Usuario.sync_mail_activo.is_(True),
+                Usuario.gmail_refresh_token.is_not(None),
             )
         )
     )

@@ -19,6 +19,13 @@ import {
   useUpdateAutomatizacion,
   useUpdateGrupoCompras,
 } from "@/lib/config";
+import {
+  useMiUsuario,
+  useUpdateMiSyncMail,
+  useUpdateUsuario,
+  useUsuarios,
+} from "@/lib/usuarios";
+import type { Usuario } from "@/lib/types";
 
 export default function ConfiguracionPage() {
   const { data, isLoading, isError } = useAutomatizacion();
@@ -53,7 +60,85 @@ export default function ConfiguracionPage() {
         </Card>
       )}
 
+      <SincronizacionMails />
+
       <GruposCompras />
+    </div>
+  );
+}
+
+// Pausar/activar la sincronización de mails a la bandeja. Cada usuario controla
+// la suya; un admin puede además frenar la de otros.
+function SincronizacionMails() {
+  const { data: me } = useMiUsuario();
+  const updateMi = useUpdateMiSyncMail();
+  const esAdmin = me?.rol === "admin";
+  const { data: usuarios } = useUsuarios();
+
+  return (
+    <>
+      <h2 className="mt-8 text-lg font-semibold tracking-tight text-ink">
+        Sincronización de mails
+      </h2>
+      <p className="mt-1 text-sm text-ink-2">
+        Si la pausás, tus mails dejan de ingresar a la bandeja (ni el sync
+        automático ni el botón manual). Al reactivarla se recuperan los mails de
+        los últimos ~2 días; si estuvo pausada más tiempo, los anteriores no se
+        recuperan.
+      </p>
+
+      <Card className="mt-4 divide-y divide-line">
+        {me && (
+          <Row
+            titulo="Sincronizar mis mails a la bandeja"
+            detalle={
+              me.gmail_conectado
+                ? "Activá para recibir tus mails; pausá para frenarlos."
+                : "Todavía no conectaste tu Gmail; conectalo desde tu perfil."
+            }
+            checked={me.sync_mail_activo}
+            disabled={updateMi.isPending}
+            onChange={(v) => updateMi.mutate(v)}
+          />
+        )}
+
+        {esAdmin && (
+          <div className="p-4">
+            <p className="mb-2 text-sm font-medium text-ink">Otros usuarios</p>
+            <div className="divide-y divide-line overflow-hidden rounded-lg border border-line">
+              {(usuarios ?? [])
+                .filter((u) => u.id !== me?.id)
+                .map((u) => (
+                  <FilaUsuarioSync key={u.id} usuario={u} />
+                ))}
+              {(usuarios ?? []).filter((u) => u.id !== me?.id).length === 0 && (
+                <p className="p-3 text-sm text-ink-3">No hay otros usuarios.</p>
+              )}
+            </div>
+          </div>
+        )}
+      </Card>
+    </>
+  );
+}
+
+// Fila para que un admin pause/active la sync de otro usuario.
+function FilaUsuarioSync({ usuario }: { usuario: Usuario }) {
+  const update = useUpdateUsuario(usuario.id);
+  return (
+    <div className="flex items-center justify-between gap-4 p-3">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium text-ink">{usuario.nombre}</p>
+        <p className="truncate text-xs text-ink-3">
+          {usuario.email}
+          {usuario.gmail_conectado ? "" : " · sin Gmail conectado"}
+        </p>
+      </div>
+      <Switch
+        checked={usuario.sync_mail_activo}
+        onCheckedChange={(v) => update.mutate({ sync_mail_activo: v })}
+        disabled={update.isPending}
+      />
     </div>
   );
 }

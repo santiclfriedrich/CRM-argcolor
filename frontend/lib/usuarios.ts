@@ -22,6 +22,24 @@ export function useUsuario(id: number) {
   });
 }
 
+// El usuario logueado (para su propia config, ej. pausar su sync de mails).
+export function useMiUsuario() {
+  return useQuery({
+    queryKey: [...KEY, "me"],
+    queryFn: async () => (await api.get<Usuario>(`${BASE}/me`)).data,
+  });
+}
+
+// El usuario logueado pausa/activa su propia sincronización de mails.
+export function useUpdateMiSyncMail() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (sync_mail_activo: boolean) =>
+      (await api.patch<Usuario>(`${BASE}/me/sync-mail`, { sync_mail_activo })).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
 export function useCreateUsuario() {
   const qc = useQueryClient();
   return useMutation({

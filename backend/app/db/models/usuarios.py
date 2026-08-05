@@ -25,6 +25,9 @@ class Usuario(Base, TimestampMixin):
         Enum(RolUsuario, name="rol_usuario"), default=RolUsuario.vendedor, nullable=False
     )
     activo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Sincronización de mails a la bandeja: si es False, el poller (de fondo y
+    # manual) saltea la casilla de este usuario. Distinto de `activo` (login).
+    sync_mail_activo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Gmail propio del vendedor (OAuth): refresh token CIFRADO + cuándo se conectó.
     # Permite que el poller lea la casilla de cada uno (ver app.core.crypto).
