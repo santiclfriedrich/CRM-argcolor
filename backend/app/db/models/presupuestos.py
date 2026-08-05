@@ -22,7 +22,9 @@ class Presupuesto(Base, TimestampMixin):
     __tablename__ = "presupuestos"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    oportunidad_id: Mapped[int] = mapped_column(ForeignKey("oportunidades.id"), nullable=False)
+    oportunidad_id: Mapped[int] = mapped_column(
+        ForeignKey("oportunidades.id"), nullable=False, index=True
+    )
     codigo: Mapped[str] = mapped_column(String(20), unique=True, index=True, nullable=False)
     monto_total: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     moneda: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)

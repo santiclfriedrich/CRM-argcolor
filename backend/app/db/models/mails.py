@@ -24,7 +24,9 @@ class Mail(Base, TimestampMixin):
     # Message-ID del header RFC 2822 (ej. "<CAF...@mail.gmail.com>"): sirve para
     # encadenar la respuesta (In-Reply-To/References) aunque salga de otra casilla.
     rfc_message_id: Mapped[str | None] = mapped_column(String(512))
-    oportunidad_id: Mapped[int | None] = mapped_column(ForeignKey("oportunidades.id"))
+    oportunidad_id: Mapped[int | None] = mapped_column(
+        ForeignKey("oportunidades.id"), index=True
+    )
     direccion: Mapped[DireccionMail] = mapped_column(
         Enum(DireccionMail, name="direccion_mail"), nullable=False
     )

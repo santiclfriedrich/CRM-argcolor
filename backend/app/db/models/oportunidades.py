@@ -58,9 +58,9 @@ class Oportunidad(Base, TimestampMixin):
     __tablename__ = "oportunidades"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    cliente_id: Mapped[int | None] = mapped_column(ForeignKey("clientes.id"))
+    cliente_id: Mapped[int | None] = mapped_column(ForeignKey("clientes.id"), index=True)
     contacto_cliente_id: Mapped[int | None] = mapped_column(ForeignKey("contactos_cliente.id"))
-    vendedor_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
+    vendedor_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"), index=True)
     # Quién creó la oportunidad (registro): manual = quien la carga; mail = dueño
     # de la casilla. No cambia aunque se reasigne el vendedor.
     creado_por_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
@@ -79,7 +79,7 @@ class Oportunidad(Base, TimestampMixin):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     fecha_ultimo_movimiento: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
     )
     # Cuándo pasó a un estado cerrado (para "fijarla" en ese mes). Null = abierta.
     fecha_cierre: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

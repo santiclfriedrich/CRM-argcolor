@@ -20,7 +20,7 @@ class ContactoCliente(Base, TimestampMixin):
     __tablename__ = "contactos_cliente"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    cliente_id: Mapped[int] = mapped_column(ForeignKey("clientes.id"), nullable=False)
+    cliente_id: Mapped[int] = mapped_column(ForeignKey("clientes.id"), nullable=False, index=True)
     nombre: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), index=True)
     telefono: Mapped[str | None] = mapped_column(String(50))

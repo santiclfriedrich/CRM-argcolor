@@ -33,8 +33,12 @@ class SolicitudCompras(Base, TimestampMixin):
     __tablename__ = "solicitudes_compras"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    oportunidad_id: Mapped[int] = mapped_column(ForeignKey("oportunidades.id"), nullable=False)
-    solicitante_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"), nullable=False)
+    oportunidad_id: Mapped[int] = mapped_column(
+        ForeignKey("oportunidades.id"), nullable=False, index=True
+    )
+    solicitante_id: Mapped[int] = mapped_column(
+        ForeignKey("usuarios.id"), nullable=False, index=True
+    )
     requerimiento: Mapped[str] = mapped_column(Text, nullable=False)
     numero_cliente: Mapped[str | None] = mapped_column(String(80))
     # Lista de adjuntos enviados a Compras: [{filename, mime_type, path}].

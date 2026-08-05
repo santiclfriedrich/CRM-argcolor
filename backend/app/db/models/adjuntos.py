@@ -10,7 +10,7 @@ class Adjunto(Base, TimestampMixin):
     __tablename__ = "adjuntos"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    mail_id: Mapped[int] = mapped_column(ForeignKey("mails.id"), nullable=False)
+    mail_id: Mapped[int] = mapped_column(ForeignKey("mails.id"), nullable=False, index=True)
     nombre_archivo: Mapped[str] = mapped_column(String(500), nullable=False)
     mime_type: Mapped[str | None] = mapped_column(String(120))
     path_storage: Mapped[str | None] = mapped_column(String(500))
