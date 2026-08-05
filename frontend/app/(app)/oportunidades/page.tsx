@@ -295,26 +295,14 @@ const CERRADOS: EstadoOportunidad[] = ["ganada", "perdida"];
 //   amarillo = confirmada / pendiente
 //   verde   = pagada ("ganada")
 //   sin punto = perdida ("No avanzó")
-// Color del número de ID según el estado (reemplaza el puntito de color):
-// verde = pago/ganada, amarillo = confirmada/pendiente, rojo = sin cerrar,
-// gris = perdida.
-function colorIdEstado(estado: EstadoOportunidad): { className: string; title: string } {
-  if (estado === "ganada") return { className: "text-success", title: "Pago" };
-  // Amarillo real (no el ámbar de `warning`, que se confunde con el rojo):
-  // hue ~48°, oscuro para tener contraste sobre fondo claro.
-  if (estado === "confirmada")
-    return { className: "text-[#b59000]", title: "Confirmada / pendiente" };
-  if (estado === "perdida") return { className: "text-ink-3", title: "Perdida" };
-  return { className: "text-danger", title: "Sin cerrar" };
-}
-
-function IdEstado({ estado, id }: { estado: EstadoOportunidad; id: number }) {
-  const m = colorIdEstado(estado);
-  return (
-    <span className={`font-mono font-semibold leading-none tabular-nums ${m.className}`} title={m.title}>
-      {id}
-    </span>
-  );
+// Fondo del nombre del cliente según el estado de la oportunidad:
+// verde = ganada/pago, amarillo = confirmada/pendiente, rojo = perdida (no
+// avanzó), sin color = resto (sin cerrar). Devuelve clases para el RefChip.
+function bgClienteEstado(estado: EstadoOportunidad): string {
+  if (estado === "ganada") return "border-success/40 bg-success/15 text-ink";
+  if (estado === "confirmada") return "border-yellow-500/50 bg-yellow-300/50 text-ink";
+  if (estado === "perdida") return "border-danger/40 bg-danger/12 text-ink";
+  return "";
 }
 
 // Índice de mes absoluto (año*12+mes) para comparar meses fácilmente.
@@ -887,8 +875,8 @@ export default function OportunidadesPage() {
                       className="h-4 w-4 rounded border-line accent-navy align-middle"
                     />
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-medium">
-                    <IdEstado estado={o.estado} id={o.id} />
+                  <td className="whitespace-nowrap px-3 py-2 font-medium text-ink">
+                    <span className="font-mono tabular-nums">{o.id}</span>
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex min-w-0 items-center gap-1.5">
@@ -896,7 +884,7 @@ export default function OportunidadesPage() {
                         <RefChip
                           icon={<Building2 size={12} className="shrink-0 text-ink-3" />}
                           title={o.cliente.razon_social}
-                          className="min-w-0"
+                          className={cn("min-w-0", bgClienteEstado(o.estado))}
                         >
                           {o.cliente.razon_social}
                         </RefChip>
