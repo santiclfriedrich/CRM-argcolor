@@ -4,7 +4,6 @@ import {
   ArrowDown,
   ArrowRightLeft,
   ArrowUp,
-  Building2,
   CalendarClock,
   Check,
   ChevronLeft,
@@ -299,9 +298,9 @@ const CERRADOS: EstadoOportunidad[] = ["ganada", "perdida"];
 // verde = ganada/pago, amarillo = confirmada/pendiente, rojo = perdida (no
 // avanzó), sin color = resto (sin cerrar). Devuelve clases para el RefChip.
 function bgClienteEstado(estado: EstadoOportunidad): string {
-  if (estado === "ganada") return "border-success/40 bg-success/15 text-ink";
-  if (estado === "confirmada") return "border-yellow-500/50 bg-yellow-300/50 text-ink";
-  if (estado === "perdida") return "border-danger/40 bg-danger/12 text-ink";
+  if (estado === "ganada") return "border-green-200 bg-green-200 text-green-900";
+  if (estado === "confirmada") return "border-yellow-200 bg-yellow-200 text-yellow-900";
+  if (estado === "perdida") return "border-red-200 bg-red-200 text-red-900";
   return "";
 }
 
@@ -882,7 +881,6 @@ export default function OportunidadesPage() {
                     <div className="flex min-w-0 items-center gap-1.5">
                       {o.cliente?.razon_social ? (
                         <RefChip
-                          icon={<Building2 size={12} className="shrink-0 text-ink-3" />}
                           title={o.cliente.razon_social}
                           className={cn("min-w-0", bgClienteEstado(o.estado))}
                         >
