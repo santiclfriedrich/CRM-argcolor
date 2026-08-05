@@ -119,8 +119,8 @@ export default function CuentasPage() {
 
           <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-2xl border border-line">
             <table
+              {...cols.tableProps}
               className="text-sm [&_td]:border-r [&_td]:border-line [&_th]:border-r [&_th]:border-line [&_td:last-child]:border-r-0 [&_th:last-child]:border-r-0"
-              style={cols.tableStyle}
             >
               <colgroup>{cols.colgroup}</colgroup>
               <thead>

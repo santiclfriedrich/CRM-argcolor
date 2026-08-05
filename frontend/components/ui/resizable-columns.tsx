@@ -6,19 +6,27 @@ import { useCallback, useEffect, useRef, useState } from "react";
 // encabezado (estilo Salesforce). Los anchos se guardan en localStorage por
 // tabla, así el usuario mantiene su layout entre sesiones.
 //
+// Rendimiento: durante el arrastre NO tocamos el estado de React (eso
+// re-renderizaría toda la tabla en cada pixel → laggeo con muchas filas).
+// Mutamos el ancho del <col> y de la <table> directamente por DOM, y recién al
+// soltar hacemos un único setState + persistimos. Así el drag es instantáneo
+// sin importar cuántas filas tenga la tabla.
+//
 // Uso:
-//   const cols = useResizableColumns("cuentas", [48, 420, 180, 200, 120]);
-//   <table style={cols.tableStyle} className="w-full ...">
+//   const cols = useResizableColumns("cuentas", [56, 460, 190, 210, 120]);
+//   <table {...cols.tableProps} className="text-sm ...">
 //     <colgroup>{cols.colgroup}</colgroup>
 //     <thead><tr className="... [&_th]:relative">
 //       <th>#{cols.handle(0)}</th> ...
-//
-// El ancho de cada columna es fijo (px) y la tabla ocupa la suma total; si la
-// suma supera el contenedor aparece scroll horizontal (el contenedor debe ser
-// overflow-auto).
 export function useResizableColumns(storageKey: string, defaults: number[]) {
   const [widths, setWidths] = useState<number[]>(defaults);
   const key = `colw:${storageKey}`;
+
+  // Espejo mutable de los anchos actuales: se actualiza en vivo durante el drag
+  // sin provocar renders. `widths` (estado) solo cambia al soltar / resetear.
+  const live = useRef<number[]>(defaults.slice());
+  const colRefs = useRef<(HTMLTableColElement | null)[]>([]);
+  const tableRef = useRef<HTMLTableElement | null>(null);
 
   // Cargar los anchos guardados una vez montado (en efecto, no en render, para
   // no romper la hidratación del SSR).
@@ -32,6 +40,7 @@ export function useResizableColumns(storageKey: string, defaults: number[]) {
           saved.length === defaults.length &&
           saved.every((n) => typeof n === "number" && n > 0)
         ) {
+          live.current = (saved as number[]).slice();
           setWidths(saved as number[]);
         }
       }
@@ -44,60 +53,63 @@ export function useResizableColumns(storageKey: string, defaults: number[]) {
 
   const drag = useRef<{ index: number; startX: number; startW: number } | null>(null);
 
+  // Aplica un ancho por DOM (sin render): muta el <col> y el ancho total de la
+  // tabla para que el scroll horizontal siga a la suma.
+  const applyWidth = (index: number, w: number) => {
+    live.current[index] = w;
+    const col = colRefs.current[index];
+    if (col) col.style.width = `${w}px`;
+    const table = tableRef.current;
+    if (table) {
+      table.style.width = `${live.current.reduce((a, b) => a + b, 0)}px`;
+    }
+  };
+
   const onPointerDown = useCallback(
     (index: number) => (e: React.PointerEvent<HTMLSpanElement>) => {
       e.preventDefault();
       e.stopPropagation();
-      drag.current = { index, startX: e.clientX, startW: widths[index] ?? 120 };
+      drag.current = { index, startX: e.clientX, startW: live.current[index] ?? 120 };
       e.currentTarget.setPointerCapture(e.pointerId);
     },
-    [widths]
+    []
   );
 
   const onPointerMove = useCallback((e: React.PointerEvent<HTMLSpanElement>) => {
     if (!drag.current) return;
     const { index, startX, startW } = drag.current;
     const next = Math.max(48, Math.round(startW + (e.clientX - startX)));
-    setWidths((prev) => {
-      if (prev[index] === next) return prev;
-      const copy = prev.slice();
-      copy[index] = next;
-      return copy;
-    });
+    applyWidth(index, next);
   }, []);
+
+  const commit = useCallback(() => {
+    try {
+      localStorage.setItem(key, JSON.stringify(live.current));
+    } catch {
+      /* ignore */
+    }
+    setWidths(live.current.slice());
+  }, [key]);
 
   const onPointerUp = useCallback(
     (e: React.PointerEvent<HTMLSpanElement>) => {
       if (!drag.current) return;
       e.currentTarget.releasePointerCapture?.(e.pointerId);
       drag.current = null;
-      setWidths((w) => {
-        try {
-          localStorage.setItem(key, JSON.stringify(w));
-        } catch {
-          /* ignore */
-        }
-        return w;
-      });
+      commit();
     },
-    [key]
+    [commit]
   );
 
   // Doble click en el borde: reinicia esa columna a su ancho por defecto.
   const onDoubleClick = useCallback(
     (index: number) => () => {
-      setWidths((prev) => {
-        const copy = prev.slice();
-        copy[index] = defaults[index];
-        try {
-          localStorage.setItem(key, JSON.stringify(copy));
-        } catch {
-          /* ignore */
-        }
-        return copy;
-      });
+      applyWidth(index, defaults[index]);
+      commit();
     },
-    [defaults, key]
+    // applyWidth es estable (usa refs); defaults/commit son las dependencias reales.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [defaults, commit]
   );
 
   // Manija a renderizar dentro de cada <th> (que debe ser position: relative).
@@ -115,13 +127,24 @@ export function useResizableColumns(storageKey: string, defaults: number[]) {
 
   const total = widths.reduce((a, b) => a + b, 0);
 
-  const colgroup = widths.map((w, i) => <col key={i} style={{ width: w }} />);
+  const colgroup = widths.map((w, i) => (
+    <col
+      key={i}
+      ref={(el) => {
+        colRefs.current[i] = el;
+      }}
+      style={{ width: w }}
+    />
+  ));
 
-  const tableStyle: React.CSSProperties = {
-    tableLayout: "fixed",
-    width: total,
-    minWidth: "100%",
+  const tableProps = {
+    ref: tableRef,
+    style: {
+      tableLayout: "fixed",
+      width: total,
+      minWidth: "100%",
+    } as React.CSSProperties,
   };
 
-  return { widths, handle, colgroup, tableStyle };
+  return { widths, handle, colgroup, tableProps };
 }
