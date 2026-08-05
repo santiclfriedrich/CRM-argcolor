@@ -300,8 +300,10 @@ const CERRADOS: EstadoOportunidad[] = ["ganada", "perdida"];
 // gris = perdida.
 function colorIdEstado(estado: EstadoOportunidad): { className: string; title: string } {
   if (estado === "ganada") return { className: "text-success", title: "Pago" };
+  // Amarillo real (no el ámbar de `warning`, que se confunde con el rojo):
+  // hue ~48°, oscuro para tener contraste sobre fondo claro.
   if (estado === "confirmada")
-    return { className: "text-warning", title: "Confirmada / pendiente" };
+    return { className: "text-[#b59000]", title: "Confirmada / pendiente" };
   if (estado === "perdida") return { className: "text-ink-3", title: "Perdida" };
   return { className: "text-danger", title: "Sin cerrar" };
 }
