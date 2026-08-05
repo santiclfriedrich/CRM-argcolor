@@ -131,7 +131,7 @@ export default function SolicitudesPage() {
           >
             <colgroup>{cols.colgroup}</colgroup>
             <thead>
-              <tr className="[&_th]:relative [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink">
+              <tr className="[&_th]:relative [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink [&_th]:shadow-[inset_0_-1px_0_var(--c-line)]">
                 <th>
                   <span className="inline-flex items-center gap-1.5 truncate">
                     <Hash size={13} className="text-ink-3" /> ID
