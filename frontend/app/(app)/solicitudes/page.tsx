@@ -185,7 +185,7 @@ export default function SolicitudesPage() {
                     className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
                     onClick={() => setDetailId(s.id)}
                   >
-                    <td className="truncate px-3 py-2 font-mono tabular-nums text-ink-2">{s.id}</td>
+                    <td className="truncate px-3 py-2 font-mono tabular-nums text-ink">{s.id}</td>
                     <td className="truncate px-3 py-2">
                       <Link
                         href={`/oportunidades?op=${s.oportunidad_id}`}
@@ -206,7 +206,7 @@ export default function SolicitudesPage() {
                         <span className="text-ink-3">—</span>
                       )}
                     </td>
-                    <td className="truncate px-3 py-2 text-ink-2">
+                    <td className="truncate px-3 py-2 text-ink">
                       {s.requerimiento}
                     </td>
                     <td className="truncate px-3 py-2">

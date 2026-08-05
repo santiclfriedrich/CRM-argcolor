@@ -186,7 +186,7 @@ export default function CuentasPage() {
                       className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
                       onClick={() => router.push(`/clientes/${c.id}`)}
                     >
-                      <td className="truncate px-3 py-2 font-mono tabular-nums text-ink-3">
+                      <td className="truncate px-3 py-2 font-mono tabular-nums text-ink">
                         {vi.index + 1}
                       </td>
                       <td className="truncate px-3 py-2 font-medium text-accent">
@@ -194,7 +194,7 @@ export default function CuentasPage() {
                           {c.razon_social}
                         </Link>
                       </td>
-                      <td className="truncate px-3 py-2 font-mono tabular-nums text-ink-2">
+                      <td className="truncate px-3 py-2 font-mono tabular-nums text-ink">
                         {c.cuit ?? "—"}
                       </td>
                       <td className="truncate px-3 py-2">

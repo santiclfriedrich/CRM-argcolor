@@ -896,22 +896,22 @@ export default function OportunidadesPage() {
                       )}
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink-2">
+                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink">
                     {o.cliente?.numero_cliente ?? "—"}
                   </td>
-                  <td className="truncate px-3 py-2 text-ink-2" title={o.asunto ?? ""}>
+                  <td className="truncate px-3 py-2 text-ink" title={o.asunto ?? ""}>
                     {o.asunto ?? "—"}
                   </td>
-                  <td className="truncate px-3 py-2 text-ink-2" title={o.producto ?? ""}>
+                  <td className="truncate px-3 py-2 text-ink" title={o.producto ?? ""}>
                     {o.producto ?? "—"}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-ink-2">
+                  <td className="whitespace-nowrap px-3 py-2 text-ink">
                     {o.numero_pedido ?? "—"}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink-2">
+                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink">
                     {fmtDate(o.fecha_enviado_compras)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink-2">
+                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink">
                     {fmtDate(o.fecha_respuesta_compras)}
                   </td>
                   <td className="px-3 py-2 text-center">
@@ -921,7 +921,7 @@ export default function OportunidadesPage() {
                       <span className="text-ink-3">—</span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink-2">
+                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink">
                     {fmtDate(o.fecha_enviado_cliente)}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums">
@@ -931,7 +931,7 @@ export default function OportunidadesPage() {
                           ? "font-semibold text-warning"
                           : estaVencida(o)
                           ? "font-semibold text-danger"
-                          : "text-ink-2"
+                          : "text-ink"
                       }
                     >
                       {fmtDate(o.fecha_limite)}
@@ -953,7 +953,7 @@ export default function OportunidadesPage() {
                       className="h-4 w-4 rounded border-line accent-navy"
                     />
                   </td>
-                  <td className="truncate px-3 py-2 text-ink-2" title={o.observacion ?? ""}>
+                  <td className="truncate px-3 py-2 text-ink" title={o.observacion ?? ""}>
                     {o.observacion ?? "—"}
                   </td>
                 </tr>
