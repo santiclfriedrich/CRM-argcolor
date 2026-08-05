@@ -928,7 +928,7 @@ export default function OportunidadesPage() {
                     <span
                       className={
                         o.estado === "confirmada" && o.fecha_limite
-                          ? "font-semibold text-warning"
+                          ? "font-semibold text-yellow-600"
                           : estaVencida(o)
                           ? "font-semibold text-danger"
                           : "text-ink"

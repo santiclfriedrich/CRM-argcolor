@@ -1,7 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Building2, DollarSign, FileText, Hash, Target, Trash2, User } from "lucide-react";
+import { Building2, FileText, Target, Trash2, User } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -133,36 +133,26 @@ export default function PresupuestosPage() {
             <thead>
               <tr className="[&_th]:relative [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink [&_th]:shadow-[inset_0_-1px_0_var(--c-line)]">
                 <th>
-                  <span className="inline-flex items-center gap-1.5 truncate">
-                    <Hash size={13} className="text-ink-3" /> Código
-                  </span>
+                  <span className="truncate">Código</span>
                   {cols.handle(0)}
                 </th>
                 <th>
-                  <span className="inline-flex items-center gap-1.5 truncate">
-                    <Target size={13} className="text-ink-3" /> Oportunidad
-                  </span>
+                  <span className="truncate">Oportunidad</span>
                   {cols.handle(1)}
                 </th>
                 <th>
-                  <span className="inline-flex items-center gap-1.5 truncate">
-                    <Building2 size={13} className="text-ink-3" /> Cliente
-                  </span>
+                  <span className="truncate">Cliente</span>
                   {cols.handle(2)}
                 </th>
                 <th>
-                  <span className="inline-flex items-center gap-1.5 truncate">
-                    <DollarSign size={13} className="text-ink-3" /> Total
-                  </span>
+                  <span className="truncate">Total</span>
                   {cols.handle(3)}
                 </th>
                 <th>
                   Estado{cols.handle(4)}
                 </th>
                 <th>
-                  <span className="inline-flex items-center gap-1.5 truncate">
-                    <User size={13} className="text-ink-3" /> Creado por
-                  </span>
+                  <span className="truncate">Creado por</span>
                   {cols.handle(5)}
                 </th>
                 <th>{cols.handle(6)}</th>

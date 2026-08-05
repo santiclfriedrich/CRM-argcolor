@@ -1,7 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Building2, Hash, Plus, RefreshCw, User } from "lucide-react";
+import { Plus, RefreshCw, User } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -97,9 +97,6 @@ export default function CuentasPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 text-white">
-          <Building2 size={18} />
-        </span>
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-ink">Cuentas</h1>
         </div>
@@ -148,21 +145,15 @@ export default function CuentasPage() {
                 <tr className="[&_th]:relative [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink [&_th]:shadow-[inset_0_-1px_0_var(--c-line)]">
                   <th>#{cols.handle(0)}</th>
                   <th>
-                    <span className="inline-flex items-center gap-1.5 truncate">
-                      <Building2 size={13} className="text-ink-3" /> Nombre de la cuenta
-                    </span>
+                    <span className="truncate">Nombre de la cuenta</span>
                     {cols.handle(1)}
                   </th>
                   <th>
-                    <span className="inline-flex items-center gap-1.5 truncate">
-                      <Hash size={13} className="text-ink-3" /> CUIT
-                    </span>
+                    <span className="truncate">CUIT</span>
                     {cols.handle(2)}
                   </th>
                   <th>
-                    <span className="inline-flex items-center gap-1.5 truncate">
-                      <User size={13} className="text-ink-3" /> Creada por
-                    </span>
+                    <span className="truncate">Creada por</span>
                     {cols.handle(3)}
                   </th>
                   <th>
