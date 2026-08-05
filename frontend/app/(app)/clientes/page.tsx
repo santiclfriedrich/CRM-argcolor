@@ -118,7 +118,10 @@ export default function CuentasPage() {
           </div>
 
           <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-2xl border border-line">
-            <table className="text-sm" style={cols.tableStyle}>
+            <table
+              className="text-sm [&_td]:border-r [&_td]:border-line [&_th]:border-r [&_th]:border-line [&_td:last-child]:border-r-0 [&_th:last-child]:border-r-0"
+              style={cols.tableStyle}
+            >
               <colgroup>{cols.colgroup}</colgroup>
               <thead>
                 <tr className="[&_th]:relative [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:border-b [&_th]:border-line [&_th]:bg-surface2 [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-ink">
