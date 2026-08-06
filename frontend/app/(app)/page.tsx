@@ -2,6 +2,7 @@
 
 import {
   AlarmClock,
+  ArrowRight,
   BellRing,
   Building2,
   Clock,
@@ -10,12 +11,13 @@ import {
   Target,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardCta, Kicker } from "@/components/ui/card";
+import { Card, CardCta } from "@/components/ui/card";
 import { Tooltip } from "@/components/ui/tooltip";
 import { STATUS, tint } from "@/lib/status";
 import { useClientes } from "@/lib/clientes";
@@ -352,12 +354,20 @@ function DashCard({
   hrefLabel: string;
 }) {
   return (
-    <Card className="flex flex-col p-5">
-      <div>
-        <Kicker>{titulo}</Kicker>
-        <p className="mt-1.5 text-sm text-ink-2">
-          {subtitulo}
-        </p>
+    <Link
+      href={href}
+      aria-label={hrefLabel}
+      className="group flex flex-col rounded-2xl border border-line bg-surface p-5 shadow-soft transition-all hover:border-accent/40 hover:shadow-pop focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-2">{titulo}</p>
+          <p className="mt-1 text-[15px] font-semibold text-ink">{subtitulo}</p>
+        </div>
+        <ArrowRight
+          size={18}
+          className="mt-0.5 shrink-0 text-ink-3 transition-all group-hover:translate-x-0.5 group-hover:text-accent"
+        />
       </div>
       <div className="mt-4 flex flex-1 items-center gap-4">
         <Donut segments={segments} centro={centro} centroLabel={centroLabel} />
@@ -377,10 +387,7 @@ function DashCard({
           ))}
         </ul>
       </div>
-      <div className="mt-5 flex justify-center border-t border-line pt-4">
-        <CardCta href={href}>{hrefLabel}</CardCta>
-      </div>
-    </Card>
+    </Link>
   );
 }
 
