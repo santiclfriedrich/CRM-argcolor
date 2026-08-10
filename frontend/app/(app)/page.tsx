@@ -179,7 +179,7 @@ export default function InicioPage() {
             </p>
             <p className="mt-1 text-sm text-ink-2">Cartera y pipeline activo</p>
           </div>
-          <div className="mt-4 flex flex-1 flex-col gap-6 sm:flex-row sm:gap-8">
+          <div className="mt-4 flex flex-1 flex-col items-center justify-center gap-6 sm:flex-row sm:gap-10">
             <DonutBloque
               caption="Cartera"
               centro={montoCompacto(totalDeals)}
@@ -195,6 +195,7 @@ export default function InicioPage() {
                 { dot: STATUS.danger, label: `${montoCompacto(vista.montos.perdidas)} Perdidas` },
               ]}
             />
+            <div className="h-px w-full bg-line sm:h-28 sm:w-px" />
             <DonutBloque
               caption="En curso"
               centro={String(vista.activasTotal)}
@@ -390,13 +391,13 @@ function DonutBloque({
   legend: { dot: string; label: string }[];
 }) {
   return (
-    <div className="flex flex-1 flex-col gap-2">
+    <div className="flex flex-col gap-2">
       {caption && (
         <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">{caption}</p>
       )}
       <div className="flex items-center gap-4">
         <Donut segments={segments} centro={centro} centroLabel={centroLabel} />
-        <ul className="flex flex-1 flex-col gap-1.5">
+        <ul className="flex flex-col gap-1.5">
           {legend.map((l, i) => (
             <li
               key={i}
