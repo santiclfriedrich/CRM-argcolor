@@ -13,13 +13,13 @@ const config: Config = {
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       colors: {
-        // Paleta base ARG COLOR: violeta de marca (#7118f7).
+        // Verde de acción de los botones primarios (CTA).
         brand: {
-          DEFAULT: "#7118f7",
-          light: "#a37cff",
-          dark: "#5e14cd",
-          50: "#f3ecfe",
-          100: "#e4d3fd",
+          DEFAULT: "#4e8d63",
+          light: "#7fb08f",
+          dark: "#3f7452",
+          50: "#eef5f0",
+          100: "#d6e7dc",
         },
         // Tokens semánticos: cambian solos entre claro/oscuro (ver globals.css).
         bg: "var(--c-bg)",
