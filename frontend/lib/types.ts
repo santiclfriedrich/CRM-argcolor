@@ -108,6 +108,8 @@ export interface Usuario {
   sync_mail_activo: boolean;
   created_at: string;
   gmail_conectado?: boolean;
+  // Preferencias de UI por usuario (ej. orden de entrada por sección).
+  preferencias?: Record<string, unknown> | null;
 }
 
 export type UsuarioCreate = {

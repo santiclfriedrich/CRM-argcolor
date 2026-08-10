@@ -40,6 +40,16 @@ export function useUpdateMiSyncMail() {
   });
 }
 
+// Merge de preferencias de UI del usuario logueado (ej. orden de entrada).
+export function useActualizarPreferencias() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (patch: Record<string, unknown>) =>
+      (await api.patch<Usuario>(`${BASE}/me/preferencias`, patch)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
 export function useCreateUsuario() {
   const qc = useQueryClient();
   return useMutation({

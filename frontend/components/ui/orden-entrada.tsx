@@ -1,40 +1,44 @@
 "use client";
 
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDownWideNarrow, ArrowUpNarrowWide } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { useActualizarPreferencias, useMiUsuario } from "@/lib/usuarios";
 import { cn } from "@/lib/utils";
 
-// Preferencia (por sección, en localStorage) de si las filas nuevas entran
-// arriba o abajo del listado. `defaultNuevasArriba` debe reflejar el orden
-// actual de esa sección para no sorprender al usuario la primera vez.
+// Preferencia (por usuario, en la base) de si las filas nuevas entran arriba o
+// abajo del listado. Se guarda en `usuario.preferencias.orden_entrada[key]`, así
+// acompaña a la cuenta en cualquier dispositivo. `defaultNuevasArriba` refleja
+// el orden actual de esa sección para no sorprender la primera vez.
 export function useOrdenEntrada(key: string, defaultNuevasArriba: boolean) {
+  const { data: me } = useMiUsuario();
+  const actualizar = useActualizarPreferencias();
+
+  const ordenGuardado = (
+    me?.preferencias as { orden_entrada?: Record<string, boolean> } | undefined
+  )?.orden_entrada;
+  const guardado = ordenGuardado?.[key];
+
   const [nuevasArriba, setNuevasArriba] = useState(defaultNuevasArriba);
 
+  // Al cargar el usuario, adoptamos su preferencia guardada (si existe).
   useEffect(() => {
-    try {
-      const v = localStorage.getItem(`orden-entrada:${key}`);
-      if (v === "1" || v === "0") setNuevasArriba(v === "1");
-    } catch {
-      /* localStorage inaccesible */
-    }
-  }, [key]);
+    if (typeof guardado === "boolean") setNuevasArriba(guardado);
+  }, [guardado]);
 
   const toggle = () =>
     setNuevasArriba((prev) => {
       const next = !prev;
-      try {
-        localStorage.setItem(`orden-entrada:${key}`, next ? "1" : "0");
-      } catch {
-        /* ignore */
-      }
+      actualizar.mutate({ orden_entrada: { ...(ordenGuardado ?? {}), [key]: next } });
       return next;
     });
 
   return { nuevasArriba, toggle };
 }
 
-// Botón compacto para invertir el orden de entrada de las filas nuevas.
+// Botón de solo-ícono para invertir el orden de entrada. El ícono representa el
+// sentido del orden (más nuevas primero / más viejas primero); el detalle va en
+// el tooltip.
 export function OrdenEntradaToggle({
   nuevasArriba,
   onToggle,
@@ -44,22 +48,20 @@ export function OrdenEntradaToggle({
   onToggle: () => void;
   className?: string;
 }) {
+  const Icono = nuevasArriba ? ArrowDownWideNarrow : ArrowUpNarrowWide;
+  const label = nuevasArriba ? "Más nuevas primero" : "Más viejas primero";
   return (
     <button
       type="button"
       onClick={onToggle}
-      title="Dónde aparecen las filas nuevas (arriba o abajo)"
+      title={`Orden: ${label} (clic para invertir)`}
+      aria-label={`Orden: ${label}`}
       className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-surface2",
+        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-accent transition-colors hover:bg-surface2",
         className
       )}
     >
-      {nuevasArriba ? (
-        <ArrowUp size={15} className="text-accent" />
-      ) : (
-        <ArrowDown size={15} className="text-accent" />
-      )}
-      Nuevas {nuevasArriba ? "arriba" : "abajo"}
+      <Icono size={16} />
     </button>
   );
 }

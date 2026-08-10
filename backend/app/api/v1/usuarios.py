@@ -43,6 +43,20 @@ def update_mi_sync_mail(
     return current_user
 
 
+@router.patch("/me/preferencias", response_model=UsuarioRead)
+def update_mis_preferencias(
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> Usuario:
+    """Merge (a nivel de claves) de las preferencias de UI del usuario logueado.
+    Ej.: {"orden_entrada": {"oportunidades": true}}."""
+    current_user.preferencias = {**(current_user.preferencias or {}), **body}
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
 @router.post("", response_model=UsuarioRead, status_code=201)
 def create_usuario(
     body: UsuarioCreate,

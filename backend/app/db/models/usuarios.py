@@ -3,7 +3,8 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Enum, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -33,6 +34,10 @@ class Usuario(Base, TimestampMixin):
     # Permite que el poller lea la casilla de cada uno (ver app.core.crypto).
     gmail_refresh_token: Mapped[str | None] = mapped_column(Text)
     gmail_conectado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Preferencias de UI por usuario (clave/valor libre). Ej.: orden de entrada
+    # de las filas por sección: {"orden_entrada": {"oportunidades": true, ...}}.
+    preferencias: Mapped[dict | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
 
     clientes = relationship(
         "Cliente",
