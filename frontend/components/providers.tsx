@@ -5,6 +5,7 @@ import { SessionProvider, useSession } from "next-auth/react";
 import { useState, type ReactNode } from "react";
 
 import { ConfirmProvider } from "@/components/ui/confirm-dialog";
+import { ToastProvider } from "@/components/ui/toast";
 import { setAuthToken } from "@/lib/api";
 
 // Sincroniza el JWT del backend (guardado en la sesión) con axios.
@@ -24,7 +25,9 @@ export function Providers({ children }: { children: ReactNode }) {
     <SessionProvider>
       <QueryClientProvider client={queryClient}>
         <ApiTokenSync>
-          <ConfirmProvider>{children}</ConfirmProvider>
+          <ToastProvider>
+            <ConfirmProvider>{children}</ConfirmProvider>
+          </ToastProvider>
         </ApiTokenSync>
       </QueryClientProvider>
     </SessionProvider>

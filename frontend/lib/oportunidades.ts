@@ -38,7 +38,20 @@ export function useResolverPropuesta() {
     mutationFn: async ({ id, accion }: { id: number; accion: "aceptar" | "rechazar" }) => {
       await api.post(`${BASE}/${id}/propuesta/${accion}`);
     },
-    onSuccess: () => {
+    // Remoción optimista: la card desaparece al instante (no esperamos el refetch).
+    onMutate: async ({ id }) => {
+      await qc.cancelQueries({ queryKey: oportunidadKeys.propuestas });
+      const prev = qc.getQueryData<Propuesta[]>(oportunidadKeys.propuestas);
+      qc.setQueryData<Propuesta[]>(oportunidadKeys.propuestas, (old) =>
+        (old ?? []).filter((p) => p.id !== id)
+      );
+      return { prev };
+    },
+    onError: (_e, _vars, ctx) => {
+      // Si falló, restauramos la lista tal cual estaba.
+      if (ctx?.prev) qc.setQueryData(oportunidadKeys.propuestas, ctx.prev);
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: oportunidadKeys.propuestas });
       qc.invalidateQueries({ queryKey: oportunidadKeys.all });
     },

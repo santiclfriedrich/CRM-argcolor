@@ -41,6 +41,7 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { OrdenEntradaToggle, useOrdenEntrada } from "@/components/ui/orden-entrada";
 import { RefChip } from "@/components/ui/ref-chip";
+import { useToast } from "@/components/ui/toast";
 import { useResizableColumns } from "@/components/ui/resizable-columns";
 import {
   ESTADO_META,
@@ -1296,6 +1297,20 @@ function PropuestaCard({
   resolver: ReturnType<typeof useResolverPropuesta>;
 }) {
   const [verMail, setVerMail] = useState(false);
+  const toast = useToast();
+
+  const accionar = (accion: "aceptar" | "rechazar") =>
+    resolver.mutate(
+      { id: p.id, accion },
+      {
+        onSuccess: () =>
+          toast(
+            accion === "aceptar" ? "Propuesta aceptada" : "Propuesta descartada",
+            "success"
+          ),
+        onError: () => toast("No se pudo procesar la propuesta. Reintentá.", "error"),
+      }
+    );
 
   return (
     <Card className="p-4">
@@ -1327,7 +1342,7 @@ function PropuestaCard({
             variant="outline"
             title="Aceptar"
             aria-label="Aceptar"
-            onClick={() => resolver.mutate({ id: p.id, accion: "aceptar" })}
+            onClick={() => accionar("aceptar")}
             disabled={resolver.isPending}
             className="rounded-full border-success text-success hover:bg-success hover:text-white"
           >
@@ -1338,7 +1353,7 @@ function PropuestaCard({
             variant="outline"
             title="Rechazar"
             aria-label="Rechazar"
-            onClick={() => resolver.mutate({ id: p.id, accion: "rechazar" })}
+            onClick={() => accionar("rechazar")}
             disabled={resolver.isPending}
             className="rounded-full border-danger text-danger hover:bg-danger hover:text-white"
           >
