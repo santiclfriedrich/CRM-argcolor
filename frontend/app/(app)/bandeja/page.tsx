@@ -195,7 +195,7 @@ export default function BandejaPage() {
         )}
         {ingestMut.isSuccess && ingestMut.data.descartado && (
           <p className="rounded-md border border-line bg-surface2 p-2 text-sm text-ink-2">
-            La IA lo clasificó como{" "}
+            Se clasificó como{" "}
             <span className="font-medium">
               {ingestMut.data.categoria
                 ? CATEGORIA_LABEL[ingestMut.data.categoria]

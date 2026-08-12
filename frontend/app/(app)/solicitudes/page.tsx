@@ -1,7 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Building2, Copy, FileText, Mail, Paperclip, Plus, Send, Sparkles, Target, User } from "lucide-react";
+import { Building2, Copy, FileText, Mail, Paperclip, Plus, Send, Target, User } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -417,7 +417,7 @@ function RespuestaCompras({
               onClick={() => parseMut.mutate(texto.trim())}
               disabled={parseMut.isPending || !texto.trim()}
             >
-              <Sparkles size={14} /> {parseMut.isPending ? "Parseando…" : "Parsear con IA"}
+              {parseMut.isPending ? "Procesando…" : "Extraer ítems"}
             </Button>
             {parseMut.isError && (
               <span className="text-xs text-danger">

@@ -334,7 +334,7 @@ export function OportunidadForm({
       </div>
 
       <div>
-        <Label htmlFor="o-requerimiento">Requerimiento (leído por la IA)</Label>
+        <Label htmlFor="o-requerimiento">Requerimiento</Label>
         <Textarea
           id="o-requerimiento"
           rows={4}

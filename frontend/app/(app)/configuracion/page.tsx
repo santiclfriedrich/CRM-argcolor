@@ -52,7 +52,7 @@ export default function ConfiguracionPage() {
           />
           <Row
             titulo="Aclaración automática"
-            detalle="Si la IA detecta que falta información, envía sola el pedido de aclaración al cliente. Si está apagado, queda como borrador para enviar con un clic desde la bandeja."
+            detalle="Cuando falta información en el pedido, envía solo el pedido de aclaración al cliente. Si está apagado, queda como borrador para enviar con un clic desde la bandeja."
             checked={data.aclaracion_automatica}
             disabled={updateMut.isPending}
             onChange={(v) => updateMut.mutate({ aclaracion_automatica: v })}
