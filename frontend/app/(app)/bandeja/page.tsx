@@ -218,7 +218,7 @@ export default function BandejaPage() {
 
       <div className="mt-8 flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold tracking-tight text-ink">Mails procesados</h2>
-        <div className="flex rounded-md border border-line p-0.5 text-sm">
+        <div className="inline-flex rounded-full border border-line bg-surface2 p-0.5 text-sm">
           {(["todos", "personal"] as const).map((f) => (
             <button
               key={f}
