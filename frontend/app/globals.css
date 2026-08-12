@@ -28,6 +28,10 @@
   --c-navy: #250c50;
   --c-navy-hover: #4c1d95;
 
+  /* Chrome del nav / To-Do bar. En claro = violeta de marca; en oscuro se
+     reemplaza por una superficie muy oscura (ver .dark) para un dark real. */
+  --c-nav: #250c50;
+
   /* Neutro frío: estados dormidos/neutros y metadatos (no es un acento). */
   --c-muted: #6d7495;
 
@@ -40,6 +44,10 @@
   --c-danger: 199 62 42;    /* rojo    */
   --c-info: 42 108 190;     /* azul    */
   --c-neutral: 90 96 122;   /* gris    */
+
+  /* Verde de acción de los botones primarios (CTA). Triplet RGB para opacidad. */
+  --c-brand: 78 141 99;      /* #4e8d63 */
+  --c-brand-hover: #3f7452;
 }
 
 .dark {
@@ -72,6 +80,14 @@
   --c-danger: 240 122 96;
   --c-info: 96 160 230;
   --c-neutral: 140 146 170;
+
+  /* Verde un poco más luminoso para que resalte sobre el fondo casi negro. */
+  --c-brand: 90 163 118;     /* #5aa376 */
+  --c-brand-hover: #4e8d63;
+
+  /* Chrome del nav / To-Do bar en oscuro: superficie muy oscura con un dejo
+     violeta (en claro el nav usa el violeta de marca, ver bg-nav). */
+  --c-nav: #14111e;
 }
 
 body {

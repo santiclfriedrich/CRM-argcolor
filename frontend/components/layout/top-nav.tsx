@@ -57,7 +57,7 @@ export function TopNav() {
   const iniciales = nombre.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 border-b border-white/10 bg-navy">
+    <header className="sticky top-0 z-30 border-b border-white/10 bg-nav">
       <div className="flex h-14 items-center gap-3 px-4">
         <button
           type="button"

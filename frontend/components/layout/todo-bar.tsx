@@ -106,7 +106,7 @@ export function ToDoBar() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between border-t border-line bg-navy px-4 py-2.5 text-sm font-semibold text-white"
+        className="flex w-full items-center justify-between border-t border-line bg-nav px-4 py-2.5 text-sm font-semibold text-white"
       >
         <span className="flex items-center gap-2">
           <ListTodo size={16} /> To Do List

@@ -301,9 +301,12 @@ const CERRADOS: EstadoOportunidad[] = ["ganada", "perdida"];
 // verde = ganada/pago, amarillo = confirmada/pendiente, rojo = perdida (no
 // avanzó), sin color = resto (sin cerrar). Devuelve clases para el RefChip.
 function bgClienteEstado(estado: EstadoOportunidad): string {
-  if (estado === "ganada") return "border-green-200 bg-green-200 text-green-900";
-  if (estado === "confirmada") return "border-yellow-200 bg-yellow-200 text-yellow-900";
-  if (estado === "perdida") return "border-red-200 bg-red-200 text-red-900";
+  if (estado === "ganada")
+    return "border-green-200 bg-green-200 text-green-900 dark:border-green-400/25 dark:bg-green-400/15 dark:text-green-200";
+  if (estado === "confirmada")
+    return "border-yellow-200 bg-yellow-200 text-yellow-900 dark:border-yellow-400/25 dark:bg-yellow-400/15 dark:text-yellow-100";
+  if (estado === "perdida")
+    return "border-red-200 bg-red-200 text-red-900 dark:border-red-400/25 dark:bg-red-400/15 dark:text-red-200";
   return "";
 }
 
@@ -947,7 +950,7 @@ export default function OportunidadesPage() {
                     <span
                       className={
                         o.estado === "confirmada" && o.fecha_limite
-                          ? "font-semibold text-yellow-600"
+                          ? "font-semibold text-yellow-600 dark:text-yellow-400"
                           : estaVencida(o)
                           ? "font-semibold text-danger"
                           : "text-ink"

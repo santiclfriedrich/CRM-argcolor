@@ -13,14 +13,13 @@ const config: Config = {
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       colors: {
-        // Verde de acción de los botones primarios (CTA).
+        // Verde de acción de los botones primarios (CTA). Mode-aware por token.
         brand: {
-          DEFAULT: "#4e8d63",
-          light: "#7fb08f",
-          dark: "#3f7452",
-          50: "#eef5f0",
-          100: "#d6e7dc",
+          DEFAULT: "rgb(var(--c-brand) / <alpha-value>)",
+          dark: "var(--c-brand-hover)",
         },
+        // Chrome del nav / To-Do bar (violeta en claro, oscuro real en dark).
+        nav: "var(--c-nav)",
         // Tokens semánticos: cambian solos entre claro/oscuro (ver globals.css).
         bg: "var(--c-bg)",
         surface: "var(--c-surface)",
