@@ -170,9 +170,9 @@ export default function InicioPage() {
       )}
 
       {/* Cards principales estilo Salesforce */}
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+      <div className="mt-6 flex flex-wrap items-stretch gap-4">
         {/* Oportunidades unificada: cartera + pipeline en curso, un solo botón. */}
-        <Card className="flex flex-col p-5 lg:col-span-2">
+        <Card className="flex flex-col p-5">
           <div>
             <p className="text-[13px] font-semibold uppercase tracking-wide text-ink">
               Oportunidades
