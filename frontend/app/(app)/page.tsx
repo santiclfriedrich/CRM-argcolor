@@ -170,55 +170,44 @@ export default function InicioPage() {
       )}
 
       {/* Cards principales estilo Salesforce */}
-      <div className="mt-6 flex flex-wrap items-stretch justify-center gap-4">
-        {/* Oportunidades unificada: cartera + pipeline en curso, un solo botón. */}
-        <Card className="flex flex-col p-5">
-          <div>
-            <p className="text-[13px] font-semibold uppercase tracking-wide text-ink">
-              Oportunidades
-            </p>
-            <p className="mt-1 text-sm text-ink-2">Cartera y pipeline activo</p>
-          </div>
-          <div className="mt-4 flex flex-1 flex-col items-start gap-6 sm:flex-row sm:items-center sm:gap-10">
-            <DonutBloque
-              caption="Cartera"
-              centro={montoCompacto(totalDeals)}
-              centroLabel="En total"
-              segments={[
-                { value: vista.montos.abiertas, color: STATUS.success },
-                { value: vista.montos.ganadas, color: STATUS.info },
-                { value: vista.montos.perdidas, color: STATUS.danger },
-              ]}
-              legend={[
-                { dot: STATUS.success, label: `${montoCompacto(vista.montos.abiertas)} Abiertas` },
-                { dot: STATUS.info, label: `${montoCompacto(vista.montos.ganadas)} Ganadas` },
-                { dot: STATUS.danger, label: `${montoCompacto(vista.montos.perdidas)} Perdidas` },
-              ]}
-            />
-            <div className="h-px w-full bg-line sm:h-28 sm:w-px" />
-            <DonutBloque
-              caption="En curso"
-              centro={String(vista.activasTotal)}
-              centroLabel="Activas"
-              segments={[
-                { value: vista.sem.rojo, color: STATUS.danger },
-                { value: vista.sem.amarillo, color: STATUS.warning },
-                { value: vista.sem.verde, color: STATUS.success },
-              ]}
-              legend={[
-                { dot: STATUS.danger, label: `${vista.sem.rojo} ${SEMAFORO_META.rojo.label}` },
-                {
-                  dot: STATUS.warning,
-                  label: `${vista.sem.amarillo} ${SEMAFORO_META.amarillo.label}`,
-                },
-                { dot: STATUS.success, label: `${vista.sem.verde} ${SEMAFORO_META.verde.label}` },
-              ]}
-            />
-          </div>
-          <div className="mt-5 flex justify-center border-t border-line pt-4">
-            <CardCta href="/oportunidades">Ver oportunidades</CardCta>
-          </div>
-        </Card>
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        <DashCard
+          titulo="Cerrar acuerdos"
+          subtitulo="Tu cartera de oportunidades"
+          centro={montoCompacto(totalDeals)}
+          centroLabel="En total"
+          segments={[
+            { value: vista.montos.abiertas, color: STATUS.success },
+            { value: vista.montos.ganadas, color: STATUS.info },
+            { value: vista.montos.perdidas, color: STATUS.danger },
+          ]}
+          legend={[
+            { dot: STATUS.success, label: `${montoCompacto(vista.montos.abiertas)} Abiertas` },
+            { dot: STATUS.info, label: `${montoCompacto(vista.montos.ganadas)} Ganadas` },
+            { dot: STATUS.danger, label: `${montoCompacto(vista.montos.perdidas)} Perdidas` },
+          ]}
+          href="/oportunidades"
+          hrefLabel="Ver oportunidades"
+        />
+
+        <DashCard
+          titulo="Oportunidades en curso"
+          subtitulo="Activas, por prioridad de seguimiento"
+          centro={String(vista.activasTotal)}
+          centroLabel="Activas"
+          segments={[
+            { value: vista.sem.rojo, color: STATUS.danger },
+            { value: vista.sem.amarillo, color: STATUS.warning },
+            { value: vista.sem.verde, color: STATUS.success },
+          ]}
+          legend={[
+            { dot: STATUS.danger, label: `${vista.sem.rojo} ${SEMAFORO_META.rojo.label}` },
+            { dot: STATUS.warning, label: `${vista.sem.amarillo} ${SEMAFORO_META.amarillo.label}` },
+            { dot: STATUS.success, label: `${vista.sem.verde} ${SEMAFORO_META.verde.label}` },
+          ]}
+          href="/oportunidades"
+          hrefLabel="Ver oportunidades"
+        />
 
         <DashCard
           titulo="Plan mis cuentas"
@@ -372,45 +361,6 @@ function DashCard({
         <CardCta href={href}>{hrefLabel}</CardCta>
       </div>
     </Card>
-  );
-}
-
-// Donut + leyenda (con un rótulo chico opcional). Se reutiliza en la card de
-// Cuentas y en cada mitad de la card de Oportunidades unificada.
-function DonutBloque({
-  caption,
-  centro,
-  centroLabel,
-  segments,
-  legend,
-}: {
-  caption?: string;
-  centro: string;
-  centroLabel: string;
-  segments: { value: number; color: string }[];
-  legend: { dot: string; label: string }[];
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      {caption && (
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">{caption}</p>
-      )}
-      <div className="flex items-center gap-4">
-        <Donut segments={segments} centro={centro} centroLabel={centroLabel} />
-        <ul className="flex flex-col gap-1.5">
-          {legend.map((l, i) => (
-            <li
-              key={i}
-              className="flex w-fit items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-ink"
-              style={{ backgroundColor: tint(l.dot, 0.14) }}
-            >
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: l.dot }} />
-              {l.label}
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
   );
 }
 
