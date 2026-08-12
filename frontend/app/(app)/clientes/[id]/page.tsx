@@ -66,9 +66,6 @@ export default function ClienteDetailPage() {
       {/* Encabezado */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white">
-            <Building2 size={22} />
-          </span>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-ink">
               {cliente.razon_social}

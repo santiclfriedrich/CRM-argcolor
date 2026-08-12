@@ -179,7 +179,7 @@ export default function InicioPage() {
             </p>
             <p className="mt-1 text-sm text-ink-2">Cartera y pipeline activo</p>
           </div>
-          <div className="mt-4 flex flex-1 flex-col items-center justify-center gap-6 sm:flex-row sm:gap-10">
+          <div className="mt-4 flex flex-1 flex-col items-start gap-6 sm:flex-row sm:items-center sm:gap-10">
             <DonutBloque
               caption="Cartera"
               centro={montoCompacto(totalDeals)}

@@ -61,7 +61,7 @@ export default function PresupuestosPage() {
 
   // Columnas de ancho ajustable (Código, Oportunidad, Cliente, Total, Estado,
   // Creado por, acciones).
-  const cols = useResizableColumns("presupuestos", [150, 260, 260, 150, 130, 200, 90]);
+  const cols = useResizableColumns("presupuestos", [150, 260, 260, 150, 130, 200, 150]);
 
   // Virtualización: solo se montan las filas visibles.
   const scrollRef = useRef<HTMLDivElement>(null);

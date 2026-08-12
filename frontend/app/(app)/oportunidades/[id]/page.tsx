@@ -226,7 +226,7 @@ function Bitacora({
   return (
     <Card className="p-5">
       <h2 className="mb-3 text-base font-semibold tracking-tight text-ink">
-        Bitácora de seguimiento
+        Comentarios
       </h2>
       <form onSubmit={agregar} className="mb-3 flex items-start gap-2">
         <Textarea
