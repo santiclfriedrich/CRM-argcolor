@@ -1297,20 +1297,24 @@ function PropuestaCard({
   resolver: ReturnType<typeof useResolverPropuesta>;
 }) {
   const [verMail, setVerMail] = useState(false);
-  const toast = useToast();
+  const { toast, update } = useToast();
 
-  const accionar = (accion: "aceptar" | "rechazar") =>
+  const accionar = (accion: "aceptar" | "rechazar") => {
+    const toastId = toast("Aguarde un momento…", "loading");
     resolver.mutate(
       { id: p.id, accion },
       {
         onSuccess: () =>
-          toast(
+          update(
+            toastId,
             accion === "aceptar" ? "Propuesta aceptada" : "Propuesta descartada",
             "success"
           ),
-        onError: () => toast("No se pudo procesar la propuesta. Reintentá.", "error"),
+        onError: () =>
+          update(toastId, "No se pudo procesar la propuesta. Reintentá.", "error"),
       }
     );
+  };
 
   return (
     <Card className="p-4">
