@@ -20,6 +20,7 @@ from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.integrations.ai.base import AIProvider
 from app.schemas.mail import (
+    AclaracionBody,
     DescartadoRead,
     IngestEmailRequest,
     IngestResult,
@@ -291,15 +292,16 @@ def enviar_acuse(
 @router.post("/{mail_id}/aclaracion", response_model=MailRead, status_code=201)
 def enviar_aclaracion(
     mail_id: int,
+    body: AclaracionBody | None = None,
     db: Session = Depends(get_db),
     gmail=Depends(get_gmail),  # noqa: ANN001 - GmailClient
     current_user: Usuario = Depends(get_current_user),
 ) -> Mail:
-    """Envía al cliente el borrador de aclaración redactado por la IA."""
+    """Envía al cliente la aclaración (el borrador de la IA o el editado a mano)."""
     mail = _get_loaded(db, mail_id)
     _assert_owner(mail, current_user)
     try:
-        salida = send_aclaracion(db, gmail, mail)
+        salida = send_aclaracion(db, gmail, mail, cuerpo=body.cuerpo if body else None)
     except Exception as exc:  # noqa: BLE001 - frontera con Gmail
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

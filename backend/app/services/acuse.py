@@ -131,10 +131,13 @@ def send_acuse(db: Session, gmail: GmailSender, mail: Mail) -> Mail:
     return _send_and_record(db, gmail, mail, draft["subject"], draft["body"])
 
 
-def send_aclaracion(db: Session, gmail: GmailSender, mail: Mail) -> Mail:
-    """Envía al cliente el borrador de aclaración que redactó la IA."""
+def send_aclaracion(
+    db: Session, gmail: GmailSender, mail: Mail, cuerpo: str | None = None
+) -> Mail:
+    """Envía al cliente la aclaración. `cuerpo` (opcional) permite mandar el
+    borrador editado a mano; si no viene, usa el que redactó la IA."""
     datos = mail.datos_extraidos_ia or {}
-    borrador = datos.get("borrador_aclaracion")
+    borrador = (cuerpo or "").strip() or datos.get("borrador_aclaracion")
     if not borrador:
         raise ValueError("Este mail no tiene un borrador de aclaración para enviar.")
     asunto = f"Re: {mail.asunto}" if mail.asunto else "Tu consulta — ARG COLOR"

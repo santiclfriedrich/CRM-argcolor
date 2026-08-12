@@ -25,6 +25,13 @@ class ResponderRequest(BaseModel):
     asunto: str | None = None
 
 
+class AclaracionBody(BaseModel):
+    """Aclaración a enviar. Si `cuerpo` viene, se manda ese texto (borrador
+    editado a mano); si no, se usa el que redactó la IA."""
+
+    cuerpo: str | None = None
+
+
 class ClienteMini(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

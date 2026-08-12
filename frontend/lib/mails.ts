@@ -76,12 +76,13 @@ export function useSendAcuse() {
   });
 }
 
-// Envía al cliente el borrador de aclaración redactado por la IA (1 clic).
+// Envía al cliente la aclaración. `cuerpo` opcional = borrador editado a mano;
+// si no viene, el backend usa el que redactó la IA.
 export function useSendAclaracion() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (mailId: number) =>
-      (await api.post<Mail>(`${BASE}/${mailId}/aclaracion`)).data,
+    mutationFn: async ({ mailId, cuerpo }: { mailId: number; cuerpo?: string }) =>
+      (await api.post<Mail>(`${BASE}/${mailId}/aclaracion`, { cuerpo })).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: mailKeys.all }),
   });
 }

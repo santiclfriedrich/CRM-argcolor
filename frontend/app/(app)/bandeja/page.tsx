@@ -7,7 +7,6 @@ import {
   Paperclip,
   RefreshCw,
   Send,
-  Sparkles,
   Trash2,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -122,11 +121,7 @@ export default function BandejaPage() {
     <div>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Bandeja inteligente</h1>
-          <p className="mt-1 text-sm text-ink-2">
-            La IA identifica la cuenta, extrae el pedido y crea la oportunidad. Podés pegar un
-            mail abajo o sincronizar la casilla comercial.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Bandeja</h1>
         </div>
         <Button
           variant="outline"
@@ -211,7 +206,7 @@ export default function BandejaPage() {
         )}
         <div className="flex justify-end">
           <Button type="submit" disabled={ingestMut.isPending || !de.trim() || !cuerpo.trim()}>
-            <Sparkles size={16} /> {ingestMut.isPending ? "Procesando…" : "Procesar con IA"}
+            {ingestMut.isPending ? "Procesando…" : "Procesar"}
           </Button>
         </div>
       </form>
@@ -308,6 +303,8 @@ function MailCard({ mail }: { mail: Mail }) {
   const d = mail.datos_extraidos_ia;
   const estado = mail.oportunidad?.estado;
   const [chatOpen, setChatOpen] = useState(false);
+  // Borrador de aclaración editable (arranca con el que redactó la IA).
+  const [borrador, setBorrador] = useState(d?.borrador_aclaracion ?? "");
   return (
     <article className="rounded-xl border border-line bg-surface p-4 shadow-soft">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -344,7 +341,7 @@ function MailCard({ mail }: { mail: Mail }) {
         </div>
       )}
 
-      {d && <Extraccion data={d} />}
+      {d && <Extraccion data={d} borrador={borrador} onBorradorChange={setBorrador} />}
 
       <div className="mt-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -373,7 +370,11 @@ function MailCard({ mail }: { mail: Mail }) {
             </Button>
           )}
           {mail.de && (
-            <ResponderButton mailId={mail.id} requiereAclaracion={Boolean(d?.requiere_aclaracion)} />
+            <ResponderButton
+              mailId={mail.id}
+              requiereAclaracion={Boolean(d?.requiere_aclaracion)}
+              borrador={borrador}
+            />
           )}
           {mail.oportunidad_id && (
             <EliminarButton oportunidadId={mail.oportunidad_id} cliente={mail.oportunidad?.cliente?.razon_social} />
@@ -525,14 +526,21 @@ function EliminarButton({
 function ResponderButton({
   mailId,
   requiereAclaracion,
+  borrador,
 }: {
   mailId: number;
   requiereAclaracion: boolean;
+  borrador?: string;
 }) {
   const acuseMut = useSendAcuse();
   const aclaracionMut = useSendAclaracion();
   const mut = requiereAclaracion ? aclaracionMut : acuseMut;
   const label = requiereAclaracion ? "Enviar aclaración" : "Enviar acuse";
+
+  const enviar = () => {
+    if (requiereAclaracion) aclaracionMut.mutate({ mailId, cuerpo: borrador });
+    else acuseMut.mutate(mailId);
+  };
 
   return (
     <div className="flex items-center gap-2">
@@ -545,8 +553,12 @@ function ResponderButton({
       <Button
         size="sm"
         variant="outline"
-        onClick={() => mut.mutate(mailId)}
-        disabled={mut.isPending || mut.isSuccess}
+        onClick={enviar}
+        disabled={
+          mut.isPending ||
+          mut.isSuccess ||
+          (requiereAclaracion && !borrador?.trim())
+        }
       >
         <Send size={14} /> {mut.isPending ? "Enviando…" : label}
       </Button>
@@ -609,8 +621,16 @@ function AttachmentImage({ adjunto }: { adjunto: Adjunto }) {
   );
 }
 
-function Extraccion({ data }: { data: EmailData }) {
-  const copy = () => data.borrador_aclaracion && navigator.clipboard.writeText(data.borrador_aclaracion);
+function Extraccion({
+  data,
+  borrador,
+  onBorradorChange,
+}: {
+  data: EmailData;
+  borrador: string;
+  onBorradorChange: (v: string) => void;
+}) {
+  const copy = () => borrador && navigator.clipboard.writeText(borrador);
   return (
     <div className="mt-3 space-y-2 text-sm">
       <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-ink-2 sm:grid-cols-4">
@@ -622,12 +642,16 @@ function Extraccion({ data }: { data: EmailData }) {
       {data.requiere_aclaracion && (
         <div className="rounded-md border border-warning/30 bg-warning/10 p-3">
           <p className="mb-1 text-xs font-medium text-warning">
-            Requiere aclaración — borrador para el cliente:
+            Borrador para el cliente (editalo antes de enviar):
           </p>
-          <pre className="whitespace-pre-wrap text-xs text-ink">
-            {data.borrador_aclaracion ?? "—"}
-          </pre>
-          {data.borrador_aclaracion && (
+          <Textarea
+            rows={4}
+            value={borrador}
+            onChange={(e) => onBorradorChange(e.target.value)}
+            className="text-xs"
+            placeholder="Escribí el mensaje para el cliente…"
+          />
+          {borrador && (
             <Button size="sm" variant="secondary" className="mt-2" onClick={copy}>
               <Copy size={14} /> Copiar borrador
             </Button>
