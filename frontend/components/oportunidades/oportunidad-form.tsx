@@ -400,7 +400,7 @@ export function OportunidadForm({
             step="0.01"
             value={valor}
             onChange={(e) => setValor(e.target.value)}
-            className="font-mono tabular-nums"
+            className="tabular-nums"
           />
         </div>
         <div>

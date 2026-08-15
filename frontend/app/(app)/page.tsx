@@ -411,7 +411,7 @@ function Donut({
           })}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-mono text-2xl font-medium tabular-nums tracking-tight text-ink">
+        <span className="text-2xl font-medium tabular-nums tracking-tight text-ink">
           {centro}
         </span>
         <span className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
@@ -582,7 +582,7 @@ function RegistrosRecientes() {
                       </span>
                     </span>
                   </span>
-                  <span className="shrink-0 font-mono text-xs tabular-nums text-muted">
+                  <span className="shrink-0 text-xs tabular-nums text-muted">
                     {new Date(r.fecha).toLocaleDateString("es-AR")}
                   </span>
                 </button>

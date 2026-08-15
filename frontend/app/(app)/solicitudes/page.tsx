@@ -444,8 +444,8 @@ function RespuestaCompras({
                       {it.fabricante ? `${it.fabricante} · ` : ""}
                       {it.descripcion}
                     </td>
-                    <td className="px-3 py-2 font-mono tabular-nums text-ink-2">{it.cantidad}</td>
-                    <td className="px-3 py-2 text-right font-mono tabular-nums text-ink-2">
+                    <td className="px-3 py-2 tabular-nums text-ink-2">{it.cantidad}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-ink-2">
                       {it.precio_unitario}
                     </td>
                   </tr>

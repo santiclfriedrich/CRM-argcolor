@@ -157,7 +157,7 @@ export default function ClienteDetailPage() {
                       <span className="block truncate text-sm font-medium text-ink">
                         {o.asunto ?? `Oportunidad #${o.id}`}
                       </span>
-                      <span className="font-mono tabular-nums text-xs text-ink-3">
+                      <span className="tabular-nums text-xs text-ink-3">
                         {o.valor_estimado != null ? fmtMonto(o.valor_estimado, "USD") : "—"}
                       </span>
                     </span>
@@ -196,7 +196,7 @@ export default function ClienteDetailPage() {
                     >
                       {t.titulo}
                     </span>
-                    <span className="shrink-0 font-mono tabular-nums text-xs text-ink-3">
+                    <span className="shrink-0 tabular-nums text-xs text-ink-3">
                       {fmtDia(t.fecha_vencimiento)}
                     </span>
                   </button>

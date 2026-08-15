@@ -90,7 +90,7 @@ export default function PerfilUsuarioPage() {
           <ClienteRef key="c" nombre={o.cliente?.razon_social} />,
           o.asunto ?? "—",
           <Badge key="e" className={ESTADO_META[o.estado].color}>{ESTADO_META[o.estado].label}</Badge>,
-          <span key="m" className="font-mono tabular-nums">{fmtDate(o.fecha_ultimo_movimiento)}</span>,
+          <span key="m" className="tabular-nums">{fmtDate(o.fecha_ultimo_movimiento)}</span>,
         ])}
       />
 
@@ -106,7 +106,7 @@ export default function PerfilUsuarioPage() {
           <Badge key="e" className={ESTADO_SOLICITUD_META[s.estado].color}>
             {ESTADO_SOLICITUD_META[s.estado].label}
           </Badge>,
-          <span key="d" className="font-mono tabular-nums">{fmtDate(s.fecha_envio ?? s.created_at)}</span>,
+          <span key="d" className="tabular-nums">{fmtDate(s.fecha_envio ?? s.created_at)}</span>,
         ])}
       />
 
@@ -121,7 +121,7 @@ export default function PerfilUsuarioPage() {
             {p.codigo}
           </Link>,
           <ClienteRef key="cl" nombre={p.oportunidad?.cliente?.razon_social} />,
-          <span key="m" className="font-mono tabular-nums">{fmtMonto(p.monto_total, p.moneda)}</span>,
+          <span key="m" className="tabular-nums">{fmtMonto(p.monto_total, p.moneda)}</span>,
           <Badge key="e" className={ESTADO_PRESUPUESTO[p.estado].color}>
             {ESTADO_PRESUPUESTO[p.estado].label}
           </Badge>,
@@ -162,7 +162,7 @@ function Section({
       <div className="mb-2 flex items-baseline gap-2">
         <h2 className="text-base font-semibold tracking-tight text-ink">{titulo}</h2>
         {total != null && (
-          <Badge className="font-mono tabular-nums">{total}</Badge>
+          <Badge className="tabular-nums">{total}</Badge>
         )}
       </div>
       <div className="overflow-x-auto rounded-2xl border border-line">

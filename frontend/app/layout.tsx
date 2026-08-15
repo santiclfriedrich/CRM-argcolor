@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
-import { DM_Mono, Inter } from "next/font/google";
+import { JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 
 import { Providers } from "@/components/providers";
 
 import "./globals.css";
 
 // Fuentes self-hosted por Next (no dependemos de CDNs externos).
-const sans = Inter({
+// Variables: sin `weight` Next baja la versión variable, con todos los pesos
+// en un solo archivo (más liviano que listar 4 estáticos).
+const sans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
   display: "swap",
 });
-const mono = DM_Mono({
+const mono = JetBrains_Mono({
   subsets: ["latin"],
-  weight: ["400", "500"],
   variable: "--font-mono",
   display: "swap",
 });

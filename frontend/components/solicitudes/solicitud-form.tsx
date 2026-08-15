@@ -244,7 +244,7 @@ export function SolicitudForm({
             step="0.01"
             value={importe}
             onChange={(e) => setImporte(e.target.value)}
-            className="font-mono tabular-nums"
+            className="tabular-nums"
           />
         </div>
       </div>

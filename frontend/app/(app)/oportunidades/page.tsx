@@ -662,13 +662,13 @@ export default function OportunidadesPage() {
         </h1>
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-surface2 px-2.5 py-1 text-xs font-medium text-ink-2">
-            <span className="font-mono tabular-nums text-ink">
+            <span className="tabular-nums text-ink">
               {oportunidadesDelMes.length}
             </span>
             {oportunidadesDelMes.length === 1 ? "oportunidad" : "oportunidades"}
           </span>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-surface2 px-2.5 py-1 text-xs font-medium text-ink-2">
-            <span className="font-mono tabular-nums text-ink">
+            <span className="tabular-nums text-ink">
               {montoCompacto(valorTotal)}
             </span>
             en pipeline
@@ -930,10 +930,10 @@ export default function OportunidadesPage() {
                   <td className="whitespace-nowrap px-3 py-2 text-ink">
                     {o.numero_pedido ?? "—"}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink">
+                  <td className="whitespace-nowrap px-3 py-2 tabular-nums text-ink">
                     {fmtDate(o.fecha_enviado_compras)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink">
+                  <td className="whitespace-nowrap px-3 py-2 tabular-nums text-ink">
                     {fmtDate(o.fecha_respuesta_compras)}
                   </td>
                   <td className="px-3 py-2 text-center">
@@ -943,10 +943,10 @@ export default function OportunidadesPage() {
                       <span className="text-ink-3">—</span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink">
+                  <td className="whitespace-nowrap px-3 py-2 tabular-nums text-ink">
                     {fmtDate(o.fecha_enviado_cliente)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums">
+                  <td className="whitespace-nowrap px-3 py-2 tabular-nums">
                     <span
                       className={
                         o.estado === "confirmada" && o.fecha_limite

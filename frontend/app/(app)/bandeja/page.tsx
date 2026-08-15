@@ -318,7 +318,7 @@ function MailCard({ mail }: { mail: Mail }) {
                 <span className="font-medium text-ink-2">{casillaReceptora(mail)}</span>
               </span>
             )}
-            <span className="font-mono tabular-nums">
+            <span className="tabular-nums">
               {fmtFechaHora(mail.fecha ?? mail.created_at)}
             </span>
           </div>

@@ -177,7 +177,7 @@ export default function CuentasPage() {
                       className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
                       onClick={() => router.push(`/clientes/${c.id}`)}
                     >
-                      <td className="truncate px-3 py-2 font-mono tabular-nums text-ink">
+                      <td className="truncate px-3 py-2 tabular-nums text-ink">
                         {vi.index + 1}
                       </td>
                       <td className="truncate px-3 py-2 font-medium text-accent">

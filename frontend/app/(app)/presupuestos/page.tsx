@@ -207,7 +207,7 @@ export default function PresupuestosPage() {
                         <span className="text-ink-3">—</span>
                       )}
                     </td>
-                    <td className="truncate px-3 py-2 font-mono tabular-nums text-ink">
+                    <td className="truncate px-3 py-2 tabular-nums text-ink">
                       {fmtMonto(p.monto_total, p.moneda)}
                     </td>
                     <td className="truncate px-3 py-2">

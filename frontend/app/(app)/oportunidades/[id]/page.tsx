@@ -253,7 +253,7 @@ function Bitacora({
               <div className="mb-0.5 flex items-center justify-between text-[11px] text-ink-3">
                 <span>{c.autor ?? "—"}</span>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono tabular-nums">
+                  <span className="tabular-nums">
                     {new Date(c.fecha).toLocaleString("es-AR")}
                   </span>
                   <button
@@ -407,7 +407,7 @@ function Relacionados({ oportunidadId }: { oportunidadId: number }) {
                 {p.codigo}
               </span>
               <span className="flex shrink-0 items-center gap-2">
-                <span className="font-mono text-xs tabular-nums text-ink-2">
+                <span className="text-xs tabular-nums text-ink-2">
                   {fmtMonto(p.monto_total, p.moneda)}
                 </span>
                 <Badge className={ESTADO_PRESUPUESTO[p.estado].color}>
@@ -484,7 +484,7 @@ function SubSeccion({
       <div className="mb-1.5 flex items-baseline gap-2">
         <h3 className="text-sm font-semibold text-ink">{titulo}</h3>
         {total != null && (
-          <span className="rounded-full bg-surface2 px-1.5 font-mono text-xs font-medium tabular-nums text-ink-2">
+          <span className="rounded-full bg-surface2 px-1.5 text-xs font-medium tabular-nums text-ink-2">
             {total}
           </span>
         )}

@@ -294,7 +294,7 @@ export default function ArmadorPresupuestoPage() {
                     )}
                   </select>
                 </td>
-                <td className="px-2 py-1 text-right font-mono tabular-nums text-ink">
+                <td className="px-2 py-1 text-right tabular-nums text-ink">
                   {fmtMonto(subtotalRow(r), moneda)}
                 </td>
                 <td className="p-1 min-w-[240px] align-top"><ObservacionCell value={r.observaciones} onChange={(v) => setCampo(r.key, "observaciones", v)} /></td>
@@ -322,7 +322,7 @@ export default function ArmadorPresupuestoPage() {
         </Button>
         <div className="text-right">
           <span className="text-sm text-ink-2">Total</span>
-          <p className="text-xl font-bold font-mono tabular-nums text-ink">
+          <p className="text-xl font-bold tabular-nums text-ink">
             {fmtMonto(total, moneda)}
           </p>
         </div>
