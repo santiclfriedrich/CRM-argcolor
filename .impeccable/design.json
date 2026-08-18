@@ -1,0 +1,458 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-15T04:46:23Z",
+  "title": "Design System: CRM Comercial ARG COLOR",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Violeta Instrumento",
+        "canonical": "#5813c1",
+        "darkValue": "#a37cff",
+        "tonalRamp": [
+          "oklch(15% 0.09 292)",
+          "oklch(25% 0.16 292)",
+          "oklch(34% 0.21 292)",
+          "oklch(41% 0.24 292)",
+          "oklch(52% 0.23 292)",
+          "oklch(65% 0.19 292)",
+          "oklch(80% 0.11 292)",
+          "oklch(95% 0.03 292)"
+        ]
+      },
+      "chrome": {
+        "role": "primary",
+        "displayName": "Violeta Carcasa",
+        "canonical": "#250c50",
+        "darkValue": "#250c50",
+        "tonalRamp": [
+          "oklch(15% 0.08 292)",
+          "oklch(21% 0.11 292)",
+          "oklch(30% 0.15 292)",
+          "oklch(40% 0.19 292)",
+          "oklch(52% 0.21 292)",
+          "oklch(65% 0.17 292)",
+          "oklch(80% 0.10 292)",
+          "oklch(95% 0.03 292)"
+        ]
+      },
+      "brand": {
+        "role": "secondary",
+        "displayName": "Verde Acción",
+        "canonical": "#4e8d63",
+        "darkValue": "#5aa376",
+        "tonalRamp": [
+          "oklch(15% 0.04 152)",
+          "oklch(25% 0.06 152)",
+          "oklch(35% 0.08 152)",
+          "oklch(45% 0.09 152)",
+          "oklch(55% 0.10 152)",
+          "oklch(68% 0.11 152)",
+          "oklch(82% 0.08 152)",
+          "oklch(95% 0.03 152)"
+        ]
+      },
+      "success": {
+        "role": "tertiary",
+        "displayName": "Verde Al Día",
+        "canonical": "#158057",
+        "darkValue": "#4ac88c",
+        "chartValue": "#3cb178",
+        "tonalRamp": [
+          "oklch(15% 0.04 160)",
+          "oklch(25% 0.06 160)",
+          "oklch(35% 0.08 160)",
+          "oklch(48% 0.10 160)",
+          "oklch(60% 0.11 160)",
+          "oklch(72% 0.10 160)",
+          "oklch(85% 0.06 160)",
+          "oklch(95% 0.03 160)"
+        ]
+      },
+      "warning": {
+        "role": "tertiary",
+        "displayName": "Ámbar Esperando",
+        "canonical": "#b06f08",
+        "darkValue": "#f0b446",
+        "chartValue": "#eca62f",
+        "tonalRamp": [
+          "oklch(15% 0.04 70)",
+          "oklch(25% 0.06 70)",
+          "oklch(38% 0.08 70)",
+          "oklch(57% 0.11 70)",
+          "oklch(70% 0.12 70)",
+          "oklch(80% 0.10 70)",
+          "oklch(89% 0.07 70)",
+          "oklch(96% 0.03 70)"
+        ]
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Rojo Vencido",
+        "canonical": "#c73e2a",
+        "darkValue": "#f07a60",
+        "chartValue": "#e7644a",
+        "tonalRamp": [
+          "oklch(15% 0.05 30)",
+          "oklch(25% 0.08 30)",
+          "oklch(38% 0.12 30)",
+          "oklch(52% 0.16 30)",
+          "oklch(64% 0.15 30)",
+          "oklch(76% 0.12 30)",
+          "oklch(87% 0.07 30)",
+          "oklch(96% 0.03 30)"
+        ]
+      },
+      "info": {
+        "role": "tertiary",
+        "displayName": "Azul Ganado",
+        "canonical": "#2a6cbe",
+        "darkValue": "#60a0e6",
+        "chartValue": "#4586da",
+        "tonalRamp": [
+          "oklch(15% 0.05 255)",
+          "oklch(25% 0.08 255)",
+          "oklch(37% 0.11 255)",
+          "oklch(50% 0.14 255)",
+          "oklch(63% 0.13 255)",
+          "oklch(75% 0.10 255)",
+          "oklch(87% 0.06 255)",
+          "oklch(96% 0.02 255)"
+        ]
+      },
+      "neutral": {
+        "role": "tertiary",
+        "displayName": "Gris Dormido",
+        "canonical": "#5a607a",
+        "darkValue": "#8c92aa",
+        "chartValue": "#6d7495",
+        "tonalRamp": [
+          "oklch(15% 0.02 270)",
+          "oklch(25% 0.03 270)",
+          "oklch(35% 0.03 270)",
+          "oklch(45% 0.04 270)",
+          "oklch(58% 0.04 270)",
+          "oklch(72% 0.03 270)",
+          "oklch(86% 0.02 270)",
+          "oklch(96% 0.01 270)"
+        ]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Niebla",
+        "canonical": "#eef2f7",
+        "darkValue": "#09090f",
+        "tonalRamp": [
+          "#0f172a",
+          "#1e293b",
+          "#334155",
+          "#475569",
+          "#64748b",
+          "#94a3b8",
+          "#cbd5e1",
+          "#f1f5f9"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Papel",
+        "canonical": "#ffffff",
+        "darkValue": "#101120",
+        "tonalRamp": [
+          "#0f172a",
+          "#1e293b",
+          "#334155",
+          "#475569",
+          "#64748b",
+          "#94a3b8",
+          "#cbd5e1",
+          "#ffffff"
+        ]
+      },
+      "surface-2": {
+        "role": "neutral",
+        "displayName": "Papel Tenue",
+        "canonical": "#f8fafc",
+        "darkValue": "#171826"
+      },
+      "surface-3": {
+        "role": "neutral",
+        "displayName": "Papel Hundido",
+        "canonical": "#f1f5f9",
+        "darkValue": "#1e2030"
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Trazo",
+        "canonical": "#b4bece",
+        "darkValue": "rgba(255, 255, 255, 0.17)"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta",
+        "canonical": "#0f172a",
+        "darkValue": "#f4f5ff"
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Tinta Media",
+        "canonical": "#64748b",
+        "darkValue": "#a6aac2"
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Tinta Tenue",
+        "canonical": "#94a3b8",
+        "darkValue": "#71748c"
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Neutro Frío",
+        "canonical": "#6d7495",
+        "darkValue": "#6d7495"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Título de página. Uno solo por pantalla, arriba a la izquierda."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Títulos de modal. Centrados sobre borde inferior."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Labels de formulario, encabezados de tabla, ítems de nav, texto de botón."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "El texto de trabajo: celdas, párrafos, valores."
+      },
+      "label": {
+        "displayName": "Kicker",
+        "purpose": "Rótulo en JetBrains Mono, versalitas y tracking abierto. La firma tipográfica del instrumento. Nunca compone texto corrido."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Metadatos, badges, chips de referencia, texto de ayuda."
+      }
+    },
+    "shadows": [
+      {
+        "name": "soft",
+        "value": "0 1px 2px rgba(3,35,77,0.04), 0 10px 24px -14px rgba(3,35,77,0.22)",
+        "purpose": "Sombra por defecto de cards y modales. Teñida de azul profundo, no de negro: una sombra negra sobre fondo azulado se ve sucia. Es ambiental, no jerárquica."
+      },
+      {
+        "name": "pop",
+        "value": "0 1px 2px rgba(113,24,247,0.15), 0 8px 20px -8px rgba(113,24,247,0.35)",
+        "purpose": "Teñida de violeta, para elementos que deben sentirse energizados. Uso deliberadamente escaso."
+      },
+      {
+        "name": "todo-bar",
+        "value": "0 -4px 12px rgba(0,0,0,0.08)",
+        "purpose": "La única sombra con dirección invertida: el panel de tareas crece desde el borde inferior."
+      },
+      {
+        "name": "sticky-header",
+        "value": "inset 0 -1px 0 var(--c-line)",
+        "purpose": "La línea inferior de los encabezados de tabla sticky. Va como inset shadow porque el border-bottom de un th sticky no se pinta de forma confiable al scrollear."
+      }
+    ],
+    "motion": [
+      {
+        "name": "transition-default",
+        "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "El default de Tailwind, que es lo que el sistema usa en todos lados. No hay tokens de motion propios: el movimiento es utilitario, no expresivo."
+      },
+      {
+        "name": "tooltip-fade",
+        "value": "opacity 100ms",
+        "purpose": "Aparición del tooltip. Rápido a propósito, para no reproducir el delay del title nativo del navegador."
+      },
+      {
+        "name": "press",
+        "value": "translateY(1px)",
+        "purpose": "El hundimiento de los botones al hacer click. Un solo píxel es todo el feedback táctil del sistema."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "El único control verde del sistema. Guardar, confirmar, enviar.",
+      "html": "<button class=\"ds-btn-primary\">Guardar cambios</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border: none; border-radius: 12px; background: rgb(var(--c-brand, 78 141 99)); color: #fff; font-family: var(--font-sans, system-ui, sans-serif); font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer; box-shadow: 0 1px 2px rgba(3,35,77,0.05); transition: all 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-primary:hover { background: var(--c-brand-hover, #3f7452); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--c-surface, #fff), 0 0 0 4px rgb(var(--c-brand, 78 141 99) / 0.4); } .ds-btn-primary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "La acción neutra por defecto en barras de herramientas.",
+      "html": "<button class=\"ds-btn-outline\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\"/><path d=\"M21 3v5h-5\"/><path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\"/><path d=\"M8 16H3v5\"/></svg>Sincronizar</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border: 1px solid var(--c-line, #b4bece); border-radius: 12px; background: var(--c-surface, #fff); color: var(--c-ink-2, #64748b); font-family: var(--font-sans, system-ui, sans-serif); font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer; box-shadow: 0 1px 2px rgba(3,35,77,0.05); transition: all 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-outline:hover { background: var(--c-surface-2, #f8fafc); } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--c-surface, #fff), 0 0 0 4px rgb(var(--c-brand, 78 141 99) / 0.4); } .ds-btn-outline:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo de 44px. En foco el borde confirma y el anillo encuentra.",
+      "html": "<div class=\"ds-field\"><label class=\"ds-label\" for=\"ds-in\">Razón social</label><input class=\"ds-input\" id=\"ds-in\" placeholder=\"Buscar cuenta…\" /></div>",
+      "css": ".ds-field { display: block; font-family: var(--font-sans, system-ui, sans-serif); } .ds-label { display: block; margin-bottom: 4px; font-size: 14px; font-weight: 600; color: var(--c-ink, #0f172a); } .ds-input { width: 100%; height: 44px; padding: 0 14px; border: 1px solid var(--c-line, #b4bece); border-radius: 12px; background: var(--c-surface, #fff); color: var(--c-ink, #0f172a); font-family: inherit; font-size: 14px; transition: border-color 150ms, box-shadow 150ms; } .ds-input::placeholder { color: var(--c-ink-3, #94a3b8); } .ds-input:focus { outline: none; border-color: rgb(var(--c-accent, 88 19 193)); box-shadow: 0 0 0 2px rgb(var(--c-accent, 88 19 193) / 0.3); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Contenedor base con kicker en mono y CTA en píldora al pie.",
+      "html": "<section class=\"ds-card\"><span class=\"ds-kicker\">Cerrar acuerdos</span><p class=\"ds-card-value\">14</p><p class=\"ds-card-note\">oportunidades esperando respuesta del cliente</p><a class=\"ds-card-cta\" href=\"#\">Ver todas</a></section>",
+      "css": ".ds-card { display: block; padding: 20px; border: 1px solid var(--c-line, #b4bece); border-radius: 16px; background: var(--c-surface, #fff); box-shadow: 0 1px 2px rgba(3,35,77,0.04), 0 10px 24px -14px rgba(3,35,77,0.22); font-family: var(--font-sans, system-ui, sans-serif); } .ds-kicker { display: block; font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--c-ink-3, #94a3b8); } .ds-card-value { margin: 8px 0 0; font-size: 24px; font-weight: 700; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; color: var(--c-ink, #0f172a); } .ds-card-note { margin: 4px 0 16px; font-size: 12px; color: var(--c-ink-2, #64748b); } .ds-card-cta { display: inline-flex; align-items: center; justify-content: center; padding: 8px 20px; border: 1px solid var(--c-ink-3, #94a3b8); border-radius: 9999px; color: rgb(var(--c-accent, 88 19 193)); font-size: 14px; font-weight: 600; text-decoration: none; transition: border-color 150ms, background 150ms; } .ds-card-cta:hover { border-color: rgb(var(--c-accent, 88 19 193)); background: var(--c-accent-dim, rgba(88,19,193,0.1)); }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Píldora con tinte del propio color al 12% y texto del mismo color. Nunca color pleno.",
+      "html": "<span class=\"ds-badge ds-badge-warning\">Enviado a compras</span> <span class=\"ds-badge ds-badge-success\">Pago</span> <span class=\"ds-badge ds-badge-danger\">No avanzó</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; font-family: var(--font-sans, system-ui, sans-serif); font-size: 12px; font-weight: 500; } .ds-badge-success { background: rgb(var(--c-success, 21 128 87) / 0.12); color: rgb(var(--c-success, 21 128 87)); } .ds-badge-warning { background: rgb(var(--c-warning, 176 111 8) / 0.12); color: rgb(var(--c-warning, 176 111 8)); } .ds-badge-danger { background: rgb(var(--c-danger, 199 62 42) / 0.12); color: rgb(var(--c-danger, 199 62 42)); } .ds-badge-info { background: rgb(var(--c-info, 42 108 190) / 0.12); color: rgb(var(--c-info, 42 108 190)); } .ds-badge-neutral { background: rgb(var(--c-neutral, 90 96 122) / 0.12); color: rgb(var(--c-neutral, 90 96 122)); }"
+    },
+    {
+      "name": "RefChip",
+      "kind": "chip",
+      "refersTo": "ref-chip",
+      "description": "Referencia a otra entidad. Es lo que distingue un dato de un link a otro registro.",
+      "html": "<span class=\"ds-refchip\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/></svg><span class=\"ds-refchip-text\">Guido Fernández</span></span>",
+      "css": ".ds-refchip { display: inline-flex; max-width: 100%; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--c-line, #b4bece); border-radius: 8px; background: var(--c-surface, #fff); font-family: var(--font-sans, system-ui, sans-serif); font-size: 12px; font-weight: 500; color: var(--c-ink, #0f172a); } .ds-refchip svg { flex-shrink: 0; color: var(--c-ink-3, #94a3b8); } .ds-refchip-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }"
+    },
+    {
+      "name": "Top Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Barra de 56px sobre el violeta carcasa. El activo se marca con borde inferior blanco, no con fondo.",
+      "html": "<header class=\"ds-nav\"><span class=\"ds-nav-logo\">ARGENTINA COLOR</span><nav class=\"ds-nav-items\"><a class=\"ds-nav-item\" href=\"#\">Inicio</a><a class=\"ds-nav-item ds-nav-item-active\" href=\"#\">Oportunidades</a><a class=\"ds-nav-item\" href=\"#\">Cuentas</a><a class=\"ds-nav-item\" href=\"#\">Presupuestos</a></nav><span class=\"ds-nav-avatar\">SC</span></header>",
+      "css": ".ds-nav { display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 16px; background: var(--c-nav, #250c50); font-family: var(--font-sans, system-ui, sans-serif); } .ds-nav-logo { flex-shrink: 0; font-size: 13px; font-weight: 800; letter-spacing: 0.08em; color: #fff; } .ds-nav-items { display: flex; align-items: center; gap: 2px; } .ds-nav-item { display: flex; align-items: center; height: 56px; padding: 0 12px; border-bottom: 2px solid transparent; color: rgba(255,255,255,0.6); font-size: 14px; font-weight: 500; text-decoration: none; transition: color 150ms; } .ds-nav-item:hover { color: #fff; } .ds-nav-item-active { border-bottom-color: #fff; color: #fff; } .ds-nav-avatar { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin-left: auto; border-radius: 9999px; background: rgba(255,255,255,0.1); color: #fff; font-size: 14px; font-weight: 700; }"
+    },
+    {
+      "name": "Switch",
+      "kind": "custom",
+      "refersTo": "switch",
+      "description": "Toggle propio sin Radix, accesible vía role=switch. Activo en violeta acento.",
+      "html": "<span class=\"ds-switch-row\"><button class=\"ds-switch ds-switch-on\" role=\"switch\" aria-checked=\"true\"><span class=\"ds-switch-knob\"></span></button><span class=\"ds-switch-label\">Solo mías</span></span>",
+      "css": ".ds-switch-row { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-sans, system-ui, sans-serif); } .ds-switch { position: relative; display: inline-flex; align-items: center; width: 44px; height: 24px; padding: 0; border: none; border-radius: 9999px; background: var(--c-surface-3, #f1f5f9); cursor: pointer; transition: background 150ms; } .ds-switch-on { background: rgb(var(--c-accent, 88 19 193)); } .ds-switch-knob { display: inline-block; width: 20px; height: 20px; border-radius: 9999px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.2); transform: translateX(4px); transition: transform 150ms; } .ds-switch-on .ds-switch-knob { transform: translateX(20px); } .ds-switch-label { font-size: 14px; color: var(--c-ink-2, #64748b); }"
+    },
+    {
+      "name": "Data Table",
+      "kind": "custom",
+      "refersTo": "table-cell",
+      "description": "El componente central del producto. Retícula completa, encabezado sticky con inset shadow, celdas truncadas, cifras tabulares y la columna identificadora en violeta.",
+      "html": "<div class=\"ds-table-frame\"><table class=\"ds-table\"><thead><tr><th>N°</th><th>Nombre de la cuenta</th><th>CUIT</th><th>Creada por</th></tr></thead><tbody><tr><td class=\"ds-num\">10428</td><td class=\"ds-link\">BENCEN S.A.</td><td class=\"ds-num ds-mono\">30-71042831-4</td><td>Guido Fernández</td></tr><tr><td class=\"ds-num\">10429</td><td class=\"ds-link\">AEROPUERTOS ARG 2000</td><td class=\"ds-num ds-mono\">30-68240373-8</td><td>Santiago Claros</td></tr></tbody></table></div>",
+      "css": ".ds-table-frame { overflow: auto; border: 1px solid var(--c-line, #b4bece); border-radius: 16px; } .ds-table { width: 100%; border-collapse: collapse; font-family: var(--font-sans, system-ui, sans-serif); font-size: 14px; } .ds-table th { position: sticky; top: 0; z-index: 1; padding: 10px 12px; background: var(--c-surface-2, #f8fafc); box-shadow: inset 0 -1px 0 var(--c-line, #b4bece); text-align: left; font-size: 12px; font-weight: 600; color: var(--c-ink, #0f172a); } .ds-table th, .ds-table td { border-right: 1px solid var(--c-line, #b4bece); } .ds-table th:last-child, .ds-table td:last-child { border-right: 0; } .ds-table td { padding: 8px 12px; border-top: 1px solid var(--c-line, #b4bece); color: var(--c-ink, #0f172a); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-table tbody tr { cursor: pointer; transition: background 150ms; } .ds-table tbody tr:hover { background: var(--c-surface-2, #f8fafc); } .ds-num { font-variant-numeric: tabular-nums; } .ds-mono { font-family: var(--font-mono, ui-monospace, monospace); } .ds-link { font-weight: 500; color: rgb(var(--c-accent, 88 19 193)); }"
+    },
+    {
+      "name": "To-Do Bar",
+      "kind": "custom",
+      "refersTo": "todo-bar",
+      "description": "Firma estructural del producto: la única superficie persistente que no es navegación. Fija al pie, colapsable, contador en píldora violeta.",
+      "html": "<div class=\"ds-todo\"><span class=\"ds-todo-title\">Mis tareas<span class=\"ds-todo-count\">3</span></span><svg class=\"ds-todo-chevron\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m18 15-6-6-6 6\"/></svg></div>",
+      "css": ".ds-todo { display: flex; width: 100%; align-items: center; justify-content: space-between; padding: 10px 16px; background: var(--c-nav, #250c50); color: #fff; font-family: var(--font-sans, system-ui, sans-serif); font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 -4px 12px rgba(0,0,0,0.08); } .ds-todo-title { display: inline-flex; align-items: center; gap: 8px; } .ds-todo-count { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; background: rgb(var(--c-accent, 88 19 193)); font-size: 12px; font-weight: 500; color: #fff; } .ds-todo-chevron { flex-shrink: 0; opacity: 0.8; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "El instrumento comercial",
+    "overview": "Un instrumento de medición industrial, no un producto de software. La carcasa es violeta profundo y no cambia nunca; adentro, la lectura está calibrada: rótulos en mono con versalitas, cifras alineadas por dígito, campos que dicen exactamente lo que contienen. La metáfora ya vivía en el código antes de escribirse — el comentario del Kicker en card.tsx la nombra literalmente — y este documento la formaliza.\n\nEl sistema es sólido y confiable con algo de calidez. Sólido porque hay gente trabajando ocho horas por día acá y la herramienta tiene que sentirse seria: bordes definidos, jerarquía explícita, superficies con peso. Cálido porque no quiere ser el ERP que vino a reemplazar: radios de 16px en las cards, sombras suaves teñidas de azul, chips redondeados en vez de celdas cuadradas. La tensión entre esas dos cosas es el sistema.\n\nDos anti-referencias confirmadas. No es un ERP viejo: nada de grillas grises apretadas, bordes duros en todas las direcciones ni iconografía de los 2000 — es precisamente lo que GBP hace y lo que el CRM existe para reemplazar. No es una app de consumo: sin ilustraciones, sin gradientes decorativos, sin emojis, sin tono publicitario. Nadie tiene que ser convencido de usar esto; ya es su trabajo. El único gesto atmosférico permitido es el que ya existe: un radial-gradient de tinte de marca en la esquina superior derecha del body, casi imperceptible, para que el fondo no se sienta muerto.",
+    "keyCharacteristics": [
+      "Dos temas de primera clase (claro y oscuro), resueltos por tokens semánticos, no por overrides",
+      "El violeta identifica, el verde acciona — nunca al revés",
+      "El borde estructura; la sombra apenas separa",
+      "Rótulos en mono con versalitas como firma tipográfica",
+      "Densidad de tabla real: miles de filas, virtualizadas, con columnas ajustables"
+    ],
+    "rules": [
+      {
+        "name": "La Regla de los Dos Trabajos",
+        "body": "El violeta dice dónde estás; el verde dice qué hacés. Un botón que guarda es verde aunque esté dentro de un panel violeta. Un link es violeta aunque sea la acción más importante de la pantalla. Nunca se intercambian y nunca aparecen juntos en el mismo control.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla del Semáforo Cerrado",
+        "body": "Los cinco colores de estado se usan solo para estado. Un ámbar nunca decora un encabezado, un rojo nunca marca un botón de borrar (para eso está button-danger en rojo-600, que es otro color a propósito). Si un color de estado aparece fuera de un badge, un punto o un relleno de gráfico, está mal.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla de la Carcasa Fija",
+        "body": "chrome no cambia entre temas. Es lo que hace que la app se reconozca a la distancia en cualquiera de los dos modos.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla del Dígito Alineado",
+        "body": "Todo número que se compare en vertical lleva tabular-nums: CUIT, números de cliente, importes, cantidades. Una columna de cifras que baila es un error de lectura, no de estética.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regla del Mono Rotulado",
+        "body": "JetBrains Mono nunca compone texto corrido. Solo rotula: versalitas, tamaño chico, tracking abierto. Si aparece en una oración, está mal usado.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regla del Título Único",
+        "body": "Un solo Display por pantalla. Las secciones de segundo nivel se separan con Kickers en mono, no con más peso tipográfico.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regla del Único Scroll",
+        "body": "Solo scrollea main. Cualquier panel que introduzca un segundo eje de scroll vertical en la página está peleando con el shell.",
+        "section": "layout"
+      },
+      {
+        "name": "La Regla de la Celda Truncada",
+        "body": "Toda celda de tabla trunca. El ancho lo decide el usuario arrastrando la columna, no el contenido más largo del dataset.",
+        "section": "layout"
+      },
+      {
+        "name": "La Regla de la Sombra Teñida",
+        "body": "Ninguna sombra usa negro puro. Toda sombra toma el tono de la superficie sobre la que cae — azul para el chrome general, violeta para lo energizado.",
+        "section": "elevation"
+      },
+      {
+        "name": "La Regla del Borde Primero",
+        "body": "Si dudás entre agregar una sombra o un borde para separar dos superficies, es un borde. La sombra ya está saturada de trabajo.",
+        "section": "elevation"
+      },
+      {
+        "name": "La Regla de la Píldora Semántica",
+        "body": "El radio completo significa \"esto es un valor, no un contenedor\". Un badge es píldora; una card nunca. Un botón de icono es círculo; un botón con texto es 12px.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do usar los tokens semánticos (bg-surface, text-ink-2, border-line) en vez de colores de Tailwind. Es lo que hace que el modo oscuro funcione sin que ningún componente sepa que existe.",
+      "Do poner tabular-nums en toda cifra que se compare en vertical.",
+      "Do truncar toda celda de tabla y dejar que el usuario ajuste el ancho de la columna.",
+      "Do teñir las sombras con el tono de la superficie (azul rgba(3,35,77,…), violeta rgba(113,24,247,…)).",
+      "Do renderizar modales y dropdowns recortados por portal a document.body — un ancestro con transform atrapa al position: fixed.",
+      "Do usar Kicker en mono/versalitas para rotular secciones en vez de agregar otro nivel de peso tipográfico.",
+      "Do mantener chrome (#250c50) idéntico en ambos temas.",
+      "Do dar ring-offset-2 a los anillos de foco de botón, para que no se lean como borde."
+    ],
+    "donts": [
+      "Don't usar el verde de acción para nada que no sea un botón primario, ni el violeta para el control que ejecuta la acción. Los dos colores tienen trabajos separados.",
+      "Don't usar un color del semáforo fuera de un badge, un punto de estado o un relleno de gráfico. Para acción destructiva está button-danger en rojo-600, que es otro color a propósito.",
+      "Don't rellenar un badge con color pleno. Tinte al 12% y texto del mismo color, siempre.",
+      "Don't componer texto corrido en JetBrains Mono. Solo rotula.",
+      "Don't introducir un segundo eje de scroll vertical en la página: solo scrollea main.",
+      "Don't agregar un max-w al contenedor de las páginas de listado. El ancho completo es una decisión, no un olvido.",
+      "Don't usar sombra negra pura ni bordes de más de 1px.",
+      "Don't poner radio completo a un contenedor. La píldora significa \"valor discreto\"; las cards son 16px y los controles 12px.",
+      "Don't meter ilustraciones, gradientes decorativos, emojis ni tono publicitario. El único gesto atmosférico es el radial-gradient de tinte del body.",
+      "Don't apretar la retícula a bordes duros grises tipo ERP. Es exactamente lo que este producto vino a reemplazar."
+    ]
+  }
+}
