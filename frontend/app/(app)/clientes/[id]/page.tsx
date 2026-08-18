@@ -161,7 +161,7 @@ export default function ClienteDetailPage() {
                         {o.valor_estimado != null ? fmtMonto(o.valor_estimado, "USD") : "—"}
                       </span>
                     </span>
-                    <Badge className={ESTADO_META[o.estado].color}>{ESTADO_META[o.estado].label}</Badge>
+                    <Badge tone={ESTADO_META[o.estado].tone}>{ESTADO_META[o.estado].label}</Badge>
                   </button>
                 </li>
               ))}

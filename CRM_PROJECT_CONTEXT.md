@@ -505,7 +505,7 @@ Los mails **auto-ingestados por el polling** ya **no crean la oportunidad direct
 
 ### 16.5 Oportunidades
 
-- **Estados** (código DB / etiqueta UI): `nueva`, `requiere_aclaracion`, `en_compras`/"Enviado a compras", `cotizado_compras`/"Cotizado por compras", `presupuestada`/"Enviada al cliente", `confirmada`/"Confirmada · Pendiente", `ganada`/"Pago", `perdida`/"No avanzó". Terminales: `ganada`, `perdida` (confirmada NO es terminal). Vista **mensual** con arrastre de abiertas.
+- **Estados** (código DB / etiqueta UI): `nueva`, `requiere_aclaracion`, `en_compras`/"Enviado a compras", `cotizado_compras`/"Cotizado por compras", `presupuestada`/"Enviada al cliente", `confirmada`/"Confirmada / Pendiente", `ganada`/"Pago", `perdida`/"No avanzó". Terminales: `ganada`, `perdida` (confirmada NO es terminal). Vista **mensual** con arrastre de abiertas.
 - **Requerimiento leído por la IA** (`Oportunidad.requerimiento`): se guarda al ingestar (producto+cantidad+detalle+plazo) y es **editable** en el form.
 - **Transferencia entre vendedores**: `transferencia_para_id`; acción "Transferir a…" en el menú de fila → queda **pendiente** (sale de las "Mías" de ambos) hasta que el destinatario **acepta** (pasa a ser suya) o **rechaza** (vuelve). Indicador "Transferencias (N)" en la barra + banner en el detalle; notificación in-app.
 - Orden por llegada (más antigua arriba), multi-select + borrado en lote, headers sticky al scrollear.

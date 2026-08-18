@@ -329,7 +329,7 @@ function MailCard({ mail }: { mail: Mail }) {
           ) : (
             <Badge>cliente por identificar</Badge>
           )}
-          {estado && <Badge className={ESTADO_META[estado].color}>{ESTADO_META[estado].label}</Badge>}
+          {estado && <Badge tone={ESTADO_META[estado].tone}>{ESTADO_META[estado].label}</Badge>}
         </div>
       </div>
 

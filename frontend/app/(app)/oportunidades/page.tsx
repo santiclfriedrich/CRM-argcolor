@@ -950,7 +950,7 @@ export default function OportunidadesPage() {
                     <span
                       className={
                         o.estado === "confirmada" && o.fecha_limite
-                          ? "font-semibold text-yellow-600 dark:text-yellow-400"
+                          ? "font-semibold text-warning"
                           : estaVencida(o)
                           ? "font-semibold text-danger"
                           : "text-ink"
@@ -963,7 +963,7 @@ export default function OportunidadesPage() {
                     <IngInput o={o} />
                   </td>
                   <td className="px-3 py-2">
-                    <Badge className={ESTADO_META[o.estado].color}>{ESTADO_META[o.estado].label}</Badge>
+                    <Badge tone={ESTADO_META[o.estado].tone}>{ESTADO_META[o.estado].label}</Badge>
                   </td>
                   <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
                     <input

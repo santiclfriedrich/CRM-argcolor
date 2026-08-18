@@ -2,7 +2,14 @@ import { type HTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils";
 
-type Tone = "default" | "success" | "warning" | "danger" | "info" | "neutral";
+export type Tone =
+  | "default"
+  | "success"
+  | "warning"
+  | "danger"
+  | "info"
+  | "neutral"
+  | "accent";
 
 // Tinte de fondo suave + texto del mismo color semántico.
 const TONES: Record<Tone, string> = {
@@ -12,6 +19,7 @@ const TONES: Record<Tone, string> = {
   danger: "bg-danger/12 text-danger",
   info: "bg-info/12 text-info",
   neutral: "bg-neutral/12 text-neutral",
+  accent: "bg-accent/12 text-accent",
 };
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {

@@ -90,7 +90,7 @@ export default function OportunidadDetallePage() {
             <span className="font-mono tabular-nums text-ink-3">· {o.id}</span>
           </h1>
           <div className="mt-1 flex items-center gap-2">
-            <Badge className={ESTADO_META[o.estado].color}>{ESTADO_META[o.estado].label}</Badge>
+            <Badge tone={ESTADO_META[o.estado].tone}>{ESTADO_META[o.estado].label}</Badge>
             {o.asunto && (
               <span className="text-sm text-ink-2">{o.asunto}</span>
             )}
