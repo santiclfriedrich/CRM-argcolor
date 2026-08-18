@@ -11,6 +11,7 @@ from app.db.models.dominios_cliente import DominioCliente
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.schemas.dominio import DominioCreate, DominioRead, DominioUpdate
+from app.services.gmail_poller import reset_dominios_cache
 
 router = APIRouter(prefix="/clientes/{cliente_id}/dominios", tags=["dominios"])
 
@@ -55,6 +56,7 @@ def create_dominio(
     db.add(dominio)
     db.commit()
     db.refresh(dominio)
+    reset_dominios_cache()  # el dominio nuevo entra a la query de la bandeja ya
     return dominio
 
 
@@ -71,6 +73,7 @@ def update_dominio(
         setattr(dominio, field, value)
     db.commit()
     db.refresh(dominio)
+    reset_dominios_cache()
     return dominio
 
 
@@ -84,3 +87,4 @@ def delete_dominio(
     dominio = _get_dominio(db, cliente_id, dominio_id)
     db.delete(dominio)
     db.commit()
+    reset_dominios_cache()

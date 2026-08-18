@@ -249,19 +249,26 @@ def test_default_vendedor_id_cuando_cliente_no_tiene_vendedor(db: Session) -> No
 
 def test_build_poll_query_combina_dominios_y_etiqueta(db: Session, monkeypatch) -> None:  # noqa: ANN001
     from app.config import settings
+    from app.services.gmail_poller import reset_dominios_cache
 
     monkeypatch.setattr(settings, "GMAIL_QUERY", "newer_than:2d")
     monkeypatch.setattr(settings, "GMAIL_LABEL", "crm")
+
+    # La lista de dominios se cachea en proceso; arrancamos con el cache limpio.
+    reset_dominios_cache()
 
     # El fixture siembra el dominio bencen.com.ar. La query debe combinar la
     # ventana temporal + exclusión de propios enviados + (etiqueta OR dominios).
     q = build_poll_query(db)
     assert q == "newer_than:2d -from:me (label:crm OR from:bencen.com.ar)"
 
-    # Al agregar otro cliente con dominio, entra en la query automáticamente.
+    # Al agregar otro cliente con dominio, entra en la query en el próximo poll
+    # (los endpoints de dominios invalidan el cache; acá lo hacemos a mano porque
+    # insertamos directo en la DB, sin pasar por la API).
     db.add(Cliente(id=2, razon_social="OTRO S.A.", activo=True))
     db.add(DominioCliente(id=2, cliente_id=2, dominio="Otro.com"))
     db.commit()
+    reset_dominios_cache()
     q2 = build_poll_query(db)
     assert "from:otro.com" in q2  # normalizado a minúsculas
     assert "from:bencen.com.ar" in q2

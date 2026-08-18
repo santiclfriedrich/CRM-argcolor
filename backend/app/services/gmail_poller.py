@@ -6,6 +6,7 @@ list_message_ids/get_message) para poder testearlo con un fake.
 
 import logging
 import re
+import time
 from typing import Any, Protocol
 
 from sqlalchemy import func, select
@@ -34,6 +35,40 @@ class GmailLike(Protocol):
     def get_message(self, message_id: str) -> dict[str, Any]: ...
 
 
+# Cache en proceso de los dominios de clientes. El poller corre seguido pero los
+# dominios casi no cambian; leer la tabla entera en cada corrida es egress al
+# pedo contra Neon. Un dominio recién cargado tarda a lo sumo _DOMINIOS_TTL en
+# entrar a la query (aceptable para la bandeja). El backend es monoproceso.
+_DOMINIOS_TTL = 600.0  # segundos
+_dominios_cache: tuple[float, list[str]] | None = None
+
+
+def reset_dominios_cache() -> None:
+    """Invalida el cache de dominios: la próxima corrida los relee de la DB.
+
+    Se llama al alta/baja/edición de un dominio para que un cliente nuevo entre
+    a la query de la bandeja en el próximo poll, sin esperar el TTL.
+    """
+    global _dominios_cache
+    _dominios_cache = None
+
+
+def _dominios_clientes(db: Session) -> list[str]:
+    global _dominios_cache
+    ahora = time.monotonic()
+    if _dominios_cache is not None and ahora - _dominios_cache[0] < _DOMINIOS_TTL:
+        return _dominios_cache[1]
+    dominios = sorted(
+        {
+            d.strip().lower()
+            for d in db.scalars(select(DominioCliente.dominio))
+            if d and d.strip()
+        }
+    )
+    _dominios_cache = (ahora, dominios)
+    return dominios
+
+
 def build_poll_query(db: Session) -> str:
     """Arma la query de Gmail (enfoque B): clientes conocidos + etiqueta comodín.
 
@@ -45,13 +80,7 @@ def build_poll_query(db: Session) -> str:
     base = settings.GMAIL_QUERY.strip()
     label = settings.GMAIL_LABEL.strip()
 
-    dominios = sorted(
-        {
-            d.strip().lower()
-            for d in db.scalars(select(DominioCliente.dominio))
-            if d and d.strip()
-        }
-    )
+    dominios = _dominios_clientes(db)
 
     # -from:me: no procesar los mails que envió el propio dueño de la casilla.
     prefijo = f"{base} -from:me".strip() if base else "-from:me"

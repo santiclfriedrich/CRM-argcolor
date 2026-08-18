@@ -2,14 +2,20 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, load_only, selectinload
 
 from app.api.deps import get_current_user
 from app.core.exceptions import NotFoundError
 from app.db.models.clientes import Cliente
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
-from app.schemas.cliente import ClienteCreate, ClienteDetail, ClienteRead, ClienteUpdate
+from app.schemas.cliente import (
+    ClienteCreate,
+    ClienteDetail,
+    ClienteListItem,
+    ClienteRead,
+    ClienteUpdate,
+)
 from app.services.borrado import eliminar_cliente
 
 router = APIRouter(prefix="/clientes", tags=["clientes"])
@@ -31,17 +37,21 @@ def _normalizar_cuit(cuit: str | None) -> str:
 
 
 def _validar_cuit_unico(db: Session, canonico: str, excluir_id: int | None = None) -> None:
-    """Rechaza (409) si ya existe otra cuenta con el mismo CUIT (comparando por
-    dígitos, sin importar el formato con que se haya guardado)."""
-    digitos = _solo_digitos(canonico)
-    for cid, cuit in db.execute(select(Cliente.id, Cliente.cuit)).all():
-        if cid == excluir_id or not cuit:
-            continue
-        if _solo_digitos(cuit) == digitos:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Ya existe una cuenta con el CUIT {canonico}.",
-            )
+    """Rechaza (409) si ya existe otra cuenta con el mismo CUIT.
+
+    El `canonico` ya viene normalizado a 'XX-XXXXXXXX-X' por el caller, y todos
+    los caminos de escritura (esta API y el sync de GBP) guardan el CUIT en ese
+    mismo formato. Por eso alcanza con una igualdad indexada (usa ix_clientes_cuit)
+    en vez de escanear toda la tabla comparando dígitos en Python.
+    """
+    stmt = select(Cliente.id).where(Cliente.cuit == canonico)
+    if excluir_id is not None:
+        stmt = stmt.where(Cliente.id != excluir_id)
+    if db.scalar(stmt.limit(1)) is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Ya existe una cuenta con el CUIT {canonico}.",
+        )
 
 
 def _validar_cuenta_principal(
@@ -62,14 +72,28 @@ def _validar_cuenta_principal(
         )
 
 
-@router.get("", response_model=list[ClienteRead])
+@router.get("", response_model=list[ClienteListItem])
 def list_clientes(
     db: Session = Depends(get_db), _: Usuario = Depends(get_current_user)
 ) -> list[Cliente]:
+    # Listado liviano: traemos SOLO las columnas que la tabla y los pickers usan
+    # (load_only), no las 8k filas con todos los campos de texto largo. Esto
+    # recorta el egress de Neon, que es lo que venía reventando la cuota.
     return list(
         db.scalars(
             select(Cliente)
-            .options(selectinload(Cliente.creado_por))
+            .options(
+                load_only(
+                    Cliente.id,
+                    Cliente.razon_social,
+                    Cliente.cuit,
+                    Cliente.numero_cliente,
+                    Cliente.activo,
+                    Cliente.vendedor_asignado_id,
+                    Cliente.created_at,
+                ),
+                selectinload(Cliente.creado_por).load_only(Usuario.id, Usuario.nombre),
+            )
             .order_by(Cliente.razon_social)
         )
     )

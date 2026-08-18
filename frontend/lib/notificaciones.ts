@@ -16,7 +16,7 @@ export function useNotificaciones() {
   return useQuery({
     queryKey: notificacionKeys.all,
     queryFn: async () => (await api.get<Notificacion[]>(BASE)).data,
-    refetchInterval: 30_000,
+    refetchInterval: 90_000,
   });
 }
 

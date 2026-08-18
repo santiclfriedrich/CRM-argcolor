@@ -28,7 +28,7 @@ export function usePropuestas() {
   return useQuery({
     queryKey: oportunidadKeys.propuestas,
     queryFn: async () => (await api.get<Propuesta[]>(`${BASE}/propuestas`)).data,
-    refetchInterval: 30_000,
+    refetchInterval: 120_000,
   });
 }
 
@@ -77,7 +77,7 @@ export function useTransferenciasPendientes() {
     queryFn: async () =>
       (await api.get<Oportunidad[]>(`${BASE}/transferencias-pendientes`)).data,
     // Refresca solo para que el indicador aparezca sin recargar la página.
-    refetchInterval: 30_000,
+    refetchInterval: 90_000,
   });
 }
 

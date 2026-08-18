@@ -28,6 +28,11 @@ export function useClientes() {
   return useQuery({
     queryKey: clienteKeys.all,
     queryFn: async () => (await api.get<Cliente[]>(BASE)).data,
+    // El listado (~8k cuentas) casi no cambia entre navegaciones. Lo tratamos
+    // como "fresco" 5 min y no lo re-bajamos al volver el foco a la pestaña,
+    // para no descargar todo el dataset en cada entrada a Cuentas (egress Neon).
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
 }
 

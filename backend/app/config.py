@@ -65,7 +65,9 @@ class Settings(BaseSettings):
     GMAIL_QUERY: str = "newer_than:2d"
     # Etiqueta comodín para prospectos nuevos cuyo dominio aún no está cargado.
     GMAIL_LABEL: str = "crm"
-    GMAIL_POLL_INTERVAL_SECONDS: int = 120
+    # Cada corrida abre una sesión de DB y hace varias queries; 5 min es de sobra
+    # para la bandeja y baja bastante el tráfico contra Neon respecto a 2 min.
+    GMAIL_POLL_INTERVAL_SECONDS: int = 300
     # Camino B: ruta al JSON de la service account (con domain-wide delegation).
     # Si está seteado, se leen las casillas de todos los usuarios (impersonación).
     GMAIL_SERVICE_ACCOUNT_FILE: str = ""

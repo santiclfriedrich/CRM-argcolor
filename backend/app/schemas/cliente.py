@@ -69,6 +69,26 @@ class ClienteRead(ClienteBase):
     creado_por: UsuarioMini | None = None
 
 
+class ClienteListItem(BaseModel):
+    """Versión liviana para el listado de cuentas (~8k filas).
+
+    Solo los campos que consumen la tabla y los pickers; se dejan afuera los
+    campos de texto largo (notas, direcciones, etc.) para no arrastrar megas de
+    egress en cada carga del listado. Para la ficha completa está ClienteDetail.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    razon_social: str
+    cuit: str | None = None
+    numero_cliente: str | None = None
+    activo: bool = True
+    vendedor_asignado_id: int | None = None
+    created_at: datetime
+    creado_por: UsuarioMini | None = None
+
+
 class ClienteDetail(ClienteRead):
     """Cliente con sus contactos, dominios y jerarquía (vista de ficha)."""
 
