@@ -5,7 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, defer, selectinload
 
 from app.api.deps import get_current_user
 from app.api.listing import scalars_capped
@@ -17,6 +17,7 @@ from app.db.session import get_db
 from app.schemas.oportunidad import (
     ComentarioCreate,
     OportunidadCreate,
+    OportunidadListItem,
     OportunidadRead,
     OportunidadUpdate,
 )
@@ -42,8 +43,19 @@ _RELATIONS = (
     selectinload(Oportunidad.transferencia_para),
 )
 
+# Listado: solo las relaciones y columnas que muestran las tablas. Se difieren
+# las columnas pesadas (requerimiento/comentarios/adjuntos) para no traerlas de
+# Postgres en cada carga; el detalle usa su propio fetch con todo.
+_LIST_RELATIONS = (
+    selectinload(Oportunidad.cliente),
+    selectinload(Oportunidad.vendedor),
+    defer(Oportunidad.requerimiento),
+    defer(Oportunidad.comentarios),
+    defer(Oportunidad.archivos_adjuntos),
+)
 
-@router.get("", response_model=list[OportunidadRead])
+
+@router.get("", response_model=list[OportunidadListItem])
 def list_oportunidades(
     estado: EstadoOportunidad | None = None,
     cliente_id: int | None = None,
@@ -59,7 +71,7 @@ def list_oportunidades(
     del usuario logueado (toggle Mías/Todas). Con `usuario_id` se limita a las de
     ese vendedor (perfil de un usuario; el pipeline es compartido)."""
     # Las propuestas (pendientes de revisión) no aparecen acá: se revisan aparte.
-    query = select(Oportunidad).options(*_RELATIONS).where(
+    query = select(Oportunidad).options(*_LIST_RELATIONS).where(
         Oportunidad.pendiente_revision.is_(False)
     )
     if usuario_id is not None:

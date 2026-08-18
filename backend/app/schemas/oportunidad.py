@@ -107,3 +107,37 @@ class OportunidadRead(OportunidadBase):
     @classmethod
     def _comentarios_none_a_lista(cls, v: object) -> object:
         return v or []
+
+
+class OportunidadListItem(BaseModel):
+    """Fila del listado de oportunidades: solo lo que muestran las tablas.
+
+    Deja afuera lo que solo usa el detalle (que tiene su propio fetch): el texto
+    largo del `requerimiento`, la bitácora de `comentarios`, los
+    `archivos_adjuntos` (JSON) y los joins de contacto/creado_por/transferencia.
+    El `requerimiento` NO se pierde: sigue en la DB y lo leen el detalle y el
+    flujo de "Pedir a compras" directamente de la base."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    estado: EstadoOportunidad
+    cliente_id: int | None = None
+    vendedor_id: int | None = None
+    asunto: str | None = None
+    producto: str | None = None
+    numero_pedido: str | None = None
+    ing: str | None = None
+    observacion: str | None = None
+    cargada_en_gbp: bool = False
+    valor_estimado: Decimal | None = None
+    fecha_pedido_cliente: date | None = None
+    fecha_enviado_compras: date | None = None
+    fecha_respuesta_compras: date | None = None
+    fecha_enviado_cliente: date | None = None
+    fecha_limite: date | None = None
+    fecha_creacion: datetime
+    fecha_ultimo_movimiento: datetime
+    fecha_cierre: datetime | None = None
+    cliente: ClienteMini | None = None
+    vendedor: VendedorMini | None = None

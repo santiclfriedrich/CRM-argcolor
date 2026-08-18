@@ -18,6 +18,7 @@ from app.db.session import get_db
 from app.schemas.presupuesto import (
     EnviarPresupuestoRequest,
     PresupuestoCreate,
+    PresupuestoListItem,
     PresupuestoRead,
     PresupuestoUpdate,
 )
@@ -39,6 +40,13 @@ _RELATIONS = (
     selectinload(Presupuesto.editado_por),
 )
 
+# Listado: sin ítems (el mayor peso por fila) ni editado_por; el detalle usa su
+# propio fetch con todo.
+_LIST_RELATIONS = (
+    selectinload(Presupuesto.oportunidad).selectinload(Oportunidad.cliente),
+    selectinload(Presupuesto.creado_por),
+)
+
 
 def _get_loaded(db: Session, presupuesto_id: int) -> Presupuesto:
     presupuesto = db.get(Presupuesto, presupuesto_id, options=list(_RELATIONS))
@@ -53,7 +61,7 @@ def _assert_owner(presupuesto: Presupuesto, user: Usuario) -> None:
     return
 
 
-@router.get("", response_model=list[PresupuestoRead])
+@router.get("", response_model=list[PresupuestoListItem])
 def list_presupuestos(
     oportunidad_id: int | None = None,
     usuario_id: int | None = None,
@@ -62,7 +70,7 @@ def list_presupuestos(
 ) -> list[Presupuesto]:
     """Presupuestos personales: cada vendedor ve solo los de sus oportunidades.
     Los admin ven los de todo el equipo, o filtran por `usuario_id` (perfil)."""
-    query = select(Presupuesto).options(*_RELATIONS).order_by(Presupuesto.id.desc())
+    query = select(Presupuesto).options(*_LIST_RELATIONS).order_by(Presupuesto.id.desc())
     if oportunidad_id is not None:
         query = query.where(Presupuesto.oportunidad_id == oportunidad_id)
     duenio_id = resolver_duenio(current_user, usuario_id)

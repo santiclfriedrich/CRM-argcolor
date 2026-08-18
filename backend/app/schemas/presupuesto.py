@@ -98,3 +98,20 @@ class PresupuestoRead(PresupuestoBase):
     creado_por: UsuarioMini | None = None
     editado_por: UsuarioMini | None = None
     editado_en: datetime | None = None
+
+
+class PresupuestoListItem(BaseModel):
+    """Fila del listado de presupuestos: sin los ítems (líneas del presupuesto),
+    que solo usa el detalle (con su propio fetch). Es el mayor peso por fila."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    oportunidad_id: int
+    codigo: str
+    estado: EstadoPresupuesto
+    monto_total: Decimal | None = None
+    moneda: str = "USD"
+    created_at: datetime
+    oportunidad: OportunidadMini | None = None
+    creado_por: UsuarioMini | None = None

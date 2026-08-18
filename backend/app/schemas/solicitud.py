@@ -89,6 +89,23 @@ class SolicitudRead(SolicitudBase):
     solicitante: SolicitanteMini | None = None
 
 
+class SolicitudListItem(SolicitudBase):
+    """Fila del listado: sin `archivos_adjuntos` (JSON). El detalle
+    (SolicitudDetail) trae adjuntos y respuestas. Mantiene `requerimiento`,
+    que sí se muestra en las listas."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    estado: EstadoSolicitud
+    gmail_thread_id: str | None = None
+    fecha_envio: datetime | None = None
+    fecha_respuesta: datetime | None = None
+    created_at: datetime
+    oportunidad: OportunidadMini | None = None
+    solicitante: SolicitanteMini | None = None
+
+
 class EmailPreview(BaseModel):
     """Borrador del mail a Compras."""
 

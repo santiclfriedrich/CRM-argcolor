@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, defer, selectinload
 
 from app.api.deps import get_ai, get_current_user, get_user_gmail, resolver_duenio
 from app.api.listing import scalars_capped
@@ -20,6 +20,7 @@ from app.schemas.solicitud import (
     RespuestaComprasRead,
     SolicitudCreate,
     SolicitudDetail,
+    SolicitudListItem,
     SolicitudRead,
     SolicitudUpdate,
 )
@@ -38,6 +39,14 @@ _RELATIONS = (
     selectinload(SolicitudCompras.oportunidad).selectinload(Oportunidad.cliente),
     selectinload(SolicitudCompras.solicitante),
     selectinload(SolicitudCompras.respuestas),
+)
+
+# Listado: sin `respuestas` (texto + JSON, que la lista no serializa) y con los
+# adjuntos deferidos. El detalle (SolicitudDetail) trae respuestas y adjuntos.
+_LIST_RELATIONS = (
+    selectinload(SolicitudCompras.oportunidad).selectinload(Oportunidad.cliente),
+    selectinload(SolicitudCompras.solicitante),
+    defer(SolicitudCompras.archivos_adjuntos),
 )
 
 
@@ -60,7 +69,7 @@ def _normalize_ccs(data: dict) -> None:
         data["ccs_extra"] = [str(e) for e in data["ccs_extra"]]
 
 
-@router.get("", response_model=list[SolicitudRead])
+@router.get("", response_model=list[SolicitudListItem])
 def list_solicitudes(
     estado: EstadoSolicitud | None = None,
     oportunidad_id: int | None = None,
@@ -70,7 +79,7 @@ def list_solicitudes(
 ) -> list[SolicitudCompras]:
     """Solicitudes personales: cada usuario ve solo las que él pidió a Compras.
     Los admin ven las de todo el equipo, o filtran por `usuario_id` (perfil)."""
-    query = select(SolicitudCompras).options(*_RELATIONS)
+    query = select(SolicitudCompras).options(*_LIST_RELATIONS)
     if estado is not None:
         query = query.where(SolicitudCompras.estado == estado)
     if oportunidad_id is not None:
