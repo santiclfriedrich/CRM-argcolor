@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user, get_user_gmail, resolver_duenio
+from app.api.listing import scalars_capped
 from app.core.exceptions import NotFoundError
 from app.db.models.oportunidades import Oportunidad
 from app.db.models.presupuestos import Presupuesto
@@ -69,7 +70,7 @@ def list_presupuestos(
         query = query.join(Oportunidad, Presupuesto.oportunidad_id == Oportunidad.id).where(
             Oportunidad.vendedor_id == duenio_id
         )
-    return list(db.scalars(query))
+    return scalars_capped(db, query, "presupuestos")
 
 
 @router.post("", response_model=PresupuestoRead, status_code=201)

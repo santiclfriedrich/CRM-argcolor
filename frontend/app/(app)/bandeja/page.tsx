@@ -353,7 +353,7 @@ function MailCard({ mail }: { mail: Mail }) {
               Oportunidad #{mail.oportunidad_id}
             </Link>
           )}
-          {mail.cuerpo && (
+          {mail.tiene_cuerpo && (
             <button
               type="button"
               onClick={() => setChatOpen(true)}

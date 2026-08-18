@@ -5,7 +5,7 @@ from datetime import datetime
 
 from sqlalchemy import JSON, DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, query_expression, relationship
 
 from app.db.base import Base, TimestampMixin
 
@@ -40,6 +40,11 @@ class Mail(Base, TimestampMixin):
     datos_extraidos_ia: Mapped[dict | None] = mapped_column(
         JSONB().with_variant(JSON(), "sqlite")
     )
+
+    # Computado por query (with_expression) en el listado de la bandeja: dice si
+    # hay cuerpo SIN traer el texto completo (que puede ser grande). Fuera de esa
+    # query queda en None y no se usa.
+    tiene_cuerpo: Mapped[bool] = query_expression()
 
     oportunidad = relationship("Oportunidad", back_populates="mails")
     archivos = relationship("Adjunto", back_populates="mail")

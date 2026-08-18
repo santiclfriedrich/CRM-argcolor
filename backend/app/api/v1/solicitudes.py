@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_ai, get_current_user, get_user_gmail, resolver_duenio
+from app.api.listing import scalars_capped
 from app.core.exceptions import NotFoundError
 from app.db.models.oportunidades import _PREVIOS_A_COTIZAR, EstadoOportunidad, Oportunidad
 from app.db.models.respuestas_compras import RespuestaCompras
@@ -77,7 +78,9 @@ def list_solicitudes(
     duenio_id = resolver_duenio(current_user, usuario_id)
     if duenio_id is not None:
         query = query.where(SolicitudCompras.solicitante_id == duenio_id)
-    return list(db.scalars(query.order_by(SolicitudCompras.created_at.desc())))
+    return scalars_capped(
+        db, query.order_by(SolicitudCompras.created_at.desc()), "solicitudes"
+    )
 
 
 @router.post("", response_model=SolicitudRead, status_code=201)

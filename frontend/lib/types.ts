@@ -392,7 +392,10 @@ export interface Mail {
   de: string | null;
   para: string | null;
   asunto: string | null;
-  cuerpo: string | null;
+  // En el listado de la bandeja NO viene el cuerpo (se trae al abrir el hilo);
+  // sí en /hilo. `tiene_cuerpo` dice si mostrar "Ver conversación" en la lista.
+  cuerpo?: string | null;
+  tiene_cuerpo?: boolean;
   fecha: string | null;
   oportunidad_id: number | null;
   datos_extraidos_ia: EmailData | null;

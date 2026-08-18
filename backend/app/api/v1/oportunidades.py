@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user
+from app.api.listing import scalars_capped
 from app.core.exceptions import NotFoundError
 from app.db.models.mails import DireccionMail, Mail
 from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
@@ -82,7 +83,7 @@ def list_oportunidades(
     # Orden estable por llegada (id desc = más nueva arriba). No usamos
     # fecha_ultimo_movimiento porque editar una fila la actualizaría y la fila
     # "saltaría" hacia arriba en la lista.
-    return list(db.scalars(query.order_by(Oportunidad.id.desc())))
+    return scalars_capped(db, query.order_by(Oportunidad.id.desc()), "oportunidades")
 
 
 @router.post("", response_model=OportunidadRead, status_code=201)

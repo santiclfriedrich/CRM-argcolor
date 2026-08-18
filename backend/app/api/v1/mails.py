@@ -1,8 +1,8 @@
 """Bandeja inteligente: ingesta manual de mails y listado de procesados."""
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import or_, select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import func, or_, select
+from sqlalchemy.orm import Session, defer, selectinload, with_expression
 
 from app.api.deps import (
     get_ai,
@@ -24,6 +24,7 @@ from app.schemas.mail import (
     DescartadoRead,
     IngestEmailRequest,
     IngestResult,
+    MailListItem,
     MailRead,
     ResponderRequest,
 )
@@ -149,7 +150,13 @@ def sync_gmail(
     return resultado
 
 
-@router.get("", response_model=list[MailRead])
+# Tope de seguridad de la bandeja: se muestran los más nuevos. Es holgado para
+# el uso real y evita volcar toda la tabla si crece mucho. El cuerpo se trae al
+# abrir la conversación, no acá.
+_BANDEJA_LIMIT = 500
+
+
+@router.get("", response_model=list[MailListItem])
 def list_mails(
     usuario_id: int | None = None,
     oportunidad_id: int | None = None,
@@ -158,12 +165,22 @@ def list_mails(
 ) -> list[Mail]:
     """Bandeja personal: cada vendedor ve solo los mails de sus oportunidades.
     Los admin ven la bandeja de todo el equipo, o filtran por `usuario_id` (perfil).
-    Con `oportunidad_id` se limita a los mails de esa oportunidad (detalle)."""
+    Con `oportunidad_id` se limita a los mails de esa oportunidad (detalle).
+
+    No trae el cuerpo del mail (puede ser grande): lo defiere en el SELECT y solo
+    computa `tiene_cuerpo`. El texto completo se pide al abrir la conversación."""
     query = (
         select(Mail)
         .where(Mail.direccion == DireccionMail.entrante)
-        .options(*_RELATIONS)
+        .options(
+            *_RELATIONS,
+            defer(Mail.cuerpo),
+            with_expression(
+                Mail.tiene_cuerpo, func.length(func.coalesce(Mail.cuerpo, "")) > 0
+            ),
+        )
         .order_by(Mail.created_at.desc())
+        .limit(_BANDEJA_LIMIT)
     )
     if oportunidad_id is not None:
         query = query.where(Mail.oportunidad_id == oportunidad_id)

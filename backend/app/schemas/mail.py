@@ -82,6 +82,31 @@ class MailRead(BaseModel):
     archivos: list[AdjuntoRead] = []
 
 
+class MailListItem(BaseModel):
+    """Versión del listado de la bandeja SIN el cuerpo del mail.
+
+    La bandeja muestra remitente/asunto/fecha/extracción, pero no el cuerpo: ese
+    se trae al abrir la conversación (endpoint /hilo). Omitir el cuerpo acá evita
+    arrastrar el texto completo de cada mail en cada carga de la bandeja.
+    `tiene_cuerpo` viene computado en SQL para saber si mostrar "Ver conversación".
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    direccion: DireccionMail
+    de: str | None = None
+    para: str | None = None
+    asunto: str | None = None
+    tiene_cuerpo: bool = False
+    fecha: datetime | None = None
+    oportunidad_id: int | None = None
+    datos_extraidos_ia: EmailData | None = None
+    created_at: datetime
+    oportunidad: OportunidadMini | None = None
+    archivos: list[AdjuntoRead] = []
+
+
 class DescartadoRead(BaseModel):
     """Mail que la IA clasificó como no comercial (registro mínimo)."""
 
