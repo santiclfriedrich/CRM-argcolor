@@ -1,6 +1,7 @@
 // API + hooks de React Query para oportunidades, y metadatos de estados.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import type { Tone as BadgeTone } from "@/components/ui/badge";
 import { api } from "@/lib/api";
 import type {
   AdjuntoCompras,
@@ -108,22 +109,31 @@ export function useResolverTransferencia() {
   });
 }
 
-// Etiqueta legible + color por estado (Tailwind). Orden = flujo del ciclo comercial.
-export const ESTADOS: { value: EstadoOportunidad; label: string; color: string }[] = [
-  { value: "nueva", label: "Nueva", color: "bg-blue-100 text-blue-700" },
-  { value: "requiere_aclaracion", label: "Requiere aclaración", color: "bg-amber-100 text-amber-700" },
-  { value: "en_compras", label: "Enviado a compras", color: "bg-purple-100 text-purple-700" },
-  { value: "cotizado_compras", label: "Cotizado por compras", color: "bg-cyan-100 text-cyan-700" },
-  { value: "presupuestada", label: "Enviada al cliente", color: "bg-indigo-100 text-indigo-700" },
-  { value: "confirmada", label: "Confirmada / Pendiente", color: "bg-yellow-100 text-yellow-700" },
-  { value: "ganada", label: "Pago", color: "bg-green-100 text-green-700" },
-  { value: "perdida", label: "No avanzó", color: "bg-red-100 text-red-700" },
+// Etiqueta legible + tono semántico por estado. Orden = flujo del ciclo comercial.
+//
+// El TONO codifica de quién es la pelota, no el paso del ciclo (para eso está la
+// etiqueta): ámbar = te espera a vos · gris = esperás a Compras · azul = esperás
+// al cliente · violeta = a cobrar. Los dos terminales conservan color de
+// resultado (verde/rojo) porque ahí el resultado sí es la información.
+//
+// Se usan los tonos del `Badge` (tokens semánticos, mode-aware) y NO clases de
+// paleta cruda: `bg-blue-100` y compañía no tienen variante dark y quedaban como
+// bloques casi blancos sobre el fondo #101120 del tema oscuro.
+export const ESTADOS: { value: EstadoOportunidad; label: string; tone: BadgeTone }[] = [
+  { value: "nueva", label: "Nueva", tone: "warning" },
+  { value: "requiere_aclaracion", label: "Requiere aclaración", tone: "warning" },
+  { value: "en_compras", label: "Enviado a compras", tone: "neutral" },
+  { value: "cotizado_compras", label: "Cotizado por compras", tone: "warning" },
+  { value: "presupuestada", label: "Enviada al cliente", tone: "info" },
+  { value: "confirmada", label: "Confirmada / Pendiente", tone: "accent" },
+  { value: "ganada", label: "Pago", tone: "success" },
+  { value: "perdida", label: "No avanzó", tone: "danger" },
 ];
 
-export const ESTADO_META: Record<EstadoOportunidad, { label: string; color: string }> =
-  Object.fromEntries(ESTADOS.map((e) => [e.value, { label: e.label, color: e.color }])) as Record<
+export const ESTADO_META: Record<EstadoOportunidad, { label: string; tone: BadgeTone }> =
+  Object.fromEntries(ESTADOS.map((e) => [e.value, { label: e.label, tone: e.tone }])) as Record<
     EstadoOportunidad,
-    { label: string; color: string }
+    { label: string; tone: BadgeTone }
   >;
 
 export function useOportunidades(filtros?: OportunidadFiltros) {

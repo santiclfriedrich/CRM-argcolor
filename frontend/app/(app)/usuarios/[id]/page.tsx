@@ -89,7 +89,7 @@ export default function PerfilUsuarioPage() {
         filas={(oportunidades.data ?? []).map((o) => [
           <ClienteRef key="c" nombre={o.cliente?.razon_social} />,
           o.asunto ?? "—",
-          <Badge key="e" className={ESTADO_META[o.estado].color}>{ESTADO_META[o.estado].label}</Badge>,
+          <Badge key="e" tone={ESTADO_META[o.estado].tone}>{ESTADO_META[o.estado].label}</Badge>,
           <span key="m" className="tabular-nums">{fmtDate(o.fecha_ultimo_movimiento)}</span>,
         ])}
       />
