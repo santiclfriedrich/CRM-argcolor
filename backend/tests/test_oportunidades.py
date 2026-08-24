@@ -428,3 +428,45 @@ def test_delete_marca_gmail_id_para_no_resucitar(client: TestClient) -> None:
             select(MailDescartado).where(MailDescartado.gmail_message_id == "gmail-123")
         ).first()
         assert desc is not None and desc.categoria == "eliminado_manual"
+
+
+def test_limpieza_borra_propuestas_y_descartados_viejos(client: TestClient) -> None:
+    """El job diario borra propuestas y descartados de más de 10 días, y deja
+    intactos los recientes y las oportunidades ya aceptadas (no pendientes)."""
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import select
+
+    from app.services.limpieza import limpiar_bandeja
+
+    ahora = datetime.now(timezone.utc)
+    viejo = ahora - timedelta(days=15)
+    reciente = ahora - timedelta(days=3)
+
+    with TestingSessionLocal() as db:
+        op_vieja = Oportunidad(asunto="vieja", pendiente_revision=True, fecha_creacion=viejo)
+        op_nueva = Oportunidad(asunto="nueva", pendiente_revision=True, fecha_creacion=reciente)
+        op_aceptada = Oportunidad(
+            asunto="aceptada", pendiente_revision=False, fecha_creacion=viejo
+        )
+        db.add_all([op_vieja, op_nueva, op_aceptada])
+        db.add(
+            MailDescartado(gmail_message_id="d-viejo", categoria="no_comercial", created_at=viejo)
+        )
+        db.add(
+            MailDescartado(
+                gmail_message_id="d-nuevo", categoria="no_comercial", created_at=reciente
+            )
+        )
+        db.commit()
+        ids = {"vieja": op_vieja.id, "nueva": op_nueva.id, "aceptada": op_aceptada.id}
+
+    with TestingSessionLocal() as db:
+        assert limpiar_bandeja(db) == {"propuestas": 1, "descartados": 1}
+
+    with TestingSessionLocal() as db:
+        assert db.get(Oportunidad, ids["vieja"]) is None  # propuesta vieja: borrada
+        assert db.get(Oportunidad, ids["nueva"]) is not None  # propuesta reciente: queda
+        assert db.get(Oportunidad, ids["aceptada"]) is not None  # no pendiente: intacta
+        restantes = list(db.scalars(select(MailDescartado.gmail_message_id)))
+        assert restantes == ["d-nuevo"]

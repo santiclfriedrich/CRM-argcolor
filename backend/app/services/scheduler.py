@@ -65,6 +65,26 @@ def _run_gbp_sync() -> None:
     logger.info("GBP sync programado (full): %s", r.get("status"))
 
 
+def _run_limpieza() -> None:
+    """Limpieza diaria de la bandeja: borra propuestas y descartados viejos."""
+    from app.db.session import SessionLocal
+    from app.services.limpieza import limpiar_bandeja
+
+    db = SessionLocal()
+    try:
+        r = limpiar_bandeja(db)
+        if r["propuestas"] or r["descartados"]:
+            logger.info(
+                "Limpieza: %s propuesta(s) y %s descartado(s) viejos borrados",
+                r["propuestas"],
+                r["descartados"],
+            )
+    except Exception:  # noqa: BLE001 - el job no debe tirar el scheduler
+        logger.exception("Falló la limpieza de la bandeja")
+    finally:
+        db.close()
+
+
 def _run_recordatorios() -> None:
     """Dispara los recordatorios de tareas cuya hora ya llegó."""
     from app.db.session import SessionLocal
@@ -99,6 +119,9 @@ def start_scheduler() -> None:
 
     # Seguimiento diario: siempre (independiente de Gmail). 11:00 UTC ≈ 08:00 ART.
     _scheduler.add_job(_run_seguimiento, "cron", hour=11, minute=0, id="seguimiento_diario")
+    # Limpieza diaria de la bandeja (propuestas/descartados viejos): de madrugada,
+    # 06:00 UTC ≈ 03:00 ART, cuando nadie usa el sistema.
+    _scheduler.add_job(_run_limpieza, "cron", hour=6, minute=0, id="limpieza_bandeja")
     # Recordatorios de tareas: chequeo frecuente (granularidad de ~5 min).
     _scheduler.add_job(_run_recordatorios, "interval", minutes=5, id="recordatorios")
 
