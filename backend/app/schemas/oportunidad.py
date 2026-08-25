@@ -1,6 +1,6 @@
 """Pydantic schemas for Oportunidad."""
 
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Literal
 
@@ -31,6 +31,16 @@ class OportunidadBase(BaseModel):
     fecha_respuesta_compras: date | None = None
     fecha_enviado_cliente: date | None = None
     fecha_limite: date | None = None
+    # Campos de la sección Gubernamental (licitaciones):
+    proceso: str | None = None
+    portal: str | None = None
+    apertura: date | None = None
+    hr_pliego: time | None = None
+    hr_apertura: time | None = None
+    moneda: str | None = None
+    pliego: str | None = None
+    empresa: str | None = None
+    presupuesto_url: str | None = None
 
 
 class OportunidadCreate(OportunidadBase):
@@ -59,6 +69,15 @@ class OportunidadUpdate(BaseModel):
     fecha_respuesta_compras: date | None = None
     fecha_enviado_cliente: date | None = None
     fecha_limite: date | None = None
+    proceso: str | None = None
+    portal: str | None = None
+    apertura: date | None = None
+    hr_pliego: time | None = None
+    hr_apertura: time | None = None
+    moneda: str | None = None
+    pliego: str | None = None
+    empresa: str | None = None
+    presupuesto_url: str | None = None
 
 
 class ComentarioRead(BaseModel):
@@ -147,5 +166,15 @@ class OportunidadListItem(BaseModel):
     fecha_creacion: datetime
     fecha_ultimo_movimiento: datetime
     fecha_cierre: datetime | None = None
+    # Campos de la sección Gubernamental (los muestra la tabla en esa sección):
+    proceso: str | None = None
+    portal: str | None = None
+    apertura: date | None = None
+    hr_pliego: time | None = None
+    hr_apertura: time | None = None
+    moneda: str | None = None
+    pliego: str | None = None
+    empresa: str | None = None
+    presupuesto_url: str | None = None
     cliente: ClienteMini | None = None
     vendedor: VendedorMini | None = None

@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  ExternalLink,
   Eye,
   FileText,
   Filter,
@@ -406,6 +407,12 @@ function RowMenu({
         {o.cliente?.razon_social ?? `#${o.id}`}
       </div>
       {item("Ver detalle", onVerDetalle, <Eye size={14} />)}
+      {o.presupuesto_url &&
+        item(
+          "Ir al presupuesto",
+          () => window.open(o.presupuesto_url!, "_blank", "noopener,noreferrer"),
+          <ExternalLink size={14} />,
+        )}
       {item("Pedir a Compras", onPedir, <ClipboardList size={14} />)}
       {item("Crear presupuesto", onPresupuesto, <FileText size={14} />, {
         disabled: presupuestoPending,

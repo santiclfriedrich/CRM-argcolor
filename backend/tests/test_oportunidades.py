@@ -503,3 +503,43 @@ def test_ambito_se_deriva_del_tipo_de_cliente_y_filtra(client: TestClient) -> No
     assert ovr["id"] in ids_gub
     assert corp["id"] not in ids_gub
     assert all(o["ambito"] == "gubernamental" for o in solo_gub)
+
+
+def test_campos_gubernamentales_round_trip(client: TestClient) -> None:
+    """Los campos de la sección Gubernamental se guardan y vuelven en Read y listado."""
+    with TestingSessionLocal() as db:
+        db.add(Cliente(id=3, razon_social="Ministerio Y", tipo="Gubernamental", activo=True))
+        db.commit()
+
+    body = {
+        "cliente_id": 3,
+        "fuente": "manual",
+        "asunto": "Licitación 123",
+        "proceso": "LP-2026-45",
+        "portal": "COMPRAR",
+        "apertura": "2026-09-10",
+        "hr_pliego": "09:30:00",
+        "hr_apertura": "11:00:00",
+        "moneda": "ARS",
+        "pliego": "digital",
+        "empresa": "ARGCOL",
+        "presupuesto_url": "https://ejemplo.com/presu/1",
+    }
+    r = client.post("/api/v1/oportunidades", json=body)
+    assert r.status_code == 201
+    o = r.json()
+    assert o["ambito"] == "gubernamental"
+    assert o["proceso"] == "LP-2026-45"
+    assert o["portal"] == "COMPRAR"
+    assert o["apertura"] == "2026-09-10"
+    assert o["moneda"] == "ARS"
+    assert o["pliego"] == "digital"
+    assert o["empresa"] == "ARGCOL"
+    assert o["presupuesto_url"] == "https://ejemplo.com/presu/1"
+    assert o["hr_pliego"].startswith("09:30")
+    assert o["hr_apertura"].startswith("11:00")
+
+    items = client.get("/api/v1/oportunidades", params={"ambito": "gubernamental"}).json()
+    match = next(x for x in items if x["id"] == o["id"])
+    assert match["proceso"] == "LP-2026-45"
+    assert match["empresa"] == "ARGCOL"

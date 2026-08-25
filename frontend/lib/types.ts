@@ -187,6 +187,16 @@ export interface Oportunidad {
   fecha_creacion: string;
   fecha_ultimo_movimiento: string;
   fecha_cierre: string | null;
+  // Sección Gubernamental (licitaciones):
+  proceso: string | null;
+  portal: string | null;
+  apertura: string | null;
+  hr_pliego: string | null;
+  hr_apertura: string | null;
+  moneda: string | null;
+  pliego: string | null;
+  empresa: string | null;
+  presupuesto_url: string | null;
   cliente: ClienteMini | null;
   contacto: PersonaMini | null;
   vendedor: PersonaMini | null;
@@ -213,6 +223,16 @@ export type OportunidadCreate = {
   fecha_respuesta_compras?: string | null;
   fecha_enviado_cliente?: string | null;
   fecha_limite?: string | null;
+  ambito?: Seccion;
+  proceso?: string | null;
+  portal?: string | null;
+  apertura?: string | null;
+  hr_pliego?: string | null;
+  hr_apertura?: string | null;
+  moneda?: string | null;
+  pliego?: string | null;
+  empresa?: string | null;
+  presupuesto_url?: string | null;
 };
 export type OportunidadUpdate = Partial<OportunidadCreate>;
 

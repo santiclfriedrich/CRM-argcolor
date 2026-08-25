@@ -1,7 +1,7 @@
 """Modelo: oportunidades (núcleo del ciclo comercial)."""
 
 import enum
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 
 from sqlalchemy import (
@@ -14,6 +14,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    Time,
     false,
     func,
 )
@@ -134,6 +135,18 @@ class Oportunidad(Base, TimestampMixin):
     comentarios: Mapped[list | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
     # Adjuntos de la oportunidad: lista de {id, filename, mime_type, path}.
     archivos_adjuntos: Mapped[list | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
+
+    # --- Campos de la sección Gubernamental (licitaciones). Nullable; solo se
+    # usan cuando ambito == 'gubernamental'. ---
+    proceso: Mapped[str | None] = mapped_column(String(120))  # nº/identificador del proceso
+    portal: Mapped[str | None] = mapped_column(String(120))  # portal de compras
+    apertura: Mapped[date | None] = mapped_column(Date)  # fecha de apertura
+    hr_pliego: Mapped[time | None] = mapped_column(Time)  # hora de pliego
+    hr_apertura: Mapped[time | None] = mapped_column(Time)  # hora de apertura
+    moneda: Mapped[str | None] = mapped_column(String(10))  # ARS / USD / …
+    pliego: Mapped[str | None] = mapped_column(String(10))  # 'fisico' / 'digital'
+    empresa: Mapped[str | None] = mapped_column(String(20))  # 'SKOP' / 'ARGCOL'
+    presupuesto_url: Mapped[str | None] = mapped_column(Text)  # link a presupuesto EXTERNO
 
     cliente = relationship("Cliente", back_populates="oportunidades")
     contacto = relationship("ContactoCliente")

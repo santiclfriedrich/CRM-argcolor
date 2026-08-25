@@ -7,6 +7,7 @@ import { ClientePicker } from "@/components/clientes/cliente-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSeccion } from "@/components/ui/seccion";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { imagenesPegadas, sumarSinDuplicados, useImagePreviews } from "@/lib/attachments";
@@ -185,6 +186,17 @@ export function OportunidadForm({
   const [fechaLimite, setFechaLimite] = useState(
     draft?.fechaLimite ?? initial?.fecha_limite ?? ""
   );
+  // Campos de la sección Gubernamental (licitaciones). Las horas vienen del
+  // backend como "HH:MM:SS"; el input type="time" usa "HH:MM" (slice 0,5).
+  const [proceso, setProceso] = useState(initial?.proceso ?? "");
+  const [portal, setPortal] = useState(initial?.portal ?? "");
+  const [apertura, setApertura] = useState(initial?.apertura ?? "");
+  const [hrPliego, setHrPliego] = useState((initial?.hr_pliego ?? "").slice(0, 5));
+  const [hrApertura, setHrApertura] = useState((initial?.hr_apertura ?? "").slice(0, 5));
+  const [moneda, setMoneda] = useState(initial?.moneda ?? "");
+  const [pliego, setPliego] = useState(initial?.pliego ?? "");
+  const [empresa, setEmpresa] = useState(initial?.empresa ?? "");
+  const [presupuestoUrl, setPresupuestoUrl] = useState(initial?.presupuesto_url ?? "");
   const [files, setFiles] = useState<File[]>([]);
   // Imágenes pegadas en el requerimiento (nuevas, aún sin subir).
   const [imagenesReq, setImagenesReq] = useState<File[]>([]);
@@ -239,6 +251,10 @@ export function OportunidadForm({
 
   const { data: clientes } = useClientes();
   const { data: usuarios } = useUsuarios();
+  const { seccion } = useSeccion();
+  // Mostramos los campos de licitación si estamos en la sección Gubernamental
+  // (al crear) o si la oportunidad ya es gubernamental (al editar).
+  const esGubernamental = (initial?.ambito ?? seccion) === "gubernamental";
   // Contactos del cliente elegido, para el selector de contacto.
   const { data: clienteDetail } = useCliente(clienteId ?? 0);
   const contactos = clienteDetail?.contactos ?? [];
@@ -264,6 +280,19 @@ export function OportunidadForm({
       fecha_respuesta_compras: fechaRespCompras || null,
       fecha_enviado_cliente: fechaCliente || null,
       fecha_limite: fechaLimite || null,
+      // Campos de licitación (solo se llenan en la sección Gubernamental).
+      proceso: proceso.trim() || null,
+      portal: portal.trim() || null,
+      apertura: apertura || null,
+      hr_pliego: hrPliego || null,
+      hr_apertura: hrApertura || null,
+      moneda: moneda || null,
+      pliego: pliego || null,
+      empresa: empresa || null,
+      presupuesto_url: presupuestoUrl.trim() || null,
+      // Al crear, la sección activa fija el ámbito (override manual); al editar
+      // no lo tocamos (undefined no viaja en el JSON).
+      ambito: initial ? undefined : seccion,
     }, files, imagenesReq);
     // Limpiamos el estado local: los archivos ya se pasaron al handler (que los
     // sube). En el detalle (form persistente) esto evita ver duplicadas las
@@ -452,6 +481,105 @@ export function OportunidadForm({
           />
         </div>
       </div>
+
+      {esGubernamental && (
+        <div className="rounded-xl border border-line bg-surface2 p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-2">
+            Licitación (Gubernamental)
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="o-proceso">Proceso</Label>
+              <Input id="o-proceso" value={proceso} onChange={(e) => setProceso(e.target.value)} />
+            </div>
+            <div>
+              <Label htmlFor="o-portal">Portal</Label>
+              <Input id="o-portal" value={portal} onChange={(e) => setPortal(e.target.value)} />
+            </div>
+            <div>
+              <Label htmlFor="o-apertura">Apertura</Label>
+              <Input
+                id="o-apertura"
+                type="date"
+                value={apertura}
+                onChange={(e) => setApertura(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label htmlFor="o-hrpliego">Hr Pliego</Label>
+                <Input
+                  id="o-hrpliego"
+                  type="time"
+                  value={hrPliego}
+                  onChange={(e) => setHrPliego(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="o-hrapertura">Hr Apertura</Label>
+                <Input
+                  id="o-hrapertura"
+                  type="time"
+                  value={hrApertura}
+                  onChange={(e) => setHrApertura(e.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="o-moneda">Moneda</Label>
+              <SelectMenu
+                id="o-moneda"
+                value={moneda}
+                onChange={setMoneda}
+                placeholder="— Moneda —"
+                options={[
+                  { value: "", label: "— Moneda —" },
+                  { value: "ARS", label: "ARS" },
+                  { value: "USD", label: "USD" },
+                ]}
+              />
+            </div>
+            <div>
+              <Label htmlFor="o-pliego">Pliego</Label>
+              <SelectMenu
+                id="o-pliego"
+                value={pliego}
+                onChange={setPliego}
+                placeholder="— Pliego —"
+                options={[
+                  { value: "", label: "—" },
+                  { value: "fisico", label: "Físico" },
+                  { value: "digital", label: "Digital" },
+                ]}
+              />
+            </div>
+            <div>
+              <Label htmlFor="o-empresa">Empresa</Label>
+              <SelectMenu
+                id="o-empresa"
+                value={empresa}
+                onChange={setEmpresa}
+                placeholder="— Empresa —"
+                options={[
+                  { value: "", label: "—" },
+                  { value: "SKOP", label: "SKOP" },
+                  { value: "ARGCOL", label: "ARGCOL" },
+                ]}
+              />
+            </div>
+            <div className="col-span-2">
+              <Label htmlFor="o-presuurl">Link al presupuesto (externo)</Label>
+              <Input
+                id="o-presuurl"
+                type="url"
+                placeholder="https://…"
+                value={presupuestoUrl}
+                onChange={(e) => setPresupuestoUrl(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div>
