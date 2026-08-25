@@ -2,10 +2,13 @@
 
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.db.models.oportunidades import EstadoOportunidad
+
+Ambito = Literal["corporativo", "gubernamental"]
 
 
 class OportunidadBase(BaseModel):
@@ -31,7 +34,9 @@ class OportunidadBase(BaseModel):
 
 
 class OportunidadCreate(OportunidadBase):
-    pass
+    # Opcional: si no viene, se deriva del tipo del cliente. Permite el override
+    # manual (ej. crear una licitación desde la sección Gubernamental).
+    ambito: Ambito | None = None
 
 
 class OportunidadUpdate(BaseModel):
@@ -39,6 +44,7 @@ class OportunidadUpdate(BaseModel):
     contacto_cliente_id: int | None = None
     vendedor_id: int | None = None
     estado: EstadoOportunidad | None = None
+    ambito: Ambito | None = None
     fuente: str | None = None
     asunto: str | None = None
     requerimiento: str | None = None
@@ -92,6 +98,7 @@ class OportunidadRead(OportunidadBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    ambito: str
     fecha_creacion: datetime
     fecha_ultimo_movimiento: datetime
     fecha_cierre: datetime | None = None
@@ -122,6 +129,7 @@ class OportunidadListItem(BaseModel):
 
     id: int
     estado: EstadoOportunidad
+    ambito: str
     cliente_id: int | None = None
     vendedor_id: int | None = None
     asunto: str | None = None

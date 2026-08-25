@@ -7,6 +7,7 @@ import type {
   CondicionPago,
   EstadoSolicitud,
   RespuestaCompras,
+  Seccion,
   Solicitud,
   SolicitudCreate,
   SolicitudDetail,
@@ -38,16 +39,21 @@ export const ESTADO_SOLICITUD_META: Record<EstadoSolicitud, { label: string; col
   cerrada: { label: "Cerrada", color: "bg-slate-100 text-slate-600" },
 };
 
-export function useSolicitudes(usuarioId?: number, oportunidadId?: number) {
+export function useSolicitudes(
+  usuarioId?: number,
+  oportunidadId?: number,
+  ambito?: Seccion
+) {
   return useQuery({
     queryKey:
-      usuarioId || oportunidadId
-        ? [...solicitudKeys.all, { usuarioId, oportunidadId }]
+      usuarioId || oportunidadId || ambito
+        ? [...solicitudKeys.all, { usuarioId, oportunidadId, ambito }]
         : solicitudKeys.all,
     queryFn: async () => {
-      const params: Record<string, number> = {};
+      const params: Record<string, string | number> = {};
       if (usuarioId) params.usuario_id = usuarioId;
       if (oportunidadId) params.oportunidad_id = oportunidadId;
+      if (ambito) params.ambito = ambito;
       return (await api.get<Solicitud[]>(BASE, { params })).data;
     },
   });

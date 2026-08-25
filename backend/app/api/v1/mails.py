@@ -15,7 +15,7 @@ from app.core.exceptions import NotFoundError
 from app.db.models.adjuntos import Adjunto
 from app.db.models.mails import DireccionMail, Mail
 from app.db.models.mails_descartados import MailDescartado
-from app.db.models.oportunidades import Oportunidad
+from app.db.models.oportunidades import AmbitoOportunidad, Oportunidad
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.integrations.ai.base import AIProvider
@@ -160,12 +160,15 @@ _BANDEJA_LIMIT = 500
 def list_mails(
     usuario_id: int | None = None,
     oportunidad_id: int | None = None,
+    ambito: AmbitoOportunidad | None = None,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> list[Mail]:
     """Bandeja personal: cada vendedor ve solo los mails de sus oportunidades.
     Los admin ven la bandeja de todo el equipo, o filtran por `usuario_id` (perfil).
     Con `oportunidad_id` se limita a los mails de esa oportunidad (detalle).
+    `ambito` limita a la sección (corporativo/gubernamental) por el ámbito de la
+    oportunidad del mail.
 
     No trae el cuerpo del mail (puede ser grande): lo defiere en el SELECT y solo
     computa `tiene_cuerpo`. El texto completo se pide al abrir la conversación."""
@@ -185,10 +188,12 @@ def list_mails(
     if oportunidad_id is not None:
         query = query.where(Mail.oportunidad_id == oportunidad_id)
     duenio_id = resolver_duenio(current_user, usuario_id)
-    if duenio_id is not None:
-        query = query.join(Oportunidad, Mail.oportunidad_id == Oportunidad.id).where(
-            Oportunidad.vendedor_id == duenio_id
-        )
+    if duenio_id is not None or ambito is not None:
+        query = query.join(Oportunidad, Mail.oportunidad_id == Oportunidad.id)
+        if duenio_id is not None:
+            query = query.where(Oportunidad.vendedor_id == duenio_id)
+        if ambito is not None:
+            query = query.where(Oportunidad.ambito == ambito.value)
     return list(db.scalars(query))
 
 

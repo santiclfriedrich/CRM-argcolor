@@ -8,6 +8,7 @@ import type {
   Presupuesto,
   PresupuestoCreate,
   PresupuestoUpdate,
+  Seccion,
 } from "@/lib/types";
 
 const BASE = "/api/v1/presupuestos";
@@ -33,13 +34,18 @@ export const presupuestoKeys = {
   detail: (id: number) => ["presupuestos", id] as const,
 };
 
-export function usePresupuestos(oportunidadId?: number, usuarioId?: number) {
+export function usePresupuestos(
+  oportunidadId?: number,
+  usuarioId?: number,
+  ambito?: Seccion
+) {
   return useQuery({
-    queryKey: [...presupuestoKeys.all, { oportunidadId, usuarioId }],
+    queryKey: [...presupuestoKeys.all, { oportunidadId, usuarioId, ambito }],
     queryFn: async () => {
-      const params: Record<string, number> = {};
+      const params: Record<string, string | number> = {};
       if (oportunidadId) params.oportunidad_id = oportunidadId;
       if (usuarioId) params.usuario_id = usuarioId;
+      if (ambito) params.ambito = ambito;
       return (await api.get<Presupuesto[]>(BASE, { params })).data;
     },
   });

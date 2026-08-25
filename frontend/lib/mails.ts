@@ -8,6 +8,7 @@ import type {
   IngestResult,
   Mail,
   MailDescartado,
+  Seccion,
 } from "@/lib/types";
 
 const BASE = "/api/v1/mails";
@@ -34,11 +35,14 @@ export const mailKeys = {
   hilo: (mailId: number) => ["mails", "hilo", mailId] as const,
 };
 
-export function useMails(oportunidadId?: number) {
+// `ambito` limita la bandeja a la sección activa (Corporativo / Gubernamental).
+export function useMails(oportunidadId?: number, ambito?: Seccion) {
   return useQuery({
-    queryKey: oportunidadId ? [...mailKeys.all, { oportunidadId }] : mailKeys.all,
+    queryKey: [...mailKeys.all, { oportunidadId, ambito }],
     queryFn: async () => {
-      const params = oportunidadId ? { oportunidad_id: oportunidadId } : undefined;
+      const params: Record<string, string | number> = {};
+      if (oportunidadId) params.oportunidad_id = oportunidadId;
+      if (ambito) params.ambito = ambito;
       return (await api.get<Mail[]>(BASE, { params })).data;
     },
   });

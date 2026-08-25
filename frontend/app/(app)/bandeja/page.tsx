@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
+import { useSeccion } from "@/components/ui/seccion";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
@@ -76,7 +77,8 @@ const CATEGORIA_LABEL: Record<CategoriaMail, string> = {
 };
 
 export default function BandejaPage() {
-  const { data: mails, isLoading } = useMails();
+  const { seccion } = useSeccion();
+  const { data: mails, isLoading } = useMails(undefined, seccion);
   const ingestMut = useIngestEmail();
   const syncMut = useSyncGmail();
 

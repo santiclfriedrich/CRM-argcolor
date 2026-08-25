@@ -23,6 +23,7 @@ import { useState } from "react";
 
 import { GlobalSearch } from "@/components/layout/global-search";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { SeccionSwitcher } from "@/components/ui/seccion";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -99,6 +100,7 @@ export function TopNav() {
         </nav>
 
         <div className="ml-auto flex items-center gap-1.5">
+          <SeccionSwitcher className="hidden md:inline-flex" />
           <div className="hidden w-44 sm:block xl:w-56">
             <GlobalSearch />
           </div>
@@ -156,6 +158,10 @@ export function TopNav() {
       {/* Menú mobile desplegable */}
       {menuOpen && (
         <div className="border-t border-line lg:hidden">
+          <div className="flex items-center gap-2 px-3 pt-3 md:hidden">
+            <span className="text-xs font-medium text-white/60">Sección:</span>
+            <SeccionSwitcher />
+          </div>
           <div className="p-3 sm:hidden">
             <GlobalSearch />
           </div>

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.api.deps import get_current_user, get_user_gmail, resolver_duenio
 from app.api.listing import scalars_capped
 from app.core.exceptions import NotFoundError
-from app.db.models.oportunidades import Oportunidad
+from app.db.models.oportunidades import AmbitoOportunidad, Oportunidad
 from app.db.models.presupuestos import Presupuesto
 from app.db.models.solicitudes_compras import SolicitudCompras
 from app.db.models.usuarios import Usuario
@@ -65,19 +65,23 @@ def _assert_owner(presupuesto: Presupuesto, user: Usuario) -> None:
 def list_presupuestos(
     oportunidad_id: int | None = None,
     usuario_id: int | None = None,
+    ambito: AmbitoOportunidad | None = None,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> list[Presupuesto]:
     """Presupuestos personales: cada vendedor ve solo los de sus oportunidades.
-    Los admin ven los de todo el equipo, o filtran por `usuario_id` (perfil)."""
+    Los admin ven los de todo el equipo, o filtran por `usuario_id` (perfil).
+    `ambito` limita a la sección (por el ámbito de la oportunidad del presupuesto)."""
     query = select(Presupuesto).options(*_LIST_RELATIONS).order_by(Presupuesto.id.desc())
     if oportunidad_id is not None:
         query = query.where(Presupuesto.oportunidad_id == oportunidad_id)
     duenio_id = resolver_duenio(current_user, usuario_id)
-    if duenio_id is not None:
-        query = query.join(Oportunidad, Presupuesto.oportunidad_id == Oportunidad.id).where(
-            Oportunidad.vendedor_id == duenio_id
-        )
+    if duenio_id is not None or ambito is not None:
+        query = query.join(Oportunidad, Presupuesto.oportunidad_id == Oportunidad.id)
+        if duenio_id is not None:
+            query = query.where(Oportunidad.vendedor_id == duenio_id)
+        if ambito is not None:
+            query = query.where(Oportunidad.ambito == ambito.value)
     return scalars_capped(db, query, "presupuestos")
 
 

@@ -470,3 +470,36 @@ def test_limpieza_borra_propuestas_y_descartados_viejos(client: TestClient) -> N
         assert db.get(Oportunidad, ids["aceptada"]) is not None  # no pendiente: intacta
         restantes = list(db.scalars(select(MailDescartado.gmail_message_id)))
         assert restantes == ["d-nuevo"]
+
+
+def test_ambito_se_deriva_del_tipo_de_cliente_y_filtra(client: TestClient) -> None:
+    """El ámbito se deriva del tipo del cliente (Gubernamental → gubernamental),
+    admite override manual, y el listado filtra por sección."""
+    with TestingSessionLocal() as db:
+        db.add(Cliente(id=2, razon_social="Municipio X", tipo="Gubernamental", activo=True))
+        db.commit()
+
+    # Derivación automática: cliente 1 (sin tipo) → corporativo; cliente 2 → gubernamental.
+    corp = client.post(
+        "/api/v1/oportunidades", json={"cliente_id": 1, "fuente": "manual"}
+    ).json()
+    gub = client.post(
+        "/api/v1/oportunidades", json={"cliente_id": 2, "fuente": "manual"}
+    ).json()
+    assert corp["ambito"] == "corporativo"
+    assert gub["ambito"] == "gubernamental"
+
+    # Override manual: cliente corporativo pero se fuerza gubernamental.
+    ovr = client.post(
+        "/api/v1/oportunidades",
+        json={"cliente_id": 1, "fuente": "manual", "ambito": "gubernamental"},
+    ).json()
+    assert ovr["ambito"] == "gubernamental"
+
+    # Filtro por sección: solo las gubernamentales.
+    solo_gub = client.get("/api/v1/oportunidades", params={"ambito": "gubernamental"}).json()
+    ids_gub = {o["id"] for o in solo_gub}
+    assert gub["id"] in ids_gub
+    assert ovr["id"] in ids_gub
+    assert corp["id"] not in ids_gub
+    assert all(o["ambito"] == "gubernamental" for o in solo_gub)

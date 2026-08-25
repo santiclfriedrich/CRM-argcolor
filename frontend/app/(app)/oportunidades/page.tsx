@@ -41,6 +41,7 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { OrdenEntradaToggle, useOrdenEntrada } from "@/components/ui/orden-entrada";
 import { RefChip } from "@/components/ui/ref-chip";
+import { useSeccion } from "@/components/ui/seccion";
 import { useToast } from "@/components/ui/toast";
 import { useResizableColumns } from "@/components/ui/resizable-columns";
 import {
@@ -457,7 +458,8 @@ export default function OportunidadesPage() {
     });
 
   const router = useRouter();
-  const { data, isLoading, isError } = useOportunidades(filtros);
+  const { seccion } = useSeccion();
+  const { data, isLoading, isError } = useOportunidades({ ...filtros, ambito: seccion });
   const createMut = useCreateOportunidad();
   const deleteMut = useDeleteOportunidad();
   const bulkDelete = useBulkDeleteOportunidades();
@@ -1219,7 +1221,8 @@ function TransferirModal({
 // Indicador (toolbar) de oportunidades PROPUESTAS por mail auto-ingestado, para
 // revisarlas (ver mail + requerimiento) y aceptar o descartar.
 function PropuestasIndicator() {
-  const { data } = usePropuestas();
+  const { seccion } = useSeccion();
+  const { data } = usePropuestas(seccion);
   const [abierto, setAbierto] = useState(false);
   const propuestas = data ?? [];
   if (propuestas.length === 0) return null;
@@ -1242,7 +1245,8 @@ function PropuestasIndicator() {
 }
 
 function PropuestasModal({ onClose }: { onClose: () => void }) {
-  const { data } = usePropuestas();
+  const { seccion } = useSeccion();
+  const { data } = usePropuestas(seccion);
   const resolver = useResolverPropuesta();
   const { data: session } = useSession();
   const currentUserId = Number(session?.usuario?.id) || null;

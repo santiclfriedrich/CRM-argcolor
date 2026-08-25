@@ -10,8 +10,14 @@ from sqlalchemy.orm import Session, defer, selectinload
 from app.api.deps import get_current_user
 from app.api.listing import scalars_capped
 from app.core.exceptions import NotFoundError
+from app.db.models.clientes import Cliente
 from app.db.models.mails import DireccionMail, Mail
-from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
+from app.db.models.oportunidades import (
+    AmbitoOportunidad,
+    EstadoOportunidad,
+    Oportunidad,
+    ambito_desde_tipo,
+)
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.schemas.oportunidad import (
@@ -59,6 +65,7 @@ _LIST_RELATIONS = (
 def list_oportunidades(
     estado: EstadoOportunidad | None = None,
     cliente_id: int | None = None,
+    ambito: AmbitoOportunidad | None = None,
     desde: date | None = None,
     hasta: date | None = None,
     solo_mias: bool = False,
@@ -66,14 +73,17 @@ def list_oportunidades(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> list[Oportunidad]:
-    """Lista oportunidades con filtros opcionales. `desde`/`hasta` filtran por
-    fecha de último movimiento (inclusive). Con `solo_mias=true` se limita a las
-    del usuario logueado (toggle Mías/Todas). Con `usuario_id` se limita a las de
-    ese vendedor (perfil de un usuario; el pipeline es compartido)."""
+    """Lista oportunidades con filtros opcionales. `ambito` limita a la sección
+    (corporativo/gubernamental). `desde`/`hasta` filtran por fecha de último
+    movimiento (inclusive). Con `solo_mias=true` se limita a las del usuario
+    logueado (toggle Mías/Todas). Con `usuario_id` se limita a las de ese
+    vendedor (perfil de un usuario; el pipeline es compartido)."""
     # Las propuestas (pendientes de revisión) no aparecen acá: se revisan aparte.
     query = select(Oportunidad).options(*_LIST_RELATIONS).where(
         Oportunidad.pendiente_revision.is_(False)
     )
+    if ambito is not None:
+        query = query.where(Oportunidad.ambito == ambito.value)
     if usuario_id is not None:
         query = query.where(Oportunidad.vendedor_id == usuario_id)
     elif solo_mias:
@@ -104,7 +114,18 @@ def create_oportunidad(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> Oportunidad:
-    oportunidad = Oportunidad(**body.model_dump(), creado_por_id=current_user.id)
+    data = body.model_dump()
+    # Ámbito: si vino explícito (override manual / sección donde se crea) se
+    # respeta; si no, se deriva del tipo del cliente.
+    ambito = data.pop("ambito", None)
+    if not ambito:
+        tipo = (
+            db.scalar(select(Cliente.tipo).where(Cliente.id == data["cliente_id"]))
+            if data.get("cliente_id")
+            else None
+        )
+        ambito = ambito_desde_tipo(tipo)
+    oportunidad = Oportunidad(**data, ambito=ambito, creado_por_id=current_user.id)
     db.add(oportunidad)
     db.commit()
     db.refresh(oportunidad)
@@ -251,17 +272,21 @@ class PropuestaRead(BaseModel):
 
 @router.get("/propuestas", response_model=list[PropuestaRead])
 def listar_propuestas(
+    ambito: AmbitoOportunidad | None = None,
     db: Session = Depends(get_db),
     _: Usuario = Depends(get_current_user),
 ) -> list[PropuestaRead]:
     """Oportunidades propuestas (pendientes de revisión), con el mail original.
-    Compartidas: las ve todo el equipo para aceptar o descartar."""
-    ops = db.scalars(
+    Compartidas: las ve todo el equipo para aceptar o descartar. `ambito` limita
+    a la sección (corporativo/gubernamental)."""
+    query = (
         select(Oportunidad)
         .options(*_RELATIONS)
         .where(Oportunidad.pendiente_revision.is_(True))
-        .order_by(Oportunidad.id.desc())
-    ).all()
+    )
+    if ambito is not None:
+        query = query.where(Oportunidad.ambito == ambito.value)
+    ops = db.scalars(query.order_by(Oportunidad.id.desc())).all()
     from app.db.models.adjuntos import Adjunto
     from app.services.ingest import _solo_email
 

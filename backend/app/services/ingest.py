@@ -14,11 +14,17 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.db.models.clientes import Cliente
 from app.db.models.contactos_cliente import ContactoCliente
 from app.db.models.dominios_cliente import DominioCliente
 from app.db.models.mails import DireccionMail, Mail
 from app.db.models.mails_descartados import MailDescartado
-from app.db.models.oportunidades import ESTADOS_CERRADOS, EstadoOportunidad, Oportunidad
+from app.db.models.oportunidades import (
+    ESTADOS_CERRADOS,
+    EstadoOportunidad,
+    Oportunidad,
+    ambito_desde_tipo,
+)
 from app.integrations.ai.base import AIProvider, DocumentPart, EmailData, ImagePart
 from app.services.attachments import save_attachments
 from app.services.documentos import enriquecer_cuerpo, es_pdf
@@ -611,12 +617,20 @@ def process_incoming_email(
     # el correo, sin importar el vendedor asignado a la cuenta.
     vendedor_id: int | None = default_vendedor_id
 
+    # Sección (Corporativo / Gubernamental): según el tipo del cliente del mail.
+    tipo_cliente = (
+        db.scalar(select(Cliente.tipo).where(Cliente.id == cliente_id))
+        if cliente_id
+        else None
+    )
+
     oportunidad = Oportunidad(
         cliente_id=cliente_id,
         contacto_cliente_id=contacto_id,
         vendedor_id=vendedor_id,
         creado_por_id=vendedor_id,  # registro: de quién es la casilla que la generó
         estado=estado,
+        ambito=ambito_desde_tipo(tipo_cliente),
         fuente="mail",
         fecha_ultimo_movimiento=now,
         # Seguimiento: el asunto y la fecha del pedido salen del mail original.

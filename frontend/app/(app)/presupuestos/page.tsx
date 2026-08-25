@@ -12,6 +12,7 @@ import { RefChip } from "@/components/ui/ref-chip";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { OrdenEntradaToggle, useOrdenEntrada } from "@/components/ui/orden-entrada";
 import { useResizableColumns } from "@/components/ui/resizable-columns";
+import { useSeccion } from "@/components/ui/seccion";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   abrirPdf,
@@ -31,7 +32,8 @@ const TONO_PRESUPUESTO = {
 } as const satisfies Record<EstadoPresupuesto, string>;
 
 export default function PresupuestosPage() {
-  const { data, isLoading, isError } = usePresupuestos();
+  const { seccion } = useSeccion();
+  const { data, isLoading, isError } = usePresupuestos(undefined, undefined, seccion);
   const deleteMut = useDeletePresupuesto();
   const confirm = useConfirm();
 

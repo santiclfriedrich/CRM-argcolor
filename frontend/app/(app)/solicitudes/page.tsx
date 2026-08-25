@@ -14,6 +14,7 @@ import { RefChip } from "@/components/ui/ref-chip";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { OrdenEntradaToggle, useOrdenEntrada } from "@/components/ui/orden-entrada";
 import { useResizableColumns } from "@/components/ui/resizable-columns";
+import { useSeccion } from "@/components/ui/seccion";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { useCrearDesdeSolicitud } from "@/lib/presupuestos";
@@ -36,10 +37,11 @@ const TONO_SOLICITUD = {
 } as const satisfies Record<EstadoSolicitud, string>;
 
 export default function SolicitudesPage() {
+  const { seccion } = useSeccion();
   const [creating, setCreating] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
 
-  const { data, isLoading, isError } = useSolicitudes();
+  const { data, isLoading, isError } = useSolicitudes(undefined, undefined, seccion);
   const createMut = useCreateSolicitud();
 
   const { data: session } = useSession();

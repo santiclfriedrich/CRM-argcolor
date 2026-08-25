@@ -23,6 +23,22 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, TimestampMixin
 
 
+class AmbitoOportunidad(str, enum.Enum):
+    """Sección del CRM a la que pertenece la oportunidad."""
+
+    corporativo = "corporativo"
+    gubernamental = "gubernamental"
+
+
+def ambito_desde_tipo(tipo: str | None) -> str:
+    """Deriva el ámbito de la oportunidad del `tipo` del cliente: los clientes
+    Gubernamentales van a la sección gubernamental; Corporativo/Gremio/None → a
+    la corporativa (default)."""
+    if tipo and tipo.strip().lower() == "gubernamental":
+        return AmbitoOportunidad.gubernamental.value
+    return AmbitoOportunidad.corporativo.value
+
+
 class EstadoOportunidad(str, enum.Enum):
     nueva = "nueva"
     requiere_aclaracion = "requiere_aclaracion"
@@ -74,6 +90,11 @@ class Oportunidad(Base, TimestampMixin):
         default=EstadoOportunidad.nueva,
         nullable=False,
         index=True,
+    )
+    # Sección del CRM (Corporativo / Gubernamental). Se deriva del tipo del
+    # cliente al crear la oportunidad (ambito_desde_tipo), con override manual.
+    ambito: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="corporativo", index=True
     )
     fecha_creacion: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

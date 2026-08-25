@@ -9,7 +9,12 @@ from sqlalchemy.orm import Session, defer, selectinload
 from app.api.deps import get_ai, get_current_user, get_user_gmail, resolver_duenio
 from app.api.listing import scalars_capped
 from app.core.exceptions import NotFoundError
-from app.db.models.oportunidades import _PREVIOS_A_COTIZAR, EstadoOportunidad, Oportunidad
+from app.db.models.oportunidades import (
+    _PREVIOS_A_COTIZAR,
+    AmbitoOportunidad,
+    EstadoOportunidad,
+    Oportunidad,
+)
 from app.db.models.respuestas_compras import RespuestaCompras
 from app.db.models.solicitudes_compras import EstadoSolicitud, SolicitudCompras
 from app.db.models.usuarios import Usuario
@@ -74,16 +79,22 @@ def list_solicitudes(
     estado: EstadoSolicitud | None = None,
     oportunidad_id: int | None = None,
     usuario_id: int | None = None,
+    ambito: AmbitoOportunidad | None = None,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> list[SolicitudCompras]:
     """Solicitudes personales: cada usuario ve solo las que él pidió a Compras.
-    Los admin ven las de todo el equipo, o filtran por `usuario_id` (perfil)."""
+    Los admin ven las de todo el equipo, o filtran por `usuario_id` (perfil).
+    `ambito` limita a la sección (por el ámbito de la oportunidad de la solicitud)."""
     query = select(SolicitudCompras).options(*_LIST_RELATIONS)
     if estado is not None:
         query = query.where(SolicitudCompras.estado == estado)
     if oportunidad_id is not None:
         query = query.where(SolicitudCompras.oportunidad_id == oportunidad_id)
+    if ambito is not None:
+        query = query.join(
+            Oportunidad, SolicitudCompras.oportunidad_id == Oportunidad.id
+        ).where(Oportunidad.ambito == ambito.value)
     duenio_id = resolver_duenio(current_user, usuario_id)
     if duenio_id is not None:
         query = query.where(SolicitudCompras.solicitante_id == duenio_id)

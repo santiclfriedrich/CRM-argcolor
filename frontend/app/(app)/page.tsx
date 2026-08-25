@@ -16,6 +16,7 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardCta } from "@/components/ui/card";
+import { useSeccion } from "@/components/ui/seccion";
 import { Tooltip } from "@/components/ui/tooltip";
 import { STATUS, tint } from "@/lib/status";
 import { useClientes } from "@/lib/clientes";
@@ -73,8 +74,9 @@ export default function InicioPage() {
   const nombre =
     (session?.usuario?.nombre as string) ?? session?.user?.name ?? "";
   const [filtro, setFiltro] = useState<Filtro>("todas");
+  const { seccion } = useSeccion();
 
-  const { data: opps, isLoading } = useOportunidades();
+  const { data: opps, isLoading } = useOportunidades({ ambito: seccion });
   const { data: clientes } = useClientes();
   const router = useRouter();
 

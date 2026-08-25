@@ -12,6 +12,7 @@ import type {
   OportunidadCreate,
   OportunidadFiltros,
   OportunidadUpdate,
+  Seccion,
 } from "@/lib/types";
 
 const BASE = "/api/v1/oportunidades";
@@ -24,10 +25,13 @@ export const oportunidadKeys = {
 };
 
 // Propuestas pendientes de revisión (mails auto-ingestados). Compartidas.
-export function usePropuestas() {
+// `ambito` limita a la sección activa (Corporativo / Gubernamental).
+export function usePropuestas(ambito?: Seccion) {
   return useQuery({
-    queryKey: oportunidadKeys.propuestas,
-    queryFn: async () => (await api.get<Propuesta[]>(`${BASE}/propuestas`)).data,
+    queryKey: [...oportunidadKeys.propuestas, ambito ?? "todas"],
+    queryFn: async () =>
+      (await api.get<Propuesta[]>(`${BASE}/propuestas`, { params: ambito ? { ambito } : {} }))
+        .data,
     refetchInterval: 120_000,
   });
 }
@@ -141,6 +145,7 @@ export function useOportunidades(filtros?: OportunidadFiltros) {
   const params: Record<string, string | number | boolean> = {};
   if (filtros?.estado) params.estado = filtros.estado;
   if (filtros?.cliente_id) params.cliente_id = filtros.cliente_id;
+  if (filtros?.ambito) params.ambito = filtros.ambito;
   if (filtros?.desde) params.desde = filtros.desde;
   if (filtros?.hasta) params.hasta = filtros.hasta;
   if (filtros?.solo_mias) params.solo_mias = true;

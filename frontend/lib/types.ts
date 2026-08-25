@@ -167,6 +167,7 @@ export interface Oportunidad {
   contacto_cliente_id: number | null;
   vendedor_id: number | null;
   estado: EstadoOportunidad;
+  ambito: Seccion;
   fuente: string | null;
   asunto: string | null;
   requerimiento: string | null;
@@ -216,9 +217,12 @@ export type OportunidadCreate = {
 export type OportunidadUpdate = Partial<OportunidadCreate>;
 
 // Filtros del listado de oportunidades.
+export type Seccion = "corporativo" | "gubernamental";
+
 export type OportunidadFiltros = {
   estado?: EstadoOportunidad | "";
   cliente_id?: number | null;
+  ambito?: Seccion;
   desde?: string;
   hasta?: string;
   solo_mias?: boolean;
