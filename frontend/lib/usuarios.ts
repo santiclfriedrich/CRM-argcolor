@@ -40,13 +40,34 @@ export function useUpdateMiSyncMail() {
   });
 }
 
-// Merge de preferencias de UI del usuario logueado (ej. orden de entrada).
+// Merge de preferencias de UI del usuario logueado (ej. orden de entrada,
+// sección activa, filas resaltadas).
+//
+// Optimista: actualiza la caché de `me` AL INSTANTE (mismo merge shallow que hace
+// el backend) y persiste en segundo plano, sin re-consultar `GET /me`. Así toggles
+// como "Resaltar" se ven inmediatos en vez de esperar 2 viajes al servidor. Si el
+// PATCH falla, revierte. `me` es privado del usuario, no hay conflicto con otros.
+const ME_KEY = [...KEY, "me"] as const;
+
 export function useActualizarPreferencias() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (patch: Record<string, unknown>) =>
       (await api.patch<Usuario>(`${BASE}/me/preferencias`, patch)).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+    onMutate: async (patch: Record<string, unknown>) => {
+      await qc.cancelQueries({ queryKey: ME_KEY });
+      const prev = qc.getQueryData<Usuario>(ME_KEY);
+      if (prev) {
+        qc.setQueryData<Usuario>(ME_KEY, {
+          ...prev,
+          preferencias: { ...(prev.preferencias ?? {}), ...patch },
+        });
+      }
+      return { prev };
+    },
+    onError: (_err, _patch, ctx) => {
+      if (ctx?.prev) qc.setQueryData(ME_KEY, ctx.prev);
+    },
   });
 }
 
