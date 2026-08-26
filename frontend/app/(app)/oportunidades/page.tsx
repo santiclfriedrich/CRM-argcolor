@@ -299,34 +299,47 @@ function FiltroColumna({
 // Terminales: no se arrastran de mes. Ahora el terminal "ganado" es 'finalizado'.
 const CERRADOS: EstadoOportunidad[] = ["finalizado", "perdida"];
 
-// Un solo color por estado, usado en el FONDO del nombre del cliente (`chip`) y
-// en el BADGE del estado (`badge`), para que SIEMPRE coincidan (el badge lleva la
-// letra del mismo color que el fondo del cliente). Los estados de cierre van en
-// verde con tonalidad creciente (pagó → entregado → finalizado); confirmada en
-// amarillo, perdida en rojo; los estados en curso quedan neutros (cliente sin
-// fondo, badge gris), como "sin cerrar".
-const NEUTRO = { chip: "", badge: "bg-surface2 text-ink-2" };
+// Un color (hue) por estado, sincronizado entre el BADGE del estado (`badge`,
+// letra de ese color) y el FONDO del nombre del cliente (`chip`, tinte del mismo
+// color). Así el fondo del cliente siempre lleva el mismo color que la letra del
+// estado. Los estados en curso conservan su color (no quedan grises); el cierre
+// va en verde de tonalidad creciente (pagó → entregado → finalizado).
 const ESTADO_COLOR: Record<EstadoOportunidad, { chip: string; badge: string }> = {
-  nueva: NEUTRO,
-  requiere_aclaracion: NEUTRO,
-  en_compras: NEUTRO,
-  cotizado_compras: NEUTRO,
-  presupuestada: NEUTRO,
+  nueva: {
+    chip: "border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-400/25 dark:bg-amber-400/15 dark:text-amber-200",
+    badge: "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300",
+  },
+  requiere_aclaracion: {
+    chip: "border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-400/25 dark:bg-amber-400/15 dark:text-amber-200",
+    badge: "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300",
+  },
+  en_compras: {
+    chip: "border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-400/25 dark:bg-slate-400/15 dark:text-slate-200",
+    badge: "bg-slate-100 text-slate-600 dark:bg-slate-400/10 dark:text-slate-300",
+  },
+  cotizado_compras: {
+    chip: "border-cyan-200 bg-cyan-100 text-cyan-800 dark:border-cyan-400/25 dark:bg-cyan-400/15 dark:text-cyan-200",
+    badge: "bg-cyan-50 text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-300",
+  },
+  presupuestada: {
+    chip: "border-blue-200 bg-blue-100 text-blue-800 dark:border-blue-400/25 dark:bg-blue-400/15 dark:text-blue-200",
+    badge: "bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300",
+  },
   confirmada: {
     chip: "border-yellow-200 bg-yellow-200 text-yellow-900 dark:border-yellow-400/25 dark:bg-yellow-400/15 dark:text-yellow-100",
-    badge: "bg-yellow-100 text-yellow-700 dark:bg-yellow-400/15 dark:text-yellow-200",
+    badge: "bg-yellow-100 text-yellow-700 dark:bg-yellow-400/15 dark:text-yellow-300",
   },
   pago_pendiente_entrega: {
     chip: "border-green-200 bg-green-100 text-green-800 dark:border-green-400/20 dark:bg-green-400/10 dark:text-green-200",
-    badge: "bg-green-100 text-green-700 dark:bg-green-400/10 dark:text-green-300",
+    badge: "bg-green-50 text-green-600 dark:bg-green-400/10 dark:text-green-300",
   },
   entregado_pendiente_pago: {
     chip: "border-green-300 bg-green-300 text-green-900 dark:border-green-400/30 dark:bg-green-400/20 dark:text-green-100",
-    badge: "bg-green-200 text-green-800 dark:bg-green-400/20 dark:text-green-200",
+    badge: "bg-green-100 text-green-700 dark:bg-green-400/15 dark:text-green-200",
   },
   finalizado: {
     chip: "border-green-500 bg-green-500 text-white dark:border-green-500/40 dark:bg-green-500/30 dark:text-green-100",
-    badge: "bg-green-300 text-green-900 dark:bg-green-500/25 dark:text-green-100",
+    badge: "bg-green-200 text-green-800 dark:bg-green-500/25 dark:text-green-100",
   },
   perdida: {
     chip: "border-red-200 bg-red-200 text-red-900 dark:border-red-400/25 dark:bg-red-400/15 dark:text-red-200",
