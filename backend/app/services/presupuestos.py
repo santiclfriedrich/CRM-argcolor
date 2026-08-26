@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.models.mails import DireccionMail, Mail
-from app.db.models.oportunidades import EstadoOportunidad
+from app.db.models.oportunidades import ESTADOS_GANADOS, EstadoOportunidad
 from app.db.models.presupuesto_items import PresupuestoItem
 from app.db.models.presupuestos import EstadoPresupuesto, Presupuesto
 from app.db.models.solicitudes_compras import SolicitudCompras
@@ -118,8 +118,8 @@ def crear_presupuesto(db: Session, data: PresupuestoCreate) -> Presupuesto:
         op = db.get(Oportunidad, data.oportunidad_id)
     if op is not None and op.estado not in (
         EstadoOportunidad.confirmada,
-        EstadoOportunidad.ganada,
         EstadoOportunidad.perdida,
+        *ESTADOS_GANADOS,
     ):
         op.estado = EstadoOportunidad.presupuestada
         op.fecha_ultimo_movimiento = now_utc()
@@ -195,8 +195,8 @@ def actualizar_presupuesto(
         if estado in respuestas:
             if presupuesto.fecha_respuesta_cliente is None:
                 presupuesto.fecha_respuesta_cliente = now_utc()
-            # No pisamos estados terminales (ya cobrado / no avanzó).
-            if op.estado not in (EstadoOportunidad.ganada, EstadoOportunidad.perdida):
+            # No pisamos estados ya ganados / terminales (ya cerró / no avanzó).
+            if op.estado not in (EstadoOportunidad.perdida, *ESTADOS_GANADOS):
                 # Aceptado = el cliente confirmó, pero el pago queda pendiente:
                 # pasa a "Confirmada / Pendiente", no directo a "Pago".
                 if estado == EstadoPresupuesto.aceptado:

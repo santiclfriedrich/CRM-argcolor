@@ -43,7 +43,12 @@ import type { EstadoOportunidad, Oportunidad } from "@/lib/types";
 
 type Filtro = "todas" | "mias";
 
-const GANADAS: EstadoOportunidad[] = ["ganada"];
+// "Ganadas": el negocio se cerró a favor (aunque falte entrega y/o cobro).
+const GANADAS: EstadoOportunidad[] = [
+  "pago_pendiente_entrega",
+  "entregado_pendiente_pago",
+  "finalizado",
+];
 
 const RECIENTE_ICONO: Record<
   TipoRegistro,
@@ -97,8 +102,10 @@ export default function InicioPage() {
       else abiertas += v;
     }
 
-    // Oportunidades en curso: activas por semáforo.
-    const activas = visibles.filter((o) => !isTerminal(o.estado));
+    // Oportunidades en curso: activas por semáforo (ni terminales ni ganadas).
+    const activas = visibles.filter(
+      (o) => !isTerminal(o.estado) && !GANADAS.includes(o.estado)
+    );
     const sem = { rojo: 0, amarillo: 0, verde: 0 };
     for (const o of activas) {
       const s = semaforoDe(o, now);

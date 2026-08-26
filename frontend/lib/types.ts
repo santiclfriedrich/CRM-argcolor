@@ -133,7 +133,9 @@ export type EstadoOportunidad =
   | "cotizado_compras"
   | "presupuestada"
   | "confirmada"
-  | "ganada"
+  | "pago_pendiente_entrega"
+  | "entregado_pendiente_pago"
+  | "finalizado"
   | "perdida";
 
 interface ClienteMini {
@@ -182,6 +184,7 @@ export interface Oportunidad {
   fecha_respuesta_compras: string | null;
   fecha_enviado_cliente: string | null;
   fecha_limite: string | null;
+  fecha_entrega: string | null;
   comentarios: Comentario[];
   archivos_adjuntos: AdjuntoOportunidad[] | null;
   fecha_creacion: string;
@@ -223,6 +226,7 @@ export type OportunidadCreate = {
   fecha_respuesta_compras?: string | null;
   fecha_enviado_cliente?: string | null;
   fecha_limite?: string | null;
+  fecha_entrega?: string | null;
   ambito?: Seccion;
   proceso?: string | null;
   portal?: string | null;

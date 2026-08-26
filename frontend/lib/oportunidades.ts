@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { Tone as BadgeTone } from "@/components/ui/badge";
 import { api } from "@/lib/api";
+import { useActualizarPreferencias, useMiUsuario } from "@/lib/usuarios";
 import type {
   AdjuntoCompras,
   EstadoOportunidad,
@@ -123,22 +124,66 @@ export function useResolverTransferencia() {
 // Se usan los tonos del `Badge` (tokens semánticos, mode-aware) y NO clases de
 // paleta cruda: `bg-blue-100` y compañía no tienen variante dark y quedaban como
 // bloques casi blancos sobre el fondo #101120 del tema oscuro.
-export const ESTADOS: { value: EstadoOportunidad; label: string; tone: BadgeTone }[] = [
+// `badgeClass`: override de color para el badge de estado. Se usa en los 3
+// estados de cierre (verde) para dar tonalidad creciente (suave → fuerte), que
+// el sistema de `tone` del Badge (un solo verde) no cubre.
+export const ESTADOS: {
+  value: EstadoOportunidad;
+  label: string;
+  tone: BadgeTone;
+  badgeClass?: string;
+}[] = [
   { value: "nueva", label: "Nueva", tone: "warning" },
   { value: "requiere_aclaracion", label: "Requiere aclaración", tone: "warning" },
   { value: "en_compras", label: "Enviado a compras", tone: "neutral" },
   { value: "cotizado_compras", label: "Cotizado por compras", tone: "warning" },
   { value: "presupuestada", label: "Enviada al cliente", tone: "info" },
   { value: "confirmada", label: "Confirmada / Pendiente", tone: "accent" },
-  { value: "ganada", label: "Pago", tone: "success" },
+  {
+    value: "pago_pendiente_entrega",
+    label: "Pagó / Pendiente de Entrega",
+    tone: "success",
+    badgeClass: "bg-green-100 text-green-800 dark:bg-green-400/10 dark:text-green-300",
+  },
+  {
+    value: "entregado_pendiente_pago",
+    label: "Entregado / Pendiente de Pago",
+    tone: "success",
+    badgeClass: "bg-green-300 text-green-900 dark:bg-green-400/20 dark:text-green-200",
+  },
+  {
+    value: "finalizado",
+    label: "Finalizado",
+    tone: "success",
+    badgeClass: "bg-green-600 text-white dark:bg-green-500/30 dark:text-green-100",
+  },
   { value: "perdida", label: "No avanzó", tone: "danger" },
 ];
 
-export const ESTADO_META: Record<EstadoOportunidad, { label: string; tone: BadgeTone }> =
-  Object.fromEntries(ESTADOS.map((e) => [e.value, { label: e.label, tone: e.tone }])) as Record<
-    EstadoOportunidad,
-    { label: string; tone: BadgeTone }
-  >;
+// Resaltado de filas: es PERSONAL por usuario (se guarda la lista de ids de
+// oportunidades resaltadas en `usuario.preferencias.resaltadas`). No es una marca
+// compartida de la oportunidad.
+export function useResaltadas() {
+  const { data: me } = useMiUsuario();
+  const actualizar = useActualizarPreferencias();
+  const resaltadas =
+    (me?.preferencias as { resaltadas?: number[] } | undefined)?.resaltadas ?? [];
+  const set = new Set(resaltadas);
+  return {
+    esResaltada: (id: number) => set.has(id),
+    toggle: (id: number) =>
+      actualizar.mutate({
+        resaltadas: set.has(id) ? resaltadas.filter((x) => x !== id) : [...resaltadas, id],
+      }),
+  };
+}
+
+export const ESTADO_META: Record<
+  EstadoOportunidad,
+  { label: string; tone: BadgeTone; badgeClass?: string }
+> = Object.fromEntries(
+  ESTADOS.map((e) => [e.value, { label: e.label, tone: e.tone, badgeClass: e.badgeClass }])
+) as Record<EstadoOportunidad, { label: string; tone: BadgeTone; badgeClass?: string }>;
 
 export function useOportunidades(filtros?: OportunidadFiltros) {
   // Solo mandamos params con valor (los vacíos se omiten).

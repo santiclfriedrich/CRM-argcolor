@@ -47,15 +47,28 @@ class EstadoOportunidad(str, enum.Enum):
     cotizado_compras = "cotizado_compras"  # Compras respondió con la cotización
     presupuestada = "presupuestada"  # etiqueta UI: "Enviada al cliente"
     confirmada = "confirmada"  # el cliente confirmó; pago pendiente
-    ganada = "ganada"  # etiqueta UI: "Pago"
+    # Cierre del funnel (verde, tonalidad creciente):
+    pago_pendiente_entrega = "pago_pendiente_entrega"  # "Pagó / Pendiente de Entrega"
+    entregado_pendiente_pago = "entregado_pendiente_pago"  # "Entregado / Pendiente de Pago"
+    finalizado = "finalizado"  # terminal: pagado y entregado
     perdida = "perdida"  # etiqueta UI: "No avanzó"
 
 
+# Estados "ganados" (el negocio se cerró a favor; falta entrega y/o cobro). No
+# son terminales salvo `finalizado`: los dos intermedios se siguen arrastrando.
+ESTADOS_GANADOS: frozenset["EstadoOportunidad"] = frozenset(
+    {
+        EstadoOportunidad.pago_pendiente_entrega,
+        EstadoOportunidad.entregado_pendiente_pago,
+        EstadoOportunidad.finalizado,
+    }
+)
+
 # Estados terminales: la gestión terminó y deja de "arrastrarse" a meses nuevos.
-# "Confirmada" NO es terminal (falta el pago), así que se sigue arrastrando.
+# "Confirmada" y los dos verdes intermedios NO son terminales (se arrastran).
 ESTADOS_CERRADOS: frozenset["EstadoOportunidad"] = frozenset(
     {
-        EstadoOportunidad.ganada,
+        EstadoOportunidad.finalizado,
         EstadoOportunidad.perdida,
     }
 )
@@ -86,8 +99,11 @@ class Oportunidad(Base, TimestampMixin):
     # de ambos y aparece como pendiente para el destinatario. Al rechazar, se
     # limpia (vuelve al vendedor). Al aceptar, vendedor_id = este id y se limpia.
     transferencia_para_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
+    # native_enum=False: se guarda como VARCHAR (no un enum nativo de Postgres),
+    # así agregar/quitar estados es solo código + una migración de datos, sin el
+    # dolor de ALTER TYPE / DROP VALUE.
     estado: Mapped[EstadoOportunidad] = mapped_column(
-        Enum(EstadoOportunidad, name="estado_oportunidad"),
+        Enum(EstadoOportunidad, native_enum=False, length=30),
         default=EstadoOportunidad.nueva,
         nullable=False,
         index=True,
@@ -131,6 +147,8 @@ class Oportunidad(Base, TimestampMixin):
     fecha_respuesta_compras: Mapped[date | None] = mapped_column(Date)  # cuándo respondió Compras
     fecha_enviado_cliente: Mapped[date | None] = mapped_column(Date)  # cuándo se cotizó al cliente
     fecha_limite: Mapped[date | None] = mapped_column(Date)  # validez / hasta cuándo seguir
+    # entrega (estado Entregado / Pendiente de Pago):
+    fecha_entrega: Mapped[date | None] = mapped_column(Date)
     # Bitácora de seguimiento: lista de {fecha, texto, autor}.
     comentarios: Mapped[list | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
     # Adjuntos de la oportunidad: lista de {id, filename, mime_type, path}.

@@ -13,6 +13,7 @@ import {
   Eye,
   FileText,
   Filter,
+  Highlighter,
   Inbox,
   Paperclip,
   Pencil,
@@ -55,6 +56,7 @@ import {
   useEliminarAdjuntoOportunidad,
   useOportunidades,
   usePropuestas,
+  useResaltadas,
   useResolverPropuesta,
   useResolverTransferencia,
   useSetIng,
@@ -117,7 +119,9 @@ function IngInput({ o }: { o: Oportunidad }) {
 const ESTADOS_COTIZADOS: EstadoOportunidad[] = [
   "presupuestada",
   "confirmada",
-  "ganada",
+  "pago_pendiente_entrega",
+  "entregado_pendiente_pago",
+  "finalizado",
 ];
 function estaCotizada(o: Oportunidad): boolean {
   return Boolean(o.fecha_enviado_cliente) || ESTADOS_COTIZADOS.includes(o.estado);
@@ -292,19 +296,19 @@ function FiltroColumna({
   );
 }
 
-const CERRADOS: EstadoOportunidad[] = ["ganada", "perdida"];
+// Terminales: no se arrastran de mes. Ahora el terminal "ganado" es 'finalizado'.
+const CERRADOS: EstadoOportunidad[] = ["finalizado", "perdida"];
 
-// Punto de estado junto al #id:
-//   rojo    = sin cerrar (default)
-//   amarillo = confirmada / pendiente
-//   verde   = pagada ("ganada")
-//   sin punto = perdida ("No avanzó")
-// Fondo del nombre del cliente según el estado de la oportunidad:
-// verde = ganada/pago, amarillo = confirmada/pendiente, rojo = perdida (no
-// avanzó), sin color = resto (sin cerrar). Devuelve clases para el RefChip.
+// Fondo del nombre del cliente según el estado de la oportunidad. Los 3 estados
+// de cierre van en verde con tonalidad creciente (pagó → entregado → finalizado);
+// confirmada en amarillo, perdida en rojo, el resto sin color. Clases para RefChip.
 function bgClienteEstado(estado: EstadoOportunidad): string {
-  if (estado === "ganada")
-    return "border-green-200 bg-green-200 text-green-900 dark:border-green-400/25 dark:bg-green-400/15 dark:text-green-200";
+  if (estado === "finalizado")
+    return "border-green-500 bg-green-500 text-white dark:border-green-500/40 dark:bg-green-500/30 dark:text-green-100";
+  if (estado === "entregado_pendiente_pago")
+    return "border-green-300 bg-green-300 text-green-900 dark:border-green-400/30 dark:bg-green-400/20 dark:text-green-100";
+  if (estado === "pago_pendiente_entrega")
+    return "border-green-200 bg-green-100 text-green-800 dark:border-green-400/20 dark:bg-green-400/10 dark:text-green-200";
   if (estado === "confirmada")
     return "border-yellow-200 bg-yellow-200 text-yellow-900 dark:border-yellow-400/25 dark:bg-yellow-400/15 dark:text-yellow-100";
   if (estado === "perdida")
@@ -334,6 +338,8 @@ function RowMenu({
   onPresupuesto,
   onTransferir,
   onEliminar,
+  onResaltar,
+  resaltada,
   presupuestoPending,
 }: {
   o: Oportunidad;
@@ -346,6 +352,8 @@ function RowMenu({
   onPresupuesto: () => void;
   onTransferir: () => void;
   onEliminar: () => void;
+  onResaltar: () => void;
+  resaltada: boolean;
   presupuestoPending: boolean;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -418,6 +426,11 @@ function RowMenu({
         disabled: presupuestoPending,
       })}
       {item("Modificar", onModificar, <Pencil size={14} />)}
+      {item(
+        resaltada ? "Quitar resaltado" : "Resaltar",
+        onResaltar,
+        <Highlighter size={14} />,
+      )}
       {item("Transferir a…", onTransferir, <ArrowRightLeft size={14} />)}
       <div className="my-1 border-t border-line" />
       {item("Eliminar", onEliminar, <Trash2 size={14} />, { danger: true })}
@@ -466,6 +479,7 @@ export default function OportunidadesPage() {
 
   const router = useRouter();
   const { seccion } = useSeccion();
+  const { esResaltada, toggle: toggleResaltar } = useResaltadas();
   const { data, isLoading, isError } = useOportunidades({ ...filtros, ambito: seccion });
   const createMut = useCreateOportunidad();
   const deleteMut = useDeleteOportunidad();
@@ -889,7 +903,12 @@ export default function OportunidadesPage() {
                 <tr
                   key={o.id}
                   onClick={(e) => setMenu({ o, x: e.clientX, y: e.clientY })}
-                  className="cursor-pointer border-t border-line transition-colors hover:bg-surface2"
+                  className={cn(
+                    "cursor-pointer border-t border-line transition-colors",
+                    esResaltada(o.id)
+                      ? "bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-400/15 dark:hover:bg-yellow-400/25"
+                      : "hover:bg-surface2"
+                  )}
                 >
                   <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
                     <input
@@ -972,7 +991,12 @@ export default function OportunidadesPage() {
                     <IngInput o={o} />
                   </td>
                   <td className="px-3 py-2">
-                    <Badge tone={ESTADO_META[o.estado].tone}>{ESTADO_META[o.estado].label}</Badge>
+                    <Badge
+                      tone={ESTADO_META[o.estado].tone}
+                      className={ESTADO_META[o.estado].badgeClass}
+                    >
+                      {ESTADO_META[o.estado].label}
+                    </Badge>
                   </td>
                   <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
                     <input
@@ -1052,6 +1076,8 @@ export default function OportunidadesPage() {
           onPresupuesto={() => armarPresupuesto(menu.o)}
           onTransferir={() => setTransfiriendo(menu.o)}
           onEliminar={() => eliminar(menu.o)}
+          onResaltar={() => toggleResaltar(menu.o.id)}
+          resaltada={esResaltada(menu.o.id)}
           presupuestoPending={crearPresupuesto.isPending}
         />
       )}

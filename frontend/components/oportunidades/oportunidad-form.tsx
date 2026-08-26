@@ -186,6 +186,7 @@ export function OportunidadForm({
   const [fechaLimite, setFechaLimite] = useState(
     draft?.fechaLimite ?? initial?.fecha_limite ?? ""
   );
+  const [fechaEntrega, setFechaEntrega] = useState(initial?.fecha_entrega ?? "");
   // Campos de la sección Gubernamental (licitaciones). Las horas vienen del
   // backend como "HH:MM:SS"; el input type="time" usa "HH:MM" (slice 0,5).
   const [proceso, setProceso] = useState(initial?.proceso ?? "");
@@ -280,6 +281,7 @@ export function OportunidadForm({
       fecha_respuesta_compras: fechaRespCompras || null,
       fecha_enviado_cliente: fechaCliente || null,
       fecha_limite: fechaLimite || null,
+      fecha_entrega: fechaEntrega || null,
       // Campos de licitación (solo se llenan en la sección Gubernamental).
       proceso: proceso.trim() || null,
       portal: portal.trim() || null,
@@ -605,6 +607,24 @@ export function OportunidadForm({
           />
         </div>
       </div>
+
+      {/* Al pasar a "Entregado / Pendiente de Pago" surge la fecha de entrega. */}
+      {estado === "entregado_pendiente_pago" && (
+        <div>
+          <Label htmlFor="o-fentrega">Fecha de entrega</Label>
+          <Input
+            id="o-fentrega"
+            type="date"
+            value={fechaEntrega}
+            onChange={(e) => setFechaEntrega(e.target.value)}
+          />
+          {!fechaEntrega && (
+            <p className="mt-1 text-xs text-warning">
+              Cargá la fecha de entrega para este estado.
+            </p>
+          )}
+        </div>
+      )}
 
       <div>
         <Label htmlFor="o-ing">Ing. (iniciales)</Label>

@@ -108,11 +108,11 @@ def test_patch_estado_actualiza_ultimo_movimiento(client: TestClient) -> None:
 
 def test_filtro_por_estado(client: TestClient) -> None:
     client.post("/api/v1/oportunidades", json={"cliente_id": 1, "estado": "nueva"})
-    client.post("/api/v1/oportunidades", json={"cliente_id": 1, "estado": "ganada"})
+    client.post("/api/v1/oportunidades", json={"cliente_id": 1, "estado": "finalizado"})
 
-    ganadas = client.get("/api/v1/oportunidades", params={"estado": "ganada"}).json()
-    assert len(ganadas) == 1
-    assert ganadas[0]["estado"] == "ganada"
+    finalizadas = client.get("/api/v1/oportunidades", params={"estado": "finalizado"}).json()
+    assert len(finalizadas) == 1
+    assert finalizadas[0]["estado"] == "finalizado"
 
 
 def test_get_404(client: TestClient) -> None:
@@ -341,7 +341,7 @@ def test_seguimiento_ignora_cerradas_y_al_dia(client: TestClient) -> None:
     # Ganada (terminal) + reciente => no genera avisos.
     client.post(
         "/api/v1/oportunidades",
-        json={"cliente_id": 1, "vendedor_id": 1, "estado": "ganada"},
+        json={"cliente_id": 1, "vendedor_id": 1, "estado": "finalizado"},
     )
     client.post("/api/v1/oportunidades", json={"cliente_id": 1, "vendedor_id": 1})
     creadas = client.post("/api/v1/notificaciones/generar-seguimiento").json()["creadas"]

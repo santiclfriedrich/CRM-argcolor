@@ -10,7 +10,7 @@ export const DIAS_ALERTA = 7;
 
 // Estados cerrados: no entran al tablero de seguimiento activo.
 // "Confirmada / Pendiente" sigue activa (falta el pago).
-const TERMINALES: readonly EstadoOportunidad[] = ["ganada", "perdida"];
+const TERMINALES: readonly EstadoOportunidad[] = ["finalizado", "perdida"];
 
 export function isTerminal(estado: EstadoOportunidad): boolean {
   return TERMINALES.includes(estado);
