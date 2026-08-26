@@ -20,9 +20,13 @@ const SIZE: Record<ModalSize, string> = {
   "7xl": "max-w-7xl",
 };
 
+// El motivo del cierre permite decidir, por ejemplo, si se descarta un borrador:
+// "x"/"escape" = cierre intencional; "backdrop" = clic afuera (posible accidente).
+type CloseReason = "x" | "backdrop" | "escape";
+
 interface ModalProps {
   open: boolean;
-  onClose: () => void;
+  onClose: (reason?: CloseReason) => void;
   title: string;
   children: ReactNode;
   size?: ModalSize;
@@ -38,7 +42,7 @@ export function Modal({ open, onClose, title, children, size = "lg" }: ModalProp
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onClose("escape");
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -58,7 +62,7 @@ export function Modal({ open, onClose, title, children, size = "lg" }: ModalProp
         // Solo cierra si el gesto empezó y terminó en el fondo (no un arrastre
         // que arrancó dentro de un campo).
         if (e.target === e.currentTarget && pressStartedOnBackdrop.current) {
-          onClose();
+          onClose("backdrop");
         }
       }}
       role="presentation"
@@ -74,9 +78,12 @@ export function Modal({ open, onClose, title, children, size = "lg" }: ModalProp
           <Button
             variant="ghost"
             size="icon"
-            onClick={onClose}
+            onClick={() => onClose("x")}
             aria-label="Cerrar"
-            className="absolute right-3 top-1/2 -translate-y-1/2"
+            // Centrado vertical por margen automático (sin transform), y sin
+            // desplazamiento al presionar: antes `active:translate-y-px` pisaba el
+            // `-translate-y-1/2` de centrado y la X "saltaba", dificultando el clic.
+            className="absolute right-3 inset-y-0 my-auto active:translate-y-0"
           >
             <X size={18} />
           </Button>

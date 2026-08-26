@@ -1065,10 +1065,10 @@ export default function OportunidadesPage() {
 
       <Modal
         open={creating}
-        onClose={() => {
-          // Cerrar con la X / clic afuera / Escape también descarta el borrador,
-          // para que "Nueva oportunidad" abra siempre en blanco.
-          clearDraft(DRAFT_OPORTUNIDAD);
+        onClose={(reason) => {
+          // Clic AFUERA (o Escape) conserva el borrador (pudo ser un accidente).
+          // La X descarta el borrador → próxima "Nueva oportunidad" abre en blanco.
+          if (reason === "x") clearDraft(DRAFT_OPORTUNIDAD);
           setCreating(false);
         }}
         title="Nueva oportunidad"
@@ -1084,10 +1084,7 @@ export default function OportunidadesPage() {
           }}
           onSubmit={(values, files, imagenesReq) => {
             // Cierre instantáneo + creación en segundo plano (optimista): el
-            // usuario no espera el viaje al servidor. El borrador ya cumplió su
-            // función al confirmar, así que se limpia acá → la próxima "Nueva"
-            // abre en blanco aunque el guardado siga en curso.
-            clearDraft(DRAFT_OPORTUNIDAD);
+            // usuario no espera el viaje al servidor.
             setCreating(false);
             const tId = toast("Creando oportunidad…", "loading");
             createMut.mutate(values, {
@@ -1099,11 +1096,14 @@ export default function OportunidadesPage() {
                   /* la oportunidad se creó igual; los adjuntos se pueden
                      reintentar desde el detalle */
                 }
+                // Recién al crearse OK se descarta el borrador (si falla, se
+                // conserva y el form reabierto lo restaura para reintentar).
+                clearDraft(DRAFT_OPORTUNIDAD);
                 update(tId, "Oportunidad creada", "success");
               },
               onError: () => {
                 update(tId, "No se pudo crear la oportunidad. Reintentá.", "error");
-                setCreating(true); // reabrir el formulario para reintentar
+                setCreating(true); // reabrir el formulario (borrador intacto)
               },
             });
           }}
