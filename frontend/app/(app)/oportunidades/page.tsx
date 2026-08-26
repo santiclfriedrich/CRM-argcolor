@@ -514,6 +514,7 @@ export default function OportunidadesPage() {
   const router = useRouter();
   const { seccion } = useSeccion();
   const { esResaltada, toggle: toggleResaltar } = useResaltadas();
+  const { toast, update } = useToast();
   const { data, isLoading, isError } = useOportunidades({ ...filtros, ambito: seccion });
   const createMut = useCreateOportunidad();
   const deleteMut = useDeleteOportunidad();
@@ -1062,7 +1063,17 @@ export default function OportunidadesPage() {
         </div>
       )}
 
-      <Modal open={creating} onClose={() => setCreating(false)} title="Nueva oportunidad" size="4xl">
+      <Modal
+        open={creating}
+        onClose={() => {
+          // Cerrar con la X / clic afuera / Escape también descarta el borrador,
+          // para que "Nueva oportunidad" abra siempre en blanco.
+          clearDraft(DRAFT_OPORTUNIDAD);
+          setCreating(false);
+        }}
+        title="Nueva oportunidad"
+        size="4xl"
+      >
         <OportunidadForm
           defaultVendedorId={currentUserId}
           isPending={createMut.isPending}
@@ -1071,7 +1082,14 @@ export default function OportunidadesPage() {
             clearDraft(DRAFT_OPORTUNIDAD);
             setCreating(false);
           }}
-          onSubmit={(values, files, imagenesReq) =>
+          onSubmit={(values, files, imagenesReq) => {
+            // Cierre instantáneo + creación en segundo plano (optimista): el
+            // usuario no espera el viaje al servidor. El borrador ya cumplió su
+            // función al confirmar, así que se limpia acá → la próxima "Nueva"
+            // abre en blanco aunque el guardado siga en curso.
+            clearDraft(DRAFT_OPORTUNIDAD);
+            setCreating(false);
+            const tId = toast("Creando oportunidad…", "loading");
             createMut.mutate(values, {
               onSuccess: async (nueva) => {
                 try {
@@ -1081,11 +1099,14 @@ export default function OportunidadesPage() {
                   /* la oportunidad se creó igual; los adjuntos se pueden
                      reintentar desde el detalle */
                 }
-                clearDraft(DRAFT_OPORTUNIDAD);
-                setCreating(false);
+                update(tId, "Oportunidad creada", "success");
               },
-            })
-          }
+              onError: () => {
+                update(tId, "No se pudo crear la oportunidad. Reintentá.", "error");
+                setCreating(true); // reabrir el formulario para reintentar
+              },
+            });
+          }}
         />
       </Modal>
 
