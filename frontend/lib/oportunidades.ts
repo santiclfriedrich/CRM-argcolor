@@ -124,39 +124,16 @@ export function useResolverTransferencia() {
 // Se usan los tonos del `Badge` (tokens semánticos, mode-aware) y NO clases de
 // paleta cruda: `bg-blue-100` y compañía no tienen variante dark y quedaban como
 // bloques casi blancos sobre el fondo #101120 del tema oscuro.
-// `badgeClass`: override de color para el badge de estado. Se usa en los 3
-// estados de cierre (verde) para dar tonalidad creciente (suave → fuerte), que
-// el sistema de `tone` del Badge (un solo verde) no cubre.
-export const ESTADOS: {
-  value: EstadoOportunidad;
-  label: string;
-  tone: BadgeTone;
-  badgeClass?: string;
-}[] = [
+export const ESTADOS: { value: EstadoOportunidad; label: string; tone: BadgeTone }[] = [
   { value: "nueva", label: "Nueva", tone: "warning" },
   { value: "requiere_aclaracion", label: "Requiere aclaración", tone: "warning" },
   { value: "en_compras", label: "Enviado a compras", tone: "neutral" },
   { value: "cotizado_compras", label: "Cotizado por compras", tone: "warning" },
   { value: "presupuestada", label: "Enviada al cliente", tone: "info" },
   { value: "confirmada", label: "Confirmada / Pendiente", tone: "accent" },
-  {
-    value: "pago_pendiente_entrega",
-    label: "Pagó / Pendiente de Entrega",
-    tone: "success",
-    badgeClass: "bg-green-100 text-green-800 dark:bg-green-400/10 dark:text-green-300",
-  },
-  {
-    value: "entregado_pendiente_pago",
-    label: "Entregado / Pendiente de Pago",
-    tone: "success",
-    badgeClass: "bg-green-300 text-green-900 dark:bg-green-400/20 dark:text-green-200",
-  },
-  {
-    value: "finalizado",
-    label: "Finalizado",
-    tone: "success",
-    badgeClass: "bg-green-600 text-white dark:bg-green-500/30 dark:text-green-100",
-  },
+  { value: "pago_pendiente_entrega", label: "Pagó / Pendiente de Entrega", tone: "success" },
+  { value: "entregado_pendiente_pago", label: "Entregado / Pendiente de Pago", tone: "success" },
+  { value: "finalizado", label: "Finalizado", tone: "success" },
   { value: "perdida", label: "No avanzó", tone: "danger" },
 ];
 
@@ -178,12 +155,11 @@ export function useResaltadas() {
   };
 }
 
-export const ESTADO_META: Record<
-  EstadoOportunidad,
-  { label: string; tone: BadgeTone; badgeClass?: string }
-> = Object.fromEntries(
-  ESTADOS.map((e) => [e.value, { label: e.label, tone: e.tone, badgeClass: e.badgeClass }])
-) as Record<EstadoOportunidad, { label: string; tone: BadgeTone; badgeClass?: string }>;
+export const ESTADO_META: Record<EstadoOportunidad, { label: string; tone: BadgeTone }> =
+  Object.fromEntries(ESTADOS.map((e) => [e.value, { label: e.label, tone: e.tone }])) as Record<
+    EstadoOportunidad,
+    { label: string; tone: BadgeTone }
+  >;
 
 export function useOportunidades(filtros?: OportunidadFiltros) {
   // Solo mandamos params con valor (los vacíos se omiten).

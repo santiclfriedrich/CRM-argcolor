@@ -299,21 +299,43 @@ function FiltroColumna({
 // Terminales: no se arrastran de mes. Ahora el terminal "ganado" es 'finalizado'.
 const CERRADOS: EstadoOportunidad[] = ["finalizado", "perdida"];
 
-// Fondo del nombre del cliente según el estado de la oportunidad. Los 3 estados
-// de cierre van en verde con tonalidad creciente (pagó → entregado → finalizado);
-// confirmada en amarillo, perdida en rojo, el resto sin color. Clases para RefChip.
+// Un solo color por estado, usado en el FONDO del nombre del cliente (`chip`) y
+// en el BADGE del estado (`badge`), para que SIEMPRE coincidan (el badge lleva la
+// letra del mismo color que el fondo del cliente). Los estados de cierre van en
+// verde con tonalidad creciente (pagó → entregado → finalizado); confirmada en
+// amarillo, perdida en rojo; los estados en curso quedan neutros (cliente sin
+// fondo, badge gris), como "sin cerrar".
+const NEUTRO = { chip: "", badge: "bg-surface2 text-ink-2" };
+const ESTADO_COLOR: Record<EstadoOportunidad, { chip: string; badge: string }> = {
+  nueva: NEUTRO,
+  requiere_aclaracion: NEUTRO,
+  en_compras: NEUTRO,
+  cotizado_compras: NEUTRO,
+  presupuestada: NEUTRO,
+  confirmada: {
+    chip: "border-yellow-200 bg-yellow-200 text-yellow-900 dark:border-yellow-400/25 dark:bg-yellow-400/15 dark:text-yellow-100",
+    badge: "bg-yellow-100 text-yellow-700 dark:bg-yellow-400/15 dark:text-yellow-200",
+  },
+  pago_pendiente_entrega: {
+    chip: "border-green-200 bg-green-100 text-green-800 dark:border-green-400/20 dark:bg-green-400/10 dark:text-green-200",
+    badge: "bg-green-100 text-green-700 dark:bg-green-400/10 dark:text-green-300",
+  },
+  entregado_pendiente_pago: {
+    chip: "border-green-300 bg-green-300 text-green-900 dark:border-green-400/30 dark:bg-green-400/20 dark:text-green-100",
+    badge: "bg-green-200 text-green-800 dark:bg-green-400/20 dark:text-green-200",
+  },
+  finalizado: {
+    chip: "border-green-500 bg-green-500 text-white dark:border-green-500/40 dark:bg-green-500/30 dark:text-green-100",
+    badge: "bg-green-300 text-green-900 dark:bg-green-500/25 dark:text-green-100",
+  },
+  perdida: {
+    chip: "border-red-200 bg-red-200 text-red-900 dark:border-red-400/25 dark:bg-red-400/15 dark:text-red-200",
+    badge: "bg-red-100 text-red-700 dark:bg-red-400/15 dark:text-red-200",
+  },
+};
+
 function bgClienteEstado(estado: EstadoOportunidad): string {
-  if (estado === "finalizado")
-    return "border-green-500 bg-green-500 text-white dark:border-green-500/40 dark:bg-green-500/30 dark:text-green-100";
-  if (estado === "entregado_pendiente_pago")
-    return "border-green-300 bg-green-300 text-green-900 dark:border-green-400/30 dark:bg-green-400/20 dark:text-green-100";
-  if (estado === "pago_pendiente_entrega")
-    return "border-green-200 bg-green-100 text-green-800 dark:border-green-400/20 dark:bg-green-400/10 dark:text-green-200";
-  if (estado === "confirmada")
-    return "border-yellow-200 bg-yellow-200 text-yellow-900 dark:border-yellow-400/25 dark:bg-yellow-400/15 dark:text-yellow-100";
-  if (estado === "perdida")
-    return "border-red-200 bg-red-200 text-red-900 dark:border-red-400/25 dark:bg-red-400/15 dark:text-red-200";
-  return "";
+  return ESTADO_COLOR[estado].chip;
 }
 
 // Índice de mes absoluto (año*12+mes) para comparar meses fácilmente.
@@ -991,10 +1013,7 @@ export default function OportunidadesPage() {
                     <IngInput o={o} />
                   </td>
                   <td className="px-3 py-2">
-                    <Badge
-                      tone={ESTADO_META[o.estado].tone}
-                      className={ESTADO_META[o.estado].badgeClass}
-                    >
+                    <Badge className={ESTADO_COLOR[o.estado].badge}>
                       {ESTADO_META[o.estado].label}
                     </Badge>
                   </td>
