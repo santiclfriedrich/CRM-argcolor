@@ -8,6 +8,8 @@ import {
   FileText,
   Plus,
   Target,
+  Truck,
+  Wallet,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -139,6 +141,9 @@ export default function InicioPage() {
       activasTotal: activas.length,
       cuentas: { total: cuentas.length, conActiva, soloCerradas, sinActividad },
       buckets: bucketsSeguimiento(visibles, now),
+      // Cierre pendiente: pagos y entregas por resolver (estados verdes).
+      pagosPendientes: visibles.filter((o) => o.estado === "entregado_pendiente_pago"),
+      entregasPendientes: visibles.filter((o) => o.estado === "pago_pendiente_entrega"),
     };
   }, [opps, clientes, filtro, currentUserId]);
 
@@ -248,6 +253,13 @@ export default function InicioPage() {
       </div>
 
       <SeguimientoHoy buckets={vista.buckets} />
+
+      {seccion === "corporativo" && (
+        <PendientesCierre
+          pagos={vista.pagosPendientes}
+          entregas={vista.entregasPendientes}
+        />
+      )}
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <TareasDeHoy />
@@ -549,6 +561,73 @@ function SeguimientoHoy({ buckets }: { buckets: BucketsSeguimiento }) {
         </p>
       )}
     </Card>
+  );
+}
+
+// ---- Pagos / Entregas pendientes (estados de cierre verdes) ----
+function PendientesCierre({
+  pagos,
+  entregas,
+}: {
+  pagos: Oportunidad[];
+  entregas: Oportunidad[];
+}) {
+  const router = useRouter();
+
+  const cajas: {
+    titulo: string;
+    icon: React.ReactNode;
+    tono: string;
+    items: Oportunidad[];
+  }[] = [
+    {
+      titulo: "Pagos pendientes",
+      icon: <Wallet size={15} />,
+      tono: "text-green-700 dark:text-green-400",
+      items: pagos,
+    },
+    {
+      titulo: "Entregas pendientes",
+      icon: <Truck size={15} />,
+      tono: "text-green-700 dark:text-green-400",
+      items: entregas,
+    },
+  ];
+
+  return (
+    <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      {cajas.map((c) => (
+        <Card key={c.titulo} className="overflow-hidden p-0">
+          <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
+            <span className={`flex items-center gap-1.5 text-sm font-semibold ${c.tono}`}>
+              {c.icon} {c.titulo}
+            </span>
+            <Badge tone="success">{c.items.length}</Badge>
+          </div>
+          <div className="max-h-56 space-y-1 overflow-y-auto p-2">
+            {c.items.length === 0 ? (
+              <p className="px-1 py-3 text-center text-xs text-ink-3">Nada por acá.</p>
+            ) : (
+              c.items.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => router.push(`/oportunidades?op=${o.id}`)}
+                  className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left hover:bg-surface2"
+                >
+                  <span className="min-w-0 truncate text-sm font-medium text-ink">
+                    {o.cliente?.razon_social ?? o.asunto ?? `#${o.id}`}
+                  </span>
+                  <span className="shrink-0 font-mono tabular-nums text-xs text-ink-2">
+                    {o.numero_pedido ? `Pedido ${o.numero_pedido}` : "Sin pedido"}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </Card>
+      ))}
+    </div>
   );
 }
 
