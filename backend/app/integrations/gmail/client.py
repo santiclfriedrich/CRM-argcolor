@@ -356,6 +356,7 @@ class GmailClient:
         in_reply_to: str | None = None,
         cc: list[str] | None = None,
         attachments: list[dict[str, Any]] | None = None,
+        html: str | None = None,
     ) -> dict[str, str | None]:
         """Envía un mail desde la casilla.
 
@@ -366,6 +367,8 @@ class GmailClient:
           en el cliente del destinatario aunque salga de otra casilla.
         - ``cc``: lista de destinatarios en copia.
         - ``attachments``: lista de {filename, content(bytes), mime} a adjuntar.
+        - ``html``: cuerpo HTML opcional (multipart/alternative); ``body`` queda
+          como texto plano de fallback.
         """
         message = EmailMessage()
         message["To"] = to
@@ -379,6 +382,8 @@ class GmailClient:
             message["In-Reply-To"] = in_reply_to
             message["References"] = in_reply_to
         message.set_content(body)
+        if html:
+            message.add_alternative(html, subtype="html")
 
         for att in attachments or []:
             maintype, _, subtype = (att.get("mime") or "application/octet-stream").partition("/")

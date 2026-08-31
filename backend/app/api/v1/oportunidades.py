@@ -374,6 +374,7 @@ def get_oportunidad(
 class SeguimientoMailBody(BaseModel):
     asunto: str | None = None
     cuerpo: str
+    html: str | None = None  # versión HTML opcional (ej. con la tabla de la op)
 
 
 @router.post("/{oportunidad_id}/seguimiento-mail")
@@ -400,7 +401,9 @@ def enviar_seguimiento_mail(
     asunto = body.asunto or f"Seguimiento: {titulo}"
     # Mail primero (llamada externa), fuera de una transacción abierta.
     try:
-        gmail.send_message(to=destinatario.email, subject=asunto, body=body.cuerpo)
+        gmail.send_message(
+            to=destinatario.email, subject=asunto, body=body.cuerpo, html=body.html
+        )
     except Exception as exc:  # noqa: BLE001 - traducir a error accionable
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

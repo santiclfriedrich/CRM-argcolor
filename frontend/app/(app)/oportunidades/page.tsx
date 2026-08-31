@@ -1442,6 +1442,75 @@ function TransferirModal({
   );
 }
 
+// Escapa texto para meterlo en el HTML del mail.
+const escHtml = (s: string): string =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+// Pares [columna, valor] de la oportunidad según la sección (mismas columnas que
+// la tabla) para incrustar en el mail de seguimiento.
+function paresTablaMail(o: Oportunidad): [string, string][] {
+  if (o.ambito === "gubernamental") {
+    return [
+      ["ID", String(o.id)],
+      ["Cliente", o.cliente?.razon_social ?? "—"],
+      ["Proceso", o.proceso ?? "—"],
+      ["N° CL", o.cliente?.numero_cliente ?? "—"],
+      ["Apertura", fmtDate(o.apertura)],
+      ["HR", o.hr_apertura ? o.hr_apertura.slice(0, 5) : "—"],
+      ["Portal", o.portal ?? "—"],
+      ["Moneda", o.moneda ?? "—"],
+      ["Productos", o.producto ?? "—"],
+      ["ING", o.ing ?? "—"],
+      ["Cotiz", estaCotizada(o) ? "Sí" : "No"],
+      ["Status", ESTADO_META[o.estado].label],
+      ["Días", o.dias != null ? `${o.dias} días` : "—"],
+      ["Empresa", o.empresa === "ARGCOL" ? "ARG COLOR" : o.empresa ?? "—"],
+    ];
+  }
+  return [
+    ["ID", String(o.id)],
+    ["Cliente", o.cliente?.razon_social ?? "—"],
+    ["CL N°", o.cliente?.numero_cliente ?? "—"],
+    ["Asunto", o.asunto ?? "—"],
+    ["Producto", o.producto ?? "—"],
+    ["Pedido", o.numero_pedido ?? "—"],
+    ["E/Compra", fmtDate(o.fecha_enviado_compras)],
+    ["R/Compra", fmtDate(o.fecha_respuesta_compras)],
+    ["Cotiz", estaCotizada(o) ? "Sí" : "No"],
+    ["E/Cliente", fmtDate(o.fecha_enviado_cliente)],
+    ["Validez", fmtDate(o.fecha_limite)],
+    ["Ing.", o.ing ?? "—"],
+    ["Estado", ESTADO_META[o.estado].label],
+    ["Observación", o.observacion ?? "—"],
+  ];
+}
+
+// Cuerpo HTML del mail: el mensaje (texto) + la tabla de la oportunidad.
+function cuerpoHtmlSeguimiento(o: Oportunidad, mensaje: string): string {
+  const pares = paresTablaMail(o);
+  const th = pares
+    .map(
+      ([l]) =>
+        `<th style="border:1px solid #d1d5db;padding:6px 10px;background:#f3f4f6;text-align:left;white-space:nowrap">${escHtml(
+          l
+        )}</th>`
+    )
+    .join("");
+  const td = pares
+    .map(
+      ([, v]) =>
+        `<td style="border:1px solid #d1d5db;padding:6px 10px;white-space:nowrap">${escHtml(
+          v
+        )}</td>`
+    )
+    .join("");
+  const tabla = `<table style="border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111827"><thead><tr>${th}</tr></thead><tbody><tr>${td}</tr></tbody></table>`;
+  const texto = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111827;white-space:pre-wrap">${escHtml(
+    mensaje
+  )}</div>`;
+  return `${texto}<br>${tabla}`;
+}
+
 // Modal (admin) para pedirle seguimiento al vendedor de la oportunidad por mail.
 function SeguimientoMailModal({
   oportunidad,
@@ -1480,7 +1549,11 @@ function SeguimientoMailModal({
     if (!cuerpo.trim()) return;
     const tId = toast("Enviando…", "loading");
     enviar.mutate(
-      { asunto: asunto.trim() || undefined, cuerpo },
+      {
+        asunto: asunto.trim() || undefined,
+        cuerpo,
+        html: cuerpoHtmlSeguimiento(oportunidad, cuerpo),
+      },
       {
         onSuccess: (r) => {
           update(tId, `Enviado a ${r.para}`, "success");
@@ -1510,6 +1583,9 @@ function SeguimientoMailModal({
             value={cuerpo}
             onChange={(e) => setCuerpo(e.target.value)}
           />
+          <p className="mt-1 text-xs text-ink-3">
+            Al final del mail se incluye la tabla de la oportunidad.
+          </p>
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>
