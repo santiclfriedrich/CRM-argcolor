@@ -1458,13 +1458,22 @@ function SeguimientoMailModal({
   const primerNombre = nombreCompleto.split(" ")[0];
   const titulo = oportunidad.asunto ?? `oportunidad #${oportunidad.id}`;
   const cliente = oportunidad.cliente?.razon_social;
+  // Fecha y hora de creación de la oportunidad, para dar contexto en el mail.
+  const creada = new Date(oportunidad.fecha_creacion).toLocaleString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
   const [asunto, setAsunto] = useState(
     cliente ? `${cliente} - N° ${oportunidad.id}` : `Oportunidad N° ${oportunidad.id}`
   );
   const [cuerpo, setCuerpo] = useState(
     `¿Cómo va ${primerNombre}?\n\n` +
       `¿Cómo viene la oportunidad "${titulo}"${cliente ? ` de ${cliente}` : ""}? ` +
-      `Contame en qué estado está y si necesitás algo.\n\nGracias.`
+      `Contame en qué estado está y si necesitás algo.\n\n` +
+      `Creada el ${creada} hs.\n\nGracias.`
   );
 
   const submit = () => {
