@@ -218,6 +218,17 @@ export function useCreateOportunidad() {
   });
 }
 
+// Admin: pide seguimiento al vendedor de la oportunidad (mail + aviso in-app).
+export function useSeguimientoMail(id: number) {
+  return useMutation({
+    mutationFn: async (body: { asunto?: string; cuerpo: string }) =>
+      (await api.post<{ enviado: boolean; para: string }>(
+        `${BASE}/${id}/seguimiento-mail`,
+        body
+      )).data,
+  });
+}
+
 export function useOportunidad(id: number) {
   return useQuery({
     queryKey: oportunidadKeys.detail(id),

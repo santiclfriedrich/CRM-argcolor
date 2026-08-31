@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, defer, selectinload
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_admin, get_current_user, get_user_gmail
 from app.api.listing import scalars_capped
 from app.core.exceptions import NotFoundError
 from app.db.models.clientes import Cliente
@@ -369,6 +369,54 @@ def get_oportunidad(
     if oportunidad is None:
         raise NotFoundError("Oportunidad no encontrada")
     return oportunidad
+
+
+class SeguimientoMailBody(BaseModel):
+    asunto: str | None = None
+    cuerpo: str
+
+
+@router.post("/{oportunidad_id}/seguimiento-mail")
+def enviar_seguimiento_mail(
+    oportunidad_id: int,
+    body: SeguimientoMailBody,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(get_current_admin),
+    gmail=Depends(get_user_gmail),
+) -> dict[str, object]:
+    """Un admin le pide seguimiento al vendedor de la oportunidad: le manda un mail
+    (desde la casilla del admin) y le deja un aviso in-app. Destinatario: el
+    vendedor asignado; si no hay, quien la creó."""
+    op = db.get(Oportunidad, oportunidad_id, options=list(_RELATIONS))
+    if op is None:
+        raise NotFoundError("Oportunidad no encontrada")
+    destinatario = op.vendedor or op.creado_por
+    if destinatario is None or not destinatario.email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La oportunidad no tiene un vendedor (ni creador) con email para avisar.",
+        )
+    titulo = op.asunto or f"oportunidad #{op.id}"
+    asunto = body.asunto or f"Seguimiento: {titulo}"
+    # Mail primero (llamada externa), fuera de una transacción abierta.
+    try:
+        gmail.send_message(to=destinatario.email, subject=asunto, body=body.cuerpo)
+    except Exception as exc:  # noqa: BLE001 - traducir a error accionable
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=(
+                "No se pudo enviar el mail. Revisá que tengas Gmail conectado en tu perfil."
+            ),
+        ) from exc
+    # Aviso in-app para el vendedor.
+    crear_notificacion(
+        db,
+        usuario_id=destinatario.id,
+        mensaje=f"{admin.nombre} te pidió seguimiento de: {titulo}",
+        link=f"/oportunidades/{op.id}",
+    )
+    db.commit()
+    return {"enviado": True, "para": destinatario.email}
 
 
 @router.get("/{oportunidad_id}/sugerencia-compras", response_model=SugerenciaCompras)

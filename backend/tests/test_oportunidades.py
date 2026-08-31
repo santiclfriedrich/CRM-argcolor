@@ -543,3 +543,50 @@ def test_campos_gubernamentales_round_trip(client: TestClient) -> None:
     match = next(x for x in items if x["id"] == o["id"])
     assert match["proceso"] == "LP-2026-45"
     assert match["empresa"] == "ARGCOL"
+
+
+def test_seguimiento_mail_a_vendedor(client: TestClient) -> None:
+    """Un admin dispara el mail de seguimiento: se envía al vendedor y se crea
+    el aviso in-app."""
+    from sqlalchemy import select
+
+    from app.api.deps import get_current_admin, get_user_gmail
+    from app.db.models.notificaciones import Notificacion
+    from app.main import app
+
+    enviados: list[dict] = []
+
+    class FakeGmail:
+        def send_message(self, to, subject, body, **_kw):  # noqa: ANN001, ANN201
+            enviados.append({"to": to, "subject": subject, "body": body})
+            return {"message_id": "x", "thread_id": None}
+
+    with TestingSessionLocal() as db:
+        db.add(Usuario(id=5, email="vend@argentinacolor.com", nombre="Vendedora", activo=True))
+        db.commit()
+        op = Oportunidad(asunto="Pedido X", vendedor_id=5, cliente_id=1)
+        db.add(op)
+        db.commit()
+        op_id = op.id
+
+    admin = Usuario(id=9, email="admin@argentinacolor.com", nombre="Admin", activo=True)
+    app.dependency_overrides[get_current_admin] = lambda: admin
+    app.dependency_overrides[get_user_gmail] = lambda: FakeGmail()
+    try:
+        r = client.post(
+            f"/api/v1/oportunidades/{op_id}/seguimiento-mail",
+            json={"cuerpo": "¿Cómo viene esta oportunidad?"},
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["para"] == "vend@argentinacolor.com"
+    finally:
+        del app.dependency_overrides[get_current_admin]
+        del app.dependency_overrides[get_user_gmail]
+
+    assert enviados and enviados[0]["to"] == "vend@argentinacolor.com"
+    assert "¿Cómo viene" in enviados[0]["body"]
+
+    with TestingSessionLocal() as db:
+        notis = list(db.scalars(select(Notificacion).where(Notificacion.usuario_id == 5)))
+        assert len(notis) == 1
+        assert notis[0].link == f"/oportunidades/{op_id}"

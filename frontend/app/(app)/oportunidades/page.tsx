@@ -15,6 +15,7 @@ import {
   Filter,
   Highlighter,
   Inbox,
+  Mail,
   Paperclip,
   Pencil,
   Plus,
@@ -40,10 +41,12 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { OrdenEntradaToggle, useOrdenEntrada } from "@/components/ui/orden-entrada";
 import { RefChip } from "@/components/ui/ref-chip";
 import { useSeccion } from "@/components/ui/seccion";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import { useResizableColumns } from "@/components/ui/resizable-columns";
 import {
@@ -58,6 +61,7 @@ import {
   usePropuestas,
   useResaltadas,
   useResolverPropuesta,
+  useSeguimientoMail,
   useResolverTransferencia,
   useSetIng,
   useSugerenciaCompras,
@@ -409,6 +413,7 @@ function RowMenu({
   onTransferir,
   onEliminar,
   onResaltar,
+  onSeguimiento,
   resaltada,
   presupuestoPending,
 }: {
@@ -423,6 +428,7 @@ function RowMenu({
   onTransferir: () => void;
   onEliminar: () => void;
   onResaltar: () => void;
+  onSeguimiento?: () => void; // solo admin
   resaltada: boolean;
   presupuestoPending: boolean;
 }) {
@@ -502,6 +508,8 @@ function RowMenu({
         <Highlighter size={14} />,
       )}
       {item("Transferir a…", onTransferir, <ArrowRightLeft size={14} />)}
+      {onSeguimiento &&
+        item("Pedir seguimiento al vendedor", onSeguimiento, <Mail size={14} />)}
       <div className="my-1 border-t border-line" />
       {item("Eliminar", onEliminar, <Trash2 size={14} />, { danger: true })}
     </div>
@@ -517,6 +525,7 @@ export default function OportunidadesPage() {
   const [editing, setEditing] = useState<Oportunidad | null>(null);
   const [pidiendo, setPidiendo] = useState<Oportunidad | null>(null);
   const [transfiriendo, setTransfiriendo] = useState<Oportunidad | null>(null);
+  const [seguimiento, setSeguimiento] = useState<Oportunidad | null>(null);
   // Menú de acciones que aparece al clickear una fila (posición del cursor).
   const [menu, setMenu] = useState<{ o: Oportunidad; x: number; y: number } | null>(null);
   const [filtros, setFiltros] = useState<OportunidadFiltros>({
@@ -1252,8 +1261,16 @@ export default function OportunidadesPage() {
           onTransferir={() => setTransfiriendo(menu.o)}
           onEliminar={() => eliminar(menu.o)}
           onResaltar={() => toggleResaltar(menu.o.id)}
+          onSeguimiento={rol === "admin" ? () => setSeguimiento(menu.o) : undefined}
           resaltada={esResaltada(menu.o.id)}
           presupuestoPending={crearPresupuesto.isPending}
+        />
+      )}
+
+      {seguimiento && (
+        <SeguimientoMailModal
+          oportunidad={seguimiento}
+          onClose={() => setSeguimiento(null)}
         />
       )}
     </div>
@@ -1420,6 +1437,79 @@ function TransferirModal({
         <Button onClick={enviar} disabled={!sel || transferir.isPending}>
           {transferir.isPending ? "Transfiriendo…" : "Transferir"}
         </Button>
+      </div>
+    </Modal>
+  );
+}
+
+// Modal (admin) para pedirle seguimiento al vendedor de la oportunidad por mail.
+function SeguimientoMailModal({
+  oportunidad,
+  onClose,
+}: {
+  oportunidad: Oportunidad;
+  onClose: () => void;
+}) {
+  const enviar = useSeguimientoMail(oportunidad.id);
+  const { toast, update } = useToast();
+  const destinatario =
+    oportunidad.vendedor?.nombre ?? oportunidad.creado_por?.nombre ?? "el vendedor";
+  const titulo = oportunidad.asunto ?? `oportunidad #${oportunidad.id}`;
+  const cliente = oportunidad.cliente?.razon_social;
+  const [asunto, setAsunto] = useState(`Seguimiento: ${titulo}`);
+  const [cuerpo, setCuerpo] = useState(
+    `Hola ${oportunidad.vendedor?.nombre ?? oportunidad.creado_por?.nombre ?? ""},\n\n` +
+      `¿Cómo viene la oportunidad "${titulo}"${cliente ? ` de ${cliente}` : ""}? ` +
+      `Contame en qué estado está y si necesitás algo.\n\nGracias.`
+  );
+
+  const submit = () => {
+    if (!cuerpo.trim()) return;
+    const tId = toast("Enviando…", "loading");
+    enviar.mutate(
+      { asunto: asunto.trim() || undefined, cuerpo },
+      {
+        onSuccess: (r) => {
+          update(tId, `Enviado a ${r.para}`, "success");
+          onClose();
+        },
+        onError: (e) => update(tId, errorMessage(e, "No se pudo enviar el mail."), "error"),
+      }
+    );
+  };
+
+  return (
+    <Modal open onClose={onClose} title={`Pedir seguimiento — ${destinatario}`} size="lg">
+      <div className="space-y-3">
+        <p className="text-sm text-ink-2">
+          Se le enviará un mail a <span className="font-medium text-ink">{destinatario}</span>{" "}
+          (y un aviso en su campana) desde tu casilla.
+        </p>
+        <div>
+          <Label htmlFor="seg-asunto">Asunto</Label>
+          <Input
+            id="seg-asunto"
+            value={asunto}
+            onChange={(e) => setAsunto(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="seg-cuerpo">Mensaje</Label>
+          <Textarea
+            id="seg-cuerpo"
+            rows={7}
+            value={cuerpo}
+            onChange={(e) => setCuerpo(e.target.value)}
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={submit} disabled={enviar.isPending || !cuerpo.trim()}>
+            <Mail size={16} /> {enviar.isPending ? "Enviando…" : "Enviar"}
+          </Button>
+        </div>
       </div>
     </Modal>
   );
