@@ -197,6 +197,7 @@ export function OportunidadForm({
   const [moneda, setMoneda] = useState(initial?.moneda ?? "");
   const [pliego, setPliego] = useState(initial?.pliego ?? "");
   const [empresa, setEmpresa] = useState(initial?.empresa ?? "");
+  const [dias, setDias] = useState(initial?.dias != null ? String(initial.dias) : "");
   const [presupuestoUrl, setPresupuestoUrl] = useState(initial?.presupuesto_url ?? "");
   const [files, setFiles] = useState<File[]>([]);
   // Imágenes pegadas en el requerimiento (nuevas, aún sin subir).
@@ -291,6 +292,7 @@ export function OportunidadForm({
       moneda: moneda || null,
       pliego: pliego || null,
       empresa: empresa || null,
+      dias: dias ? Number(dias) : null,
       presupuesto_url: presupuestoUrl.trim() || null,
       // Al crear, la sección activa fija el ámbito (override manual); al editar
       // no lo tocamos (undefined no viaja en el JSON).
@@ -566,6 +568,22 @@ export function OportunidadForm({
                   { value: "", label: "—" },
                   { value: "SKOP", label: "SKOP" },
                   { value: "ARGCOL", label: "ARGCOL" },
+                ]}
+              />
+            </div>
+            <div>
+              <Label htmlFor="o-dias">Días</Label>
+              <SelectMenu
+                id="o-dias"
+                value={dias}
+                onChange={setDias}
+                placeholder="— Días —"
+                options={[
+                  { value: "", label: "— Días —" },
+                  ...[7, 15, 30, 60, 90, 120].map((d) => ({
+                    value: String(d),
+                    label: `${d} días`,
+                  })),
                 ]}
               />
             </div>

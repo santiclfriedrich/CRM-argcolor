@@ -164,6 +164,7 @@ class Oportunidad(Base, TimestampMixin):
     moneda: Mapped[str | None] = mapped_column(String(10))  # ARS / USD / …
     pliego: Mapped[str | None] = mapped_column(String(10))  # 'fisico' / 'digital'
     empresa: Mapped[str | None] = mapped_column(String(20))  # 'SKOP' / 'ARGCOL'
+    dias: Mapped[int | None] = mapped_column()  # plazo en días: 7/15/30/60/90/120
     presupuesto_url: Mapped[str | None] = mapped_column(Text)  # link a presupuesto EXTERNO
 
     cliente = relationship("Cliente", back_populates="oportunidades")

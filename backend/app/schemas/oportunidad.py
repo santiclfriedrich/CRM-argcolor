@@ -42,6 +42,7 @@ class OportunidadBase(BaseModel):
     pliego: str | None = None
     empresa: str | None = None
     presupuesto_url: str | None = None
+    dias: int | None = None
 
 
 class OportunidadCreate(OportunidadBase):
@@ -80,6 +81,7 @@ class OportunidadUpdate(BaseModel):
     pliego: str | None = None
     empresa: str | None = None
     presupuesto_url: str | None = None
+    dias: int | None = None
 
 
 class ComentarioRead(BaseModel):
@@ -179,5 +181,6 @@ class OportunidadListItem(BaseModel):
     pliego: str | None = None
     empresa: str | None = None
     presupuesto_url: str | None = None
+    dias: int | None = None
     cliente: ClienteMini | None = None
     vendedor: VendedorMini | None = None

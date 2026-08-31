@@ -200,6 +200,7 @@ export interface Oportunidad {
   pliego: string | null;
   empresa: string | null;
   presupuesto_url: string | null;
+  dias: number | null;
   cliente: ClienteMini | null;
   contacto: PersonaMini | null;
   vendedor: PersonaMini | null;
@@ -237,6 +238,7 @@ export type OportunidadCreate = {
   pliego?: string | null;
   empresa?: string | null;
   presupuesto_url?: string | null;
+  dias?: number | null;
 };
 export type OportunidadUpdate = Partial<OportunidadCreate>;
 

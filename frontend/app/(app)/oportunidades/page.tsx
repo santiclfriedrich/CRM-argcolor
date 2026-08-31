@@ -350,6 +350,42 @@ function bgClienteEstado(estado: EstadoOportunidad): string {
   return ESTADO_COLOR[estado].chip;
 }
 
+// --- Celdas con "pill" de la tabla Gubernamental ---
+function MonedaPill({ moneda }: { moneda: string | null }) {
+  if (!moneda) return <span className="text-ink-3">—</span>;
+  const cls =
+    moneda === "USD"
+      ? "bg-green-100 text-green-800 dark:bg-green-400/15 dark:text-green-200"
+      : "bg-blue-100 text-blue-800 dark:bg-blue-400/15 dark:text-blue-200";
+  return <Badge className={cls}>{moneda}</Badge>;
+}
+
+function EmpresaPill({ empresa }: { empresa: string | null }) {
+  if (!empresa) return <span className="text-ink-3">—</span>;
+  const label = empresa === "ARGCOL" ? "ARG COLOR" : empresa;
+  return (
+    <Badge className="bg-sky-100 text-sky-800 dark:bg-sky-400/15 dark:text-sky-200">
+      {label}
+    </Badge>
+  );
+}
+
+function DiasPill({ dias }: { dias: number | null }) {
+  if (dias == null) return <span className="text-ink-3">—</span>;
+  // Más corto = más urgente (rojo) → más largo = más tranquilo (verde/azul).
+  const cls =
+    dias <= 7
+      ? "bg-red-100 text-red-800 dark:bg-red-400/15 dark:text-red-200"
+      : dias <= 15
+        ? "bg-orange-100 text-orange-800 dark:bg-orange-400/15 dark:text-orange-200"
+        : dias <= 30
+          ? "bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-200"
+          : dias <= 60
+            ? "bg-green-100 text-green-800 dark:bg-green-400/15 dark:text-green-200"
+            : "bg-blue-100 text-blue-800 dark:bg-blue-400/15 dark:text-blue-200";
+  return <Badge className={cls}>{dias} días</Badge>;
+}
+
 // Índice de mes absoluto (año*12+mes) para comparar meses fácilmente.
 const idxMes = (d: Date): number => d.getFullYear() * 12 + d.getMonth();
 
@@ -639,10 +675,20 @@ export default function OportunidadesPage() {
   // Columnas de ancho ajustable (16: checkbox, ID, Cliente, CL N°, Asunto,
   // Producto, Pedido, E/Compra, R/Compra, Cotiz, E/Cliente, Validez, Ing.,
   // Estado, GBP, Observación).
-  const cols = useResizableColumns(
+  const esGub = seccion === "gubernamental";
+  // Dos configuraciones de columnas (corporativo / gubernamental). Se llaman
+  // ambos hooks siempre (orden estable) y se usa el que corresponde a la sección.
+  const colsCorpo = useResizableColumns(
     "oportunidades",
     [44, 70, 220, 90, 200, 150, 110, 100, 100, 80, 100, 100, 90, 130, 60, 180]
   );
+  const colsGub = useResizableColumns(
+    "oportunidades-gub",
+    // checkbox, ID, Cliente, Proceso, N° CL, Apertura, HR, Portal, Moneda,
+    // Productos, ING, Cotiz, Status, Días, Empresa
+    [44, 70, 210, 110, 90, 95, 70, 120, 90, 210, 80, 60, 150, 100, 120]
+  );
+  const cols = esGub ? colsGub : colsCorpo;
 
   // Selección múltiple (sobre las filas visibles).
   const idsVisibles = filas.map((o) => o.id);
@@ -916,21 +962,38 @@ export default function OportunidadesPage() {
                   ID{cols.handle(1)}
                 </th>
                 {th(2, "cliente", "Cliente")}
-                {th(3, "cl", "CL N°")}
-                {th(4, "asunto", "Asunto")}
-                {th(5, "producto", "Producto")}
-                {th(6, "pedido", "Pedido")}
-                {th(7, "ecompra", "E/Compra")}
-                {th(8, "rcompra", "R/Compra")}
-                {th(9, "cotizado", "Cotiz")}
-                {th(10, "ecliente", "E/Cliente")}
-                {th(11, "validez", "Validez")}
-                {th(12, "ing", "Ing.")}
-                {th(13, "estado", "Estado")}
-                <th className="text-center">
-                  GBP{cols.handle(14)}
-                </th>
-                {th(15, "observacion", "Observación")}
+                {esGub ? (
+                  <>
+                    <th>Proceso{cols.handle(3)}</th>
+                    <th>N° CL{cols.handle(4)}</th>
+                    <th>Apertura{cols.handle(5)}</th>
+                    <th>HR{cols.handle(6)}</th>
+                    <th>Portal{cols.handle(7)}</th>
+                    <th>Moneda{cols.handle(8)}</th>
+                    <th>Productos{cols.handle(9)}</th>
+                    <th>ING{cols.handle(10)}</th>
+                    <th className="text-center">Cotiz{cols.handle(11)}</th>
+                    <th>Status{cols.handle(12)}</th>
+                    <th>Días{cols.handle(13)}</th>
+                    <th>Empresa{cols.handle(14)}</th>
+                  </>
+                ) : (
+                  <>
+                    {th(3, "cl", "CL N°")}
+                    {th(4, "asunto", "Asunto")}
+                    {th(5, "producto", "Producto")}
+                    {th(6, "pedido", "Pedido")}
+                    {th(7, "ecompra", "E/Compra")}
+                    {th(8, "rcompra", "R/Compra")}
+                    {th(9, "cotizado", "Cotiz")}
+                    {th(10, "ecliente", "E/Cliente")}
+                    {th(11, "validez", "Validez")}
+                    {th(12, "ing", "Ing.")}
+                    {th(13, "estado", "Estado")}
+                    <th className="text-center">GBP{cols.handle(14)}</th>
+                    {th(15, "observacion", "Observación")}
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -981,73 +1044,133 @@ export default function OportunidadesPage() {
                       )}
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink">
-                    {o.cliente?.numero_cliente ?? "—"}
-                  </td>
-                  <td className="truncate px-3 py-2 text-ink" title={o.asunto ?? ""}>
-                    {o.asunto ?? "—"}
-                  </td>
-                  <td className="truncate px-3 py-2 text-ink" title={o.producto ?? ""}>
-                    {o.producto ?? "—"}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-ink">
-                    {o.numero_pedido ?? "—"}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 tabular-nums text-ink">
-                    {fmtDate(o.fecha_enviado_compras)}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 tabular-nums text-ink">
-                    {fmtDate(o.fecha_respuesta_compras)}
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    {estaCotizada(o) ? (
-                      <Check size={16} className="mx-auto text-success" aria-label="Cotizado" />
-                    ) : (
-                      <span className="text-ink-3">—</span>
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 tabular-nums text-ink">
-                    {fmtDate(o.fecha_enviado_cliente)}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 tabular-nums">
-                    <span
-                      className={
-                        o.estado === "confirmada" && o.fecha_limite
-                          ? "font-semibold text-warning"
-                          : estaVencida(o)
-                          ? "font-semibold text-danger"
-                          : "text-ink"
-                      }
-                    >
-                      {fmtDate(o.fecha_limite)}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                    <IngInput o={o} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <Badge className={ESTADO_COLOR[o.estado].badge}>
-                      {ESTADO_META[o.estado].label}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={o.cargada_en_gbp}
-                      onChange={(e) => toggleGbp.mutate({ id: o.id, valor: e.target.checked })}
-                      aria-label="Cargada en GBP"
-                      title="Cargada en GBP"
-                      className="m-0 mx-auto block h-4 w-4 rounded border-line accent-navy"
-                    />
-                  </td>
-                  <td className="truncate px-3 py-2 text-ink" title={o.observacion ?? ""}>
-                    {o.observacion ?? "—"}
-                  </td>
+                  {esGub ? (
+                    <>
+                      <td className="truncate px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                        {o.presupuesto_url ? (
+                          <a
+                            href={o.presupuesto_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-accent hover:underline"
+                          >
+                            {o.proceso ?? "—"}
+                          </a>
+                        ) : (
+                          <span className="text-ink">{o.proceso ?? "—"}</span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink">
+                        {o.cliente?.numero_cliente ?? "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 tabular-nums text-ink">
+                        {fmtDate(o.apertura)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 tabular-nums text-ink">
+                        {o.hr_apertura ? o.hr_apertura.slice(0, 5) : "—"}
+                      </td>
+                      <td className="truncate px-3 py-2 text-ink" title={o.portal ?? ""}>
+                        {o.portal ?? "—"}
+                      </td>
+                      <td className="px-3 py-2">
+                        <MonedaPill moneda={o.moneda} />
+                      </td>
+                      <td className="truncate px-3 py-2 text-ink" title={o.producto ?? ""}>
+                        {o.producto ?? "—"}
+                      </td>
+                      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                        <IngInput o={o} />
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        {estaCotizada(o) ? (
+                          <Check size={16} className="mx-auto text-success" aria-label="Cotizado" />
+                        ) : (
+                          <span className="text-ink-3">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <Badge className={ESTADO_COLOR[o.estado].badge}>
+                          {ESTADO_META[o.estado].label}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2">
+                        <DiasPill dias={o.dias} />
+                      </td>
+                      <td className="px-3 py-2">
+                        <EmpresaPill empresa={o.empresa} />
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink">
+                        {o.cliente?.numero_cliente ?? "—"}
+                      </td>
+                      <td className="truncate px-3 py-2 text-ink" title={o.asunto ?? ""}>
+                        {o.asunto ?? "—"}
+                      </td>
+                      <td className="truncate px-3 py-2 text-ink" title={o.producto ?? ""}>
+                        {o.producto ?? "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-ink">
+                        {o.numero_pedido ?? "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 tabular-nums text-ink">
+                        {fmtDate(o.fecha_enviado_compras)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 tabular-nums text-ink">
+                        {fmtDate(o.fecha_respuesta_compras)}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        {estaCotizada(o) ? (
+                          <Check size={16} className="mx-auto text-success" aria-label="Cotizado" />
+                        ) : (
+                          <span className="text-ink-3">—</span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 tabular-nums text-ink">
+                        {fmtDate(o.fecha_enviado_cliente)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 tabular-nums">
+                        <span
+                          className={
+                            o.estado === "confirmada" && o.fecha_limite
+                              ? "font-semibold text-warning"
+                              : estaVencida(o)
+                              ? "font-semibold text-danger"
+                              : "text-ink"
+                          }
+                        >
+                          {fmtDate(o.fecha_limite)}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                        <IngInput o={o} />
+                      </td>
+                      <td className="px-3 py-2">
+                        <Badge className={ESTADO_COLOR[o.estado].badge}>
+                          {ESTADO_META[o.estado].label}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={o.cargada_en_gbp}
+                          onChange={(e) => toggleGbp.mutate({ id: o.id, valor: e.target.checked })}
+                          aria-label="Cargada en GBP"
+                          title="Cargada en GBP"
+                          className="m-0 mx-auto block h-4 w-4 rounded border-line accent-navy"
+                        />
+                      </td>
+                      <td className="truncate px-3 py-2 text-ink" title={o.observacion ?? ""}>
+                        {o.observacion ?? "—"}
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))}
               {filas.length === 0 && (
                 <tr>
-                  <td colSpan={16} className="px-4 py-6 text-center text-ink-3">
+                  <td colSpan={esGub ? 15 : 16} className="px-4 py-6 text-center text-ink-3">
                     {oportunidadesDelMes.length > 0
                       ? "No hay oportunidades que coincidan con la búsqueda o los filtros."
                       : periodoModo === "mes"
