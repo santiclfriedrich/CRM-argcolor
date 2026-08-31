@@ -1,0 +1,20 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "arial",
+        "createdAt": "2026-08-31T19:24:05.703Z",
+        "reason": "email HTML del mail de seguimiento: los clientes de correo requieren fuentes web-safe; DESIGN.md aplica a la UI, no al email"
+      },
+      {
+        "rule": "overused-font",
+        "value": "arial",
+        "createdAt": "2026-08-31T19:24:05.761Z",
+        "reason": "email HTML: Arial/Helvetica es el stack web-safe estándar para correo, no la tipografía de la app"
+      }
+    ]
+  }
+}
