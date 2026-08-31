@@ -1452,13 +1452,17 @@ function SeguimientoMailModal({
 }) {
   const enviar = useSeguimientoMail(oportunidad.id);
   const { toast, update } = useToast();
-  const destinatario =
+  const nombreCompleto =
     oportunidad.vendedor?.nombre ?? oportunidad.creado_por?.nombre ?? "el vendedor";
+  // Solo el primer nombre para el saludo del mail (sin apellido).
+  const primerNombre = nombreCompleto.split(" ")[0];
   const titulo = oportunidad.asunto ?? `oportunidad #${oportunidad.id}`;
   const cliente = oportunidad.cliente?.razon_social;
-  const [asunto, setAsunto] = useState(`Seguimiento: ${titulo}`);
+  const [asunto, setAsunto] = useState(
+    cliente ? `${cliente} - N° ${oportunidad.id}` : `Oportunidad N° ${oportunidad.id}`
+  );
   const [cuerpo, setCuerpo] = useState(
-    `Hola ${oportunidad.vendedor?.nombre ?? oportunidad.creado_por?.nombre ?? ""},\n\n` +
+    `¿Cómo va ${primerNombre}?\n\n` +
       `¿Cómo viene la oportunidad "${titulo}"${cliente ? ` de ${cliente}` : ""}? ` +
       `Contame en qué estado está y si necesitás algo.\n\nGracias.`
   );
@@ -1479,12 +1483,8 @@ function SeguimientoMailModal({
   };
 
   return (
-    <Modal open onClose={onClose} title={`Pedir seguimiento — ${destinatario}`} size="lg">
+    <Modal open onClose={onClose} title={`Pedir seguimiento — ${primerNombre}`} size="lg">
       <div className="space-y-3">
-        <p className="text-sm text-ink-2">
-          Se le enviará un mail a <span className="font-medium text-ink">{destinatario}</span>{" "}
-          (y un aviso en su campana) desde tu casilla.
-        </p>
         <div>
           <Label htmlFor="seg-asunto">Asunto</Label>
           <Input
