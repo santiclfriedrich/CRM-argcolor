@@ -12,10 +12,12 @@ from app.db.base import Base, TimestampMixin
 
 
 class CondicionPago(str, enum.Enum):
+    dias_7 = "7"
     dias_15 = "15"
     dias_30 = "30"
     dias_45 = "45"
     dias_60 = "60"
+    dias_90 = "90"
     dias_120 = "120"
     transferencia = "Transferencia"
     cheque_ant_15 = "Cheque Anticipado a Entrega - 15 días"

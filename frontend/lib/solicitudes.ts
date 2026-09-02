@@ -22,10 +22,12 @@ export const solicitudKeys = {
 };
 
 export const CONDICIONES_PAGO: CondicionPago[] = [
+  "7",
   "15",
   "30",
   "45",
   "60",
+  "90",
   "120",
   "Transferencia",
   "Cheque Anticipado a Entrega - 15 días",

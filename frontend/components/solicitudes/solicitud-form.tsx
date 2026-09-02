@@ -29,6 +29,9 @@ interface Props {
   // Pre-carga (ej. desde una oportunidad, con el requerimiento ya extraído por IA).
   defaultOportunidadId?: number | null;
   defaultRequerimiento?: string;
+  // Condición de pago pre-seleccionada (ej. mapeada desde los "Días" de una
+  // licitación gubernamental al pedir a Compras).
+  defaultCondicionPago?: CondicionPago | "";
   // Si la oportunidad viene fijada, no se puede cambiar en el form.
   lockOportunidad?: boolean;
   // Textos del botón de submit (ej. "Enviar a Compras" cuando además se envía).
@@ -51,6 +54,7 @@ export function SolicitudForm({
   onCancel,
   defaultOportunidadId = null,
   defaultRequerimiento = "",
+  defaultCondicionPago = "",
   lockOportunidad = false,
   submitLabel = "Crear solicitud",
   pendingLabel = "Creando…",
@@ -66,7 +70,7 @@ export function SolicitudForm({
   // oportunidades. Si la oportunidad viene fijada, no se usa.
   const [clienteId, setClienteId] = useState<number | null>(null);
   const [requerimiento, setRequerimiento] = useState(defaultRequerimiento);
-  const [condicionPago, setCondicionPago] = useState<CondicionPago | "">("");
+  const [condicionPago, setCondicionPago] = useState<CondicionPago | "">(defaultCondicionPago);
   const [importe, setImporte] = useState("");
   const [fechaLimite, setFechaLimite] = useState("");
   const [refGbp, setRefGbp] = useState("");

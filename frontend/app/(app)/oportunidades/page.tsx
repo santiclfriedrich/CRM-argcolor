@@ -76,6 +76,7 @@ import { useCreatePresupuesto } from "@/lib/presupuestos";
 import { useCrearYEnviarSolicitud } from "@/lib/solicitudes";
 import { useUsuarios } from "@/lib/usuarios";
 import type {
+  CondicionPago,
   EstadoOportunidad,
   Oportunidad,
   OportunidadCreate,
@@ -693,9 +694,9 @@ export default function OportunidadesPage() {
   );
   const colsGub = useResizableColumns(
     "oportunidades-gub",
-    // checkbox, ID, Cliente, Proceso, Expediente, N° CL, Apertura, HR, Portal,
-    // Moneda, Productos, ING, Cotiz, Status, Días, Empresa
-    [44, 70, 210, 110, 110, 90, 95, 70, 120, 90, 210, 80, 60, 150, 100, 120]
+    // checkbox, ID, Cliente, Proceso, Expediente, Pedido, N° CL, Apertura, HR,
+    // Portal, Moneda, Productos, ING, Cotiz, Status, Días, Empresa
+    [44, 70, 210, 110, 110, 100, 90, 95, 70, 120, 90, 210, 80, 60, 150, 100, 120]
   );
   const cols = esGub ? colsGub : colsCorpo;
 
@@ -975,17 +976,18 @@ export default function OportunidadesPage() {
                   <>
                     <th>Proceso{cols.handle(3)}</th>
                     <th>Expediente{cols.handle(4)}</th>
-                    <th>N° CL{cols.handle(5)}</th>
-                    <th>Apertura{cols.handle(6)}</th>
-                    <th>HR{cols.handle(7)}</th>
-                    <th>Portal{cols.handle(8)}</th>
-                    <th>Moneda{cols.handle(9)}</th>
-                    <th>Productos{cols.handle(10)}</th>
-                    <th>ING{cols.handle(11)}</th>
-                    <th className="text-center">Cotiz{cols.handle(12)}</th>
-                    <th>Status{cols.handle(13)}</th>
-                    <th>Días{cols.handle(14)}</th>
-                    <th>Empresa{cols.handle(15)}</th>
+                    <th>Pedido{cols.handle(5)}</th>
+                    <th>N° CL{cols.handle(6)}</th>
+                    <th>Apertura{cols.handle(7)}</th>
+                    <th>HR{cols.handle(8)}</th>
+                    <th>Portal{cols.handle(9)}</th>
+                    <th>Moneda{cols.handle(10)}</th>
+                    <th>Productos{cols.handle(11)}</th>
+                    <th>ING{cols.handle(12)}</th>
+                    <th className="text-center">Cotiz{cols.handle(13)}</th>
+                    <th>Status{cols.handle(14)}</th>
+                    <th>Días{cols.handle(15)}</th>
+                    <th>Empresa{cols.handle(16)}</th>
                   </>
                 ) : (
                   <>
@@ -1072,6 +1074,9 @@ export default function OportunidadesPage() {
                       </td>
                       <td className="truncate px-3 py-2 text-ink" title={o.expediente ?? ""}>
                         {o.expediente ?? "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-ink">
+                        {o.numero_pedido ?? "—"}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink">
                         {o.cliente?.numero_cliente ?? "—"}
@@ -1183,7 +1188,7 @@ export default function OportunidadesPage() {
               ))}
               {filas.length === 0 && (
                 <tr>
-                  <td colSpan={16} className="px-4 py-6 text-center text-ink-3">
+                  <td colSpan={esGub ? 17 : 16} className="px-4 py-6 text-center text-ink-3">
                     {oportunidadesDelMes.length > 0
                       ? "No hay oportunidades que coincidan con la búsqueda o los filtros."
                       : periodoModo === "mes"
@@ -1305,6 +1310,12 @@ function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad;
             pendingLabel="Enviando a Compras…"
             defaultOportunidadId={oportunidad.id}
             defaultRequerimiento={sugerencia?.requerimiento ?? ""}
+            defaultCondicionPago={
+              // En Gubernamental, la condición de pago sale de los "Días".
+              oportunidad.dias != null
+                ? (String(oportunidad.dias) as CondicionPago)
+                : ""
+            }
             lockOportunidad
             onCancel={onClose}
             adjuntosExtra={
@@ -1459,6 +1470,7 @@ function paresTablaMail(o: Oportunidad): [string, string][] {
       ["Cliente", o.cliente?.razon_social ?? "—"],
       ["Proceso", o.proceso ?? "—"],
       ["Expediente", o.expediente ?? "—"],
+      ["Pedido", o.numero_pedido ?? "—"],
       ["N° CL", o.cliente?.numero_cliente ?? "—"],
       ["Apertura", fmtDate(o.apertura)],
       ["HR", o.hr_apertura ? o.hr_apertura.slice(0, 5) : "—"],
