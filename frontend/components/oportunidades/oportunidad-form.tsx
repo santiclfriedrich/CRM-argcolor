@@ -190,6 +190,7 @@ export function OportunidadForm({
   // Campos de la sección Gubernamental (licitaciones). Las horas vienen del
   // backend como "HH:MM:SS"; el input type="time" usa "HH:MM" (slice 0,5).
   const [proceso, setProceso] = useState(initial?.proceso ?? "");
+  const [expediente, setExpediente] = useState(initial?.expediente ?? "");
   const [portal, setPortal] = useState(initial?.portal ?? "");
   const [apertura, setApertura] = useState(initial?.apertura ?? "");
   const [hrPliego, setHrPliego] = useState((initial?.hr_pliego ?? "").slice(0, 5));
@@ -285,6 +286,7 @@ export function OportunidadForm({
       fecha_entrega: fechaEntrega || null,
       // Campos de licitación (solo se llenan en la sección Gubernamental).
       proceso: proceso.trim() || null,
+      expediente: expediente.trim() || null,
       portal: portal.trim() || null,
       apertura: apertura || null,
       hr_pliego: hrPliego || null,
@@ -497,6 +499,14 @@ export function OportunidadForm({
               <Input id="o-proceso" value={proceso} onChange={(e) => setProceso(e.target.value)} />
             </div>
             <div>
+              <Label htmlFor="o-expediente">Expediente</Label>
+              <Input
+                id="o-expediente"
+                value={expediente}
+                onChange={(e) => setExpediente(e.target.value)}
+              />
+            </div>
+            <div>
               <Label htmlFor="o-portal">Portal</Label>
               <Input id="o-portal" value={portal} onChange={(e) => setPortal(e.target.value)} />
             </div>
@@ -554,6 +564,7 @@ export function OportunidadForm({
                   { value: "", label: "—" },
                   { value: "fisico", label: "Físico" },
                   { value: "digital", label: "Digital" },
+                  { value: "ambos", label: "Físico y Digital" },
                 ]}
               />
             </div>

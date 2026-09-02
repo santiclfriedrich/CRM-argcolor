@@ -157,6 +157,7 @@ class Oportunidad(Base, TimestampMixin):
     # --- Campos de la sección Gubernamental (licitaciones). Nullable; solo se
     # usan cuando ambito == 'gubernamental'. ---
     proceso: Mapped[str | None] = mapped_column(String(120))  # nº/identificador del proceso
+    expediente: Mapped[str | None] = mapped_column(String(120))  # nº de expediente
     portal: Mapped[str | None] = mapped_column(String(120))  # portal de compras
     apertura: Mapped[date | None] = mapped_column(Date)  # fecha de apertura
     hr_pliego: Mapped[time | None] = mapped_column(Time)  # hora de pliego

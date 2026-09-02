@@ -34,6 +34,7 @@ class OportunidadBase(BaseModel):
     fecha_entrega: date | None = None
     # Campos de la sección Gubernamental (licitaciones):
     proceso: str | None = None
+    expediente: str | None = None
     portal: str | None = None
     apertura: date | None = None
     hr_pliego: time | None = None
@@ -73,6 +74,7 @@ class OportunidadUpdate(BaseModel):
     fecha_limite: date | None = None
     fecha_entrega: date | None = None
     proceso: str | None = None
+    expediente: str | None = None
     portal: str | None = None
     apertura: date | None = None
     hr_pliego: time | None = None
@@ -173,6 +175,7 @@ class OportunidadListItem(BaseModel):
     fecha_cierre: datetime | None = None
     # Campos de la sección Gubernamental (los muestra la tabla en esa sección):
     proceso: str | None = None
+    expediente: str | None = None
     portal: str | None = None
     apertura: date | None = None
     hr_pliego: time | None = None

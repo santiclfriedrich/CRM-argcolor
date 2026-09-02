@@ -192,6 +192,7 @@ export interface Oportunidad {
   fecha_cierre: string | null;
   // Sección Gubernamental (licitaciones):
   proceso: string | null;
+  expediente: string | null;
   portal: string | null;
   apertura: string | null;
   hr_pliego: string | null;
@@ -230,6 +231,7 @@ export type OportunidadCreate = {
   fecha_entrega?: string | null;
   ambito?: Seccion;
   proceso?: string | null;
+  expediente?: string | null;
   portal?: string | null;
   apertura?: string | null;
   hr_pliego?: string | null;

@@ -693,9 +693,9 @@ export default function OportunidadesPage() {
   );
   const colsGub = useResizableColumns(
     "oportunidades-gub",
-    // checkbox, ID, Cliente, Proceso, N° CL, Apertura, HR, Portal, Moneda,
-    // Productos, ING, Cotiz, Status, Días, Empresa
-    [44, 70, 210, 110, 90, 95, 70, 120, 90, 210, 80, 60, 150, 100, 120]
+    // checkbox, ID, Cliente, Proceso, Expediente, N° CL, Apertura, HR, Portal,
+    // Moneda, Productos, ING, Cotiz, Status, Días, Empresa
+    [44, 70, 210, 110, 110, 90, 95, 70, 120, 90, 210, 80, 60, 150, 100, 120]
   );
   const cols = esGub ? colsGub : colsCorpo;
 
@@ -974,17 +974,18 @@ export default function OportunidadesPage() {
                 {esGub ? (
                   <>
                     <th>Proceso{cols.handle(3)}</th>
-                    <th>N° CL{cols.handle(4)}</th>
-                    <th>Apertura{cols.handle(5)}</th>
-                    <th>HR{cols.handle(6)}</th>
-                    <th>Portal{cols.handle(7)}</th>
-                    <th>Moneda{cols.handle(8)}</th>
-                    <th>Productos{cols.handle(9)}</th>
-                    <th>ING{cols.handle(10)}</th>
-                    <th className="text-center">Cotiz{cols.handle(11)}</th>
-                    <th>Status{cols.handle(12)}</th>
-                    <th>Días{cols.handle(13)}</th>
-                    <th>Empresa{cols.handle(14)}</th>
+                    <th>Expediente{cols.handle(4)}</th>
+                    <th>N° CL{cols.handle(5)}</th>
+                    <th>Apertura{cols.handle(6)}</th>
+                    <th>HR{cols.handle(7)}</th>
+                    <th>Portal{cols.handle(8)}</th>
+                    <th>Moneda{cols.handle(9)}</th>
+                    <th>Productos{cols.handle(10)}</th>
+                    <th>ING{cols.handle(11)}</th>
+                    <th className="text-center">Cotiz{cols.handle(12)}</th>
+                    <th>Status{cols.handle(13)}</th>
+                    <th>Días{cols.handle(14)}</th>
+                    <th>Empresa{cols.handle(15)}</th>
                   </>
                 ) : (
                   <>
@@ -1068,6 +1069,9 @@ export default function OportunidadesPage() {
                         ) : (
                           <span className="text-ink">{o.proceso ?? "—"}</span>
                         )}
+                      </td>
+                      <td className="truncate px-3 py-2 text-ink" title={o.expediente ?? ""}>
+                        {o.expediente ?? "—"}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 font-mono tabular-nums text-ink">
                         {o.cliente?.numero_cliente ?? "—"}
@@ -1179,7 +1183,7 @@ export default function OportunidadesPage() {
               ))}
               {filas.length === 0 && (
                 <tr>
-                  <td colSpan={esGub ? 15 : 16} className="px-4 py-6 text-center text-ink-3">
+                  <td colSpan={16} className="px-4 py-6 text-center text-ink-3">
                     {oportunidadesDelMes.length > 0
                       ? "No hay oportunidades que coincidan con la búsqueda o los filtros."
                       : periodoModo === "mes"
@@ -1454,6 +1458,7 @@ function paresTablaMail(o: Oportunidad): [string, string][] {
       ["ID", String(o.id)],
       ["Cliente", o.cliente?.razon_social ?? "—"],
       ["Proceso", o.proceso ?? "—"],
+      ["Expediente", o.expediente ?? "—"],
       ["N° CL", o.cliente?.numero_cliente ?? "—"],
       ["Apertura", fmtDate(o.apertura)],
       ["HR", o.hr_apertura ? o.hr_apertura.slice(0, 5) : "—"],
