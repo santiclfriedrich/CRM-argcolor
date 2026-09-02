@@ -19,6 +19,7 @@ from app.db.models.mails import Mail
 from app.db.models.oportunidades import Oportunidad
 from app.db.models.respuestas_compras import RespuestaCompras
 from app.db.models.solicitudes_compras import SolicitudCompras
+from app.db.models.speeches import Speech
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.main import app
@@ -42,6 +43,7 @@ def client() -> Iterator[TestClient]:
         RespuestaCompras.__table__,
         Configuracion.__table__,
         GrupoCompras.__table__,
+        Speech.__table__,
         Mail.__table__,
         Adjunto.__table__,
     ]
@@ -177,3 +179,28 @@ def test_create_404_oportunidad_inexistente(client: TestClient) -> None:
         json={"oportunidad_id": 999, "requerimiento": "x"},
     )
     assert resp.status_code == 404
+
+
+def test_speeches_crud(client: TestClient) -> None:
+    """CRUD de speeches del usuario logueado."""
+    base = "/api/v1/configuracion/speeches"
+    assert client.get(base).json() == []
+
+    creado = client.post(base, json={"titulo": "  Estándar  ", "texto": "Solicito cotización"})
+    assert creado.status_code == 201
+    sp = creado.json()
+    assert sp["titulo"] == "Estándar"  # se hace strip del título
+    assert sp["texto"] == "Solicito cotización"
+
+    listado = client.get(base).json()
+    assert len(listado) == 1
+
+    upd = client.put(f"{base}/{sp['id']}", json={"texto": "Nuevo texto"})
+    assert upd.status_code == 200
+    assert upd.json()["texto"] == "Nuevo texto"
+    assert upd.json()["titulo"] == "Estándar"
+
+    assert client.delete(f"{base}/{sp['id']}").status_code == 204
+    assert client.get(base).json() == []
+    # Update de uno inexistente -> 404.
+    assert client.put(f"{base}/999", json={"texto": "x"}).status_code == 404

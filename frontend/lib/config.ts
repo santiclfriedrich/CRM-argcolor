@@ -105,3 +105,50 @@ export function useDeleteGrupoCompras() {
     onSuccess: () => qc.invalidateQueries({ queryKey: GRUPOS_KEY }),
   });
 }
+
+// --- Speeches (plantillas de requerimiento a Compras, por usuario) ---
+export interface Speech {
+  id: number;
+  titulo: string;
+  texto: string;
+}
+
+export type SpeechInput = { titulo: string; texto: string };
+
+const SPEECHES_KEY = ["configuracion", "speeches"] as const;
+const SPEECHES_URL = "/api/v1/configuracion/speeches";
+
+export function useSpeeches() {
+  return useQuery({
+    queryKey: SPEECHES_KEY,
+    queryFn: async () => (await api.get<Speech[]>(SPEECHES_URL)).data,
+  });
+}
+
+export function useCreateSpeech() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: SpeechInput) =>
+      (await api.post<Speech>(SPEECHES_URL, body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: SPEECHES_KEY }),
+  });
+}
+
+export function useUpdateSpeech() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, body }: { id: number; body: Partial<SpeechInput> }) =>
+      (await api.put<Speech>(`${SPEECHES_URL}/${id}`, body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: SPEECHES_KEY }),
+  });
+}
+
+export function useDeleteSpeech() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`${SPEECHES_URL}/${id}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: SPEECHES_KEY }),
+  });
+}

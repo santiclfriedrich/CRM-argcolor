@@ -10,14 +10,20 @@ import { EmailChips } from "@/components/ui/email-chips";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   type GrupoCompras,
+  type Speech,
   useAutomatizacion,
   useCreateGrupoCompras,
+  useCreateSpeech,
   useDeleteGrupoCompras,
+  useDeleteSpeech,
   useGruposCompras,
+  useSpeeches,
   useUpdateAutomatizacion,
   useUpdateGrupoCompras,
+  useUpdateSpeech,
 } from "@/lib/config";
 import {
   useMiUsuario,
@@ -63,6 +69,7 @@ export default function ConfiguracionPage() {
       <SincronizacionMails />
 
       <GruposCompras />
+      <SpeechesConfig />
     </div>
   );
 }
@@ -362,6 +369,184 @@ function GruposCompras() {
                   No se pudo agregar. Revisá que los emails sean válidos.
                 </span>
               )}
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Speeches: plantillas de texto para el requerimiento a Compras, por usuario.
+function SpeechesConfig() {
+  const { data: speeches, isLoading } = useSpeeches();
+  const createMut = useCreateSpeech();
+  const updateMut = useUpdateSpeech();
+  const deleteMut = useDeleteSpeech();
+  const confirm = useConfirm();
+
+  const [titulo, setTitulo] = useState("");
+  const [texto, setTexto] = useState("");
+
+  const [editId, setEditId] = useState<number | null>(null);
+  const [eTitulo, setETitulo] = useState("");
+  const [eTexto, setETexto] = useState("");
+
+  const agregar = (e: FormEvent) => {
+    e.preventDefault();
+    if (!titulo.trim() || !texto.trim()) return;
+    createMut.mutate(
+      { titulo: titulo.trim(), texto },
+      {
+        onSuccess: () => {
+          setTitulo("");
+          setTexto("");
+        },
+      }
+    );
+  };
+
+  const empezarEdicion = (s: Speech) => {
+    setEditId(s.id);
+    setETitulo(s.titulo);
+    setETexto(s.texto);
+  };
+
+  const guardarEdicion = (id: number) => {
+    if (!eTitulo.trim() || !eTexto.trim()) return;
+    updateMut.mutate(
+      { id, body: { titulo: eTitulo.trim(), texto: eTexto } },
+      { onSuccess: () => setEditId(null) }
+    );
+  };
+
+  const eliminar = async (s: Speech) => {
+    if (
+      await confirm({
+        title: "Eliminar speech",
+        message: `¿Eliminar el speech "${s.titulo}"?`,
+        danger: true,
+      })
+    ) {
+      deleteMut.mutate(s.id);
+    }
+  };
+
+  return (
+    <div className="mt-8">
+      <h2 className="text-base font-semibold tracking-tight text-ink">Speeches</h2>
+      <p className="mt-1 text-sm text-ink-2">
+        Plantillas de texto con un título. Al pedir a Compras (o desde una
+        oportunidad) podés elegir un speech para llenar el requerimiento.
+      </p>
+
+      {isLoading ? (
+        <p className="mt-4 text-ink-2">Cargando…</p>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {(speeches ?? []).map((s) =>
+            editId === s.id ? (
+              <Card key={s.id} className="space-y-3 border-accent/40 p-4">
+                <div>
+                  <Label htmlFor="e-sp-titulo">Título *</Label>
+                  <Input
+                    id="e-sp-titulo"
+                    value={eTitulo}
+                    onChange={(ev) => setETitulo(ev.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="e-sp-texto">Texto *</Label>
+                  <Textarea
+                    id="e-sp-texto"
+                    rows={4}
+                    value={eTexto}
+                    onChange={(ev) => setETexto(ev.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => guardarEdicion(s.id)}
+                    disabled={updateMut.isPending || !eTitulo.trim() || !eTexto.trim()}
+                  >
+                    {updateMut.isPending ? "Guardando…" : "Guardar"}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setEditId(null)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <Card key={s.id} className="flex items-start justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <span className="font-medium text-ink">{s.titulo}</span>
+                  <p className="mt-1 whitespace-pre-wrap break-words text-sm text-ink-2">
+                    {s.texto}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => empezarEdicion(s)}
+                    aria-label="Editar speech"
+                    title="Editar"
+                  >
+                    <Pencil size={14} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => eliminar(s)}
+                    className="text-ink-3 hover:text-danger"
+                    aria-label="Eliminar speech"
+                    title="Eliminar"
+                  >
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              </Card>
+            )
+          )}
+
+          {speeches && speeches.length === 0 && (
+            <p className="text-sm text-ink-3">
+              No tenés speeches todavía. Creá el primero abajo.
+            </p>
+          )}
+
+          <form
+            onSubmit={agregar}
+            className="space-y-3 rounded-xl border border-dashed border-line p-4"
+          >
+            <p className="text-sm font-semibold text-ink">Nuevo speech</p>
+            <div>
+              <Label htmlFor="sp-titulo">Título *</Label>
+              <Input
+                id="sp-titulo"
+                value={titulo}
+                onChange={(e) => setTitulo(e.target.value)}
+                placeholder="Ej: Pedido estándar de insumos"
+              />
+            </div>
+            <div>
+              <Label htmlFor="sp-texto">Texto *</Label>
+              <Textarea
+                id="sp-texto"
+                rows={4}
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+                placeholder="El texto que se cargará en el requerimiento…"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="submit"
+                disabled={createMut.isPending || !titulo.trim() || !texto.trim()}
+              >
+                {createMut.isPending ? "Agregando…" : "Agregar speech"}
+              </Button>
             </div>
           </form>
         </div>

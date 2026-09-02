@@ -17,7 +17,7 @@ import { SelectMenu } from "@/components/ui/select-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { imagenesPegadas, sumarSinDuplicados, useImagePreviews } from "@/lib/attachments";
 import { useClientes } from "@/lib/clientes";
-import { useGruposCompras } from "@/lib/config";
+import { useGruposCompras, useSpeeches } from "@/lib/config";
 import { useOportunidades } from "@/lib/oportunidades";
 import { CONDICIONES_PAGO } from "@/lib/solicitudes";
 import type { CondicionPago, SolicitudCreate } from "@/lib/types";
@@ -59,6 +59,7 @@ export function SolicitudForm({
   const { data: oportunidades } = useOportunidades();
   const { data: clientes } = useClientes();
   const { data: grupos } = useGruposCompras();
+  const { data: speeches } = useSpeeches();
 
   const [oportunidadId, setOportunidadId] = useState<number | null>(defaultOportunidadId);
   // Búsqueda en 2 pasos (solo alta manual): primero el cliente, luego una de sus
@@ -201,7 +202,26 @@ export function SolicitudForm({
       </div>
 
       <div>
-        <Label htmlFor="s-req">Requerimiento *</Label>
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <Label htmlFor="s-req">Requerimiento *</Label>
+          {speeches && speeches.length > 0 && (
+            <div className="w-56">
+              <SelectMenu
+                id="s-speech"
+                value=""
+                onChange={(v) => {
+                  const sp = speeches.find((s) => String(s.id) === v);
+                  if (sp) setRequerimiento(sp.texto);
+                }}
+                placeholder="Usar un speech…"
+                options={[
+                  { value: "", label: "Usar un speech…" },
+                  ...speeches.map((s) => ({ value: String(s.id), label: s.titulo })),
+                ]}
+              />
+            </div>
+          )}
+        </div>
         <Textarea
           id="s-req"
           rows={4}

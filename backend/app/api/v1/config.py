@@ -13,6 +13,7 @@ from app.schemas.grupo_compras import (
     GrupoComprasRead,
     GrupoComprasUpdate,
 )
+from app.schemas.speech import SpeechCreate, SpeechRead, SpeechUpdate
 from app.services.automatizacion import get_automatizacion, set_automatizacion
 from app.services.grupos_compras import (
     create_grupo,
@@ -24,6 +25,13 @@ from app.services.grupos_compras import (
 from app.services.solicitudes import (
     get_destinatarios_compras,
     set_destinatarios_compras,
+)
+from app.services.speeches import (
+    create_speech,
+    delete_speech,
+    get_speech,
+    list_speeches,
+    update_speech,
 )
 
 router = APIRouter(prefix="/configuracion", tags=["configuracion"])
@@ -143,4 +151,57 @@ def eliminar_grupo_compras(
     if grupo is None:
         raise NotFoundError("Grupo no encontrado")
     delete_grupo(db, grupo)
+    return Response(status_code=204)
+
+
+# --- Speeches (plantillas de requerimiento a Compras, por usuario) ---
+
+
+@router.get("/speeches", response_model=list[SpeechRead])
+def listar_speeches(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> list:
+    return list_speeches(db, current_user.id)
+
+
+@router.post("/speeches", response_model=SpeechRead, status_code=201)
+def crear_speech(
+    body: SpeechCreate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    return create_speech(
+        db, current_user.id, titulo=body.titulo.strip(), texto=body.texto
+    )
+
+
+@router.put("/speeches/{speech_id}", response_model=SpeechRead)
+def actualizar_speech(
+    speech_id: int,
+    body: SpeechUpdate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    speech = get_speech(db, speech_id, current_user.id)
+    if speech is None:
+        raise NotFoundError("Speech no encontrado")
+    return update_speech(
+        db,
+        speech,
+        titulo=body.titulo.strip() if body.titulo is not None else None,
+        texto=body.texto,
+    )
+
+
+@router.delete("/speeches/{speech_id}", status_code=204)
+def eliminar_speech(
+    speech_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> Response:
+    speech = get_speech(db, speech_id, current_user.id)
+    if speech is None:
+        raise NotFoundError("Speech no encontrado")
+    delete_speech(db, speech)
     return Response(status_code=204)
