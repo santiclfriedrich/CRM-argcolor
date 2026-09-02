@@ -73,6 +73,8 @@ export function SolicitudForm({
   const [ccs, setCcs] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [grupoId, setGrupoId] = useState<number | null>(null);
+  // Speech elegido (para marcarlo y no reinsertar el mismo).
+  const [speechId, setSpeechId] = useState("");
 
   // Preseleccionar el grupo default del usuario cuando cargan los grupos.
   useEffect(() => {
@@ -208,16 +210,19 @@ export function SolicitudForm({
             <div className="w-56">
               <SelectMenu
                 id="s-speech"
-                value=""
+                value={speechId}
                 onChange={(v) => {
-                  const sp = speeches.find((s) => String(s.id) === v);
-                  // El speech va ANTES del requerimiento (no lo pisa): se
-                  // antepone y lo ya escrito queda debajo, en el mismo cuerpo.
-                  if (sp) {
-                    setRequerimiento((prev) =>
-                      prev.trim() ? `${sp.texto}\n\n${prev}` : sp.texto
-                    );
+                  // Solo antepone si cambió (no reinserta el mismo speech). El
+                  // texto va ANTES del requerimiento; lo ya escrito queda debajo.
+                  if (v && v !== speechId) {
+                    const sp = speeches.find((s) => String(s.id) === v);
+                    if (sp) {
+                      setRequerimiento((prev) =>
+                        prev.trim() ? `${sp.texto}\n\n${prev}` : sp.texto
+                      );
+                    }
                   }
+                  setSpeechId(v);
                 }}
                 placeholder="Usar un speech…"
                 options={[
