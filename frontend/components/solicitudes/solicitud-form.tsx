@@ -211,7 +211,13 @@ export function SolicitudForm({
                 value=""
                 onChange={(v) => {
                   const sp = speeches.find((s) => String(s.id) === v);
-                  if (sp) setRequerimiento(sp.texto);
+                  // El speech va ANTES del requerimiento (no lo pisa): se
+                  // antepone y lo ya escrito queda debajo, en el mismo cuerpo.
+                  if (sp) {
+                    setRequerimiento((prev) =>
+                      prev.trim() ? `${sp.texto}\n\n${prev}` : sp.texto
+                    );
+                  }
                 }}
                 placeholder="Usar un speech…"
                 options={[
