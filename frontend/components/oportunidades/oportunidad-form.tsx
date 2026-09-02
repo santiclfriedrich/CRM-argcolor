@@ -687,12 +687,12 @@ export function OportunidadForm({
       </div>
 
       <div>
-        <Label htmlFor="o-files">Adjuntos (PDF o imágenes)</Label>
+        <Label htmlFor="o-files">Adjuntos (PDF, imágenes, Excel, Word o CSV)</Label>
         <input
           id="o-files"
           type="file"
           multiple
-          accept=".pdf,image/*"
+          accept=".pdf,image/*,.csv,.xls,.xlsx,.doc,.docx"
           onChange={(e) => {
             agregarFiles(Array.from(e.target.files ?? []));
             e.target.value = "";

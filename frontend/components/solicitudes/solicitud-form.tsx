@@ -297,13 +297,13 @@ export function SolicitudForm({
 
       <div>
         <Label htmlFor="s-files">
-          Adjuntos (PDF o imágenes — también podés pegar una captura)
+          Adjuntos (PDF, imágenes, Excel, Word o CSV — también podés pegar una captura)
         </Label>
         <input
           id="s-files"
           type="file"
           multiple
-          accept=".pdf,image/*"
+          accept=".pdf,image/*,.csv,.xls,.xlsx,.doc,.docx"
           onChange={(e) => {
             agregarFiles(Array.from(e.target.files ?? []));
             // Limpiamos el input para poder volver a elegir el mismo archivo.
