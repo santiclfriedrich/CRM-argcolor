@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import get_current_admin, get_current_user
+from app.api.deps import get_current_user
 from app.config import get_settings
 from app.db.models.usuarios import Usuario
 from app.services.gbp_runner import estado_con_conteo, lanzar_sync
@@ -45,10 +45,11 @@ def estado_sync(token: str = "") -> dict:
 def run_sync(
     force: int = 0,
     full: int = 0,
-    _: Usuario = Depends(get_current_admin),
+    _: Usuario = Depends(get_current_user),
 ) -> dict:
-    """Dispara la sync desde el CRM (admin). Botón 'Sincronizar GBP'.
-    Por defecto incremental; `full=1` para un resync completo."""
+    """Dispara la sync desde el CRM (cualquier usuario logueado). Botón
+    'Sincronizar GBP'. Por defecto incremental; `full=1` para un resync completo.
+    La sync tiene lock, así que disparos simultáneos no la duplican."""
     return lanzar_sync(force=bool(force), full=bool(full))
 
 

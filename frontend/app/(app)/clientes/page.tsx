@@ -2,7 +2,6 @@
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Plus, RefreshCw, User } from "lucide-react";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -22,12 +21,11 @@ import { errorMessage } from "@/lib/utils";
 // Botón (admin) para disparar el sync de clientes GBP -> CRM. El scheduler igual
 // lo corre solo cada 8h; esto es para forzarlo cuando cargan clientes nuevos.
 function SyncGbpBoton() {
-  const { data: session } = useSession();
-  const esAdmin = (session?.usuario as { rol?: string } | undefined)?.rol === "admin";
+  // Disponible para cualquier usuario logueado (no solo admin): la sync tiene
+  // lock, así que dos disparos simultáneos no la duplican.
   const run = useRunGbpSync();
-  const { data: estado } = useGbpSyncStatus(esAdmin);
+  const { data: estado } = useGbpSyncStatus(true);
 
-  if (!esAdmin) return null;
   const corriendo = Boolean(estado?.corriendo) || run.isPending;
 
   return (
