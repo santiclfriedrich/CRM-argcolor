@@ -27,6 +27,10 @@ interface Props {
   onCancel: () => void;
   // Borrar una imagen del requerimiento ya guardada (solo en edición).
   onEliminarImagenReq?: (adjuntoId: number) => void;
+  // Mostrar los adjuntos comunes ya guardados dentro del form (para el modal
+  // "Modificar", que no tiene la sección de adjuntos del detalle). En el detalle
+  // se deja en false para no duplicarlos con su propia sección.
+  mostrarAdjuntosGuardados?: boolean;
   // Si se pasa (solo al crear), persiste un borrador en localStorage con esta clave.
   draftKey?: string;
 }
@@ -63,29 +67,112 @@ function ImagenReqGuardada({
   }, [oportunidadId, adjunto.id]);
 
   return (
-    <ThumbBox alt={adjunto.filename} src={url} onQuitar={onEliminar ? () => onEliminar(adjunto.id) : undefined} />
+    <ThumbBox
+      alt={adjunto.filename}
+      src={url}
+      onOpen={url ? () => window.open(url, "_blank", "noopener") : undefined}
+      onQuitar={onEliminar ? () => onEliminar(adjunto.id) : undefined}
+    />
+  );
+}
+
+// Adjunto ya guardado (no-requerimiento): chip con nombre; abre el archivo al
+// clickear. Carga el blob con auth (como ImagenReqGuardada).
+function AdjuntoGuardado({
+  oportunidadId,
+  adjunto,
+  onEliminar,
+}: {
+  oportunidadId: number;
+  adjunto: AdjuntoOportunidad;
+  onEliminar?: (adjuntoId: number) => void;
+}) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    let creada: string | null = null;
+    objectUrlAdjuntoOportunidad(oportunidadId, adjunto.id)
+      .then((u) => {
+        creada = u;
+        if (vivo) setUrl(u);
+        else URL.revokeObjectURL(u);
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+      if (creada) URL.revokeObjectURL(creada);
+    };
+  }, [oportunidadId, adjunto.id]);
+
+  const esImagen = (adjunto.mime_type ?? "").startsWith("image/");
+  return (
+    <li className="flex items-center gap-2 rounded-md bg-surface2 px-2.5 py-1.5 text-xs text-ink-2">
+      {esImagen && url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={url}
+          alt={adjunto.filename}
+          className="h-9 w-9 shrink-0 rounded object-cover ring-1 ring-line"
+        />
+      ) : (
+        <FileText size={16} className="shrink-0 text-ink-3" />
+      )}
+      <button
+        type="button"
+        onClick={() => url && window.open(url, "_blank", "noopener")}
+        disabled={!url}
+        title={`Abrir ${adjunto.filename}`}
+        className="min-w-0 flex-1 truncate text-left hover:underline disabled:no-underline"
+      >
+        {adjunto.filename}
+      </button>
+      {onEliminar && (
+        <button
+          type="button"
+          onClick={() => onEliminar(adjunto.id)}
+          className="shrink-0 text-ink-3 transition-colors hover:text-danger"
+        >
+          Quitar
+        </button>
+      )}
+    </li>
   );
 }
 
 // Caja de miniatura reutilizable (imagen guardada o recién pegada).
+// `onOpen`: si se pasa, la miniatura es clickeable y abre la imagen en grande.
 function ThumbBox({
   src,
   alt,
   onQuitar,
+  onOpen,
 }: {
   src: string | null;
   alt: string;
   onQuitar?: () => void;
+  onOpen?: () => void;
 }) {
+  const inner = src ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt} title={alt} className="h-full w-full object-cover" />
+  ) : (
+    <div className="flex h-full w-full items-center justify-center">
+      <FileText size={18} className="text-ink-3" />
+    </div>
+  );
   return (
     <div className="group relative h-20 w-20 overflow-hidden rounded-lg border border-line bg-surface2">
-      {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={alt} title={alt} className="h-full w-full object-cover" />
+      {onOpen ? (
+        <button
+          type="button"
+          onClick={onOpen}
+          title={`Abrir ${alt}`}
+          className="block h-full w-full cursor-zoom-in"
+        >
+          {inner}
+        </button>
       ) : (
-        <div className="flex h-full w-full items-center justify-center">
-          <FileText size={18} className="text-ink-3" />
-        </div>
+        inner
       )}
       {onQuitar && (
         <button
@@ -132,6 +219,7 @@ export function OportunidadForm({
   onSubmit,
   onCancel,
   onEliminarImagenReq,
+  mostrarAdjuntosGuardados = false,
   draftKey,
 }: Props) {
   // Borrador guardado (solo al crear): se carga una vez al montar.
@@ -205,6 +293,10 @@ export function OportunidadForm({
   const [imagenesReq, setImagenesReq] = useState<File[]>([]);
   // Imágenes del requerimiento ya guardadas en la oportunidad (en edición).
   const savedReq = (initial?.archivos_adjuntos ?? []).filter((a) => a.origen === ORIGEN_REQ);
+  // Adjuntos comunes (del cliente), ya guardados: se muestran para editar.
+  const savedAdjuntos = (initial?.archivos_adjuntos ?? []).filter(
+    (a) => a.origen !== ORIGEN_REQ
+  );
 
   // Guarda el borrador ante cada cambio (solo al crear con draftKey).
   useEffect(() => {
@@ -396,6 +488,11 @@ export function OportunidadForm({
                 key={`nueva-${i}`}
                 src={(previewsReq[i] as string) ?? null}
                 alt={f.name}
+                onOpen={
+                  previewsReq[i]
+                    ? () => window.open(previewsReq[i] as string, "_blank", "noopener")
+                    : undefined
+                }
                 onQuitar={() => setImagenesReq((prev) => prev.filter((_, j) => j !== i))}
               />
             ))}
@@ -710,8 +807,17 @@ export function OportunidadForm({
           }}
           className="block w-full text-sm text-ink-2 file:mr-3 file:rounded-md file:border-0 file:bg-surface2 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink hover:file:bg-surface3"
         />
-        {files.length > 0 && (
+        {((mostrarAdjuntosGuardados && savedAdjuntos.length > 0) || files.length > 0) && (
           <ul className="mt-2 space-y-1">
+            {mostrarAdjuntosGuardados &&
+              savedAdjuntos.map((a) => (
+                <AdjuntoGuardado
+                  key={a.id}
+                  oportunidadId={initial!.id}
+                  adjunto={a}
+                  onEliminar={onEliminarImagenReq}
+                />
+              ))}
             {files.map((f, i) => (
               <li
                 key={i}

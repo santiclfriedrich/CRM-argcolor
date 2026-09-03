@@ -1399,6 +1399,7 @@ function EditOportunidadModal({ oportunidad, onClose }: { oportunidad: Oportunid
           isPending={updateMut.isPending}
           onCancel={onClose}
           onEliminarImagenReq={(adjuntoId) => eliminarAdjunto.mutate(adjuntoId)}
+          mostrarAdjuntosGuardados
           onSubmit={handleSubmit}
         />
       )}
