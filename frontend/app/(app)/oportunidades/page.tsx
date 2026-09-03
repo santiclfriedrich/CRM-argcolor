@@ -57,6 +57,7 @@ import {
   useCreateOportunidad,
   useDeleteOportunidad,
   useEliminarAdjuntoOportunidad,
+  useOportunidad,
   useOportunidades,
   usePropuestas,
   useResaltadas,
@@ -1371,6 +1372,10 @@ function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad;
 function EditOportunidadModal({ oportunidad, onClose }: { oportunidad: Oportunidad; onClose: () => void }) {
   const updateMut = useUpdateOportunidad(oportunidad.id);
   const eliminarAdjunto = useEliminarAdjuntoOportunidad(oportunidad.id);
+  // La fila viene del listado (liviano: sin requerimiento, contacto ni adjuntos).
+  // Traemos la oportunidad COMPLETA para editarla sin entrar al detalle.
+  const { data: completa, isLoading } = useOportunidad(oportunidad.id);
+
   const handleSubmit = (values: OportunidadCreate, files: File[], imagenesReq: File[]) =>
     updateMut.mutate(values, {
       onSuccess: async () => {
@@ -1386,13 +1391,17 @@ function EditOportunidadModal({ oportunidad, onClose }: { oportunidad: Oportunid
 
   return (
     <Modal open onClose={onClose} title={`Editar oportunidad #${oportunidad.id}`} size="4xl">
-      <OportunidadForm
-        initial={oportunidad}
-        isPending={updateMut.isPending}
-        onCancel={onClose}
-        onEliminarImagenReq={(adjuntoId) => eliminarAdjunto.mutate(adjuntoId)}
-        onSubmit={handleSubmit}
-      />
+      {isLoading || !completa ? (
+        <p className="text-ink-2">Cargando…</p>
+      ) : (
+        <OportunidadForm
+          initial={completa}
+          isPending={updateMut.isPending}
+          onCancel={onClose}
+          onEliminarImagenReq={(adjuntoId) => eliminarAdjunto.mutate(adjuntoId)}
+          onSubmit={handleSubmit}
+        />
+      )}
     </Modal>
   );
 }
