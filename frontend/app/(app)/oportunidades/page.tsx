@@ -560,6 +560,7 @@ export default function OportunidadesPage() {
 
   const router = useRouter();
   const { seccion } = useSeccion();
+  const esGub = seccion === "gubernamental";
   const { esResaltada, toggle: toggleResaltar } = useResaltadas();
   const { toast, update } = useToast();
   const { data, isLoading, isError } = useOportunidades({ ...filtros, ambito: seccion });
@@ -670,7 +671,21 @@ export default function OportunidadesPage() {
     if (claves.length) {
       res = res.filter((o) => claves.every((k) => colFiltros[k]!.includes(ACCESOR[k].get(o))));
     }
-    if (sort) {
+    if (esGub) {
+      // Gubernamental: ordena por fecha de apertura. Arriba las próximas (>= hoy,
+      // la más cercana primero); después las pasadas (más reciente primero); las
+      // sin fecha, al final. Es el orden fijo de la sección (no por llegada).
+      const hoy = new Date().toISOString().slice(0, 10);
+      const rango = (o: Oportunidad) => (!o.apertura ? 2 : o.apertura >= hoy ? 0 : 1);
+      res = [...res].sort((a, b) => {
+        const ra = rango(a);
+        const rb = rango(b);
+        if (ra !== rb) return ra - rb;
+        if (ra === 2) return a.id - b.id; // sin apertura: estable por id
+        if (ra === 0) return (a.apertura ?? "") < (b.apertura ?? "") ? -1 : 1; // próximas asc
+        return (a.apertura ?? "") > (b.apertura ?? "") ? -1 : 1; // pasadas desc
+      });
+    } else if (sort) {
       const { key, dir } = sort;
       const factor = dir === "asc" ? 1 : -1;
       res = [...res].sort(
@@ -681,12 +696,11 @@ export default function OportunidadesPage() {
       res = [...res].sort((a, b) => (nuevasArriba ? b.id - a.id : a.id - b.id));
     }
     return res;
-  }, [oportunidadesDelMes, busqueda, colFiltros, sort, nuevasArriba]);
+  }, [oportunidadesDelMes, busqueda, colFiltros, sort, nuevasArriba, esGub]);
 
   // Columnas de ancho ajustable (16: checkbox, ID, Cliente, CL N°, Asunto,
   // Producto, Pedido, E/Compra, R/Compra, Cotiz, E/Cliente, Validez, Ing.,
   // Estado, GBP, Observación).
-  const esGub = seccion === "gubernamental";
   // Dos configuraciones de columnas (corporativo / gubernamental). Se llaman
   // ambos hooks siempre (orden estable) y se usa el que corresponde a la sección.
   const colsCorpo = useResizableColumns(
