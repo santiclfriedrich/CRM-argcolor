@@ -32,6 +32,8 @@ interface Props {
   // Condición de pago pre-seleccionada (ej. mapeada desde los "Días" de una
   // licitación gubernamental al pedir a Compras).
   defaultCondicionPago?: CondicionPago | "";
+  // Referencia GBP pre-cargada (ej. el N° de pedido de la oportunidad).
+  defaultReferenciaGbp?: string;
   // Si la oportunidad viene fijada, no se puede cambiar en el form.
   lockOportunidad?: boolean;
   // Textos del botón de submit (ej. "Enviar a Compras" cuando además se envía).
@@ -55,6 +57,7 @@ export function SolicitudForm({
   defaultOportunidadId = null,
   defaultRequerimiento = "",
   defaultCondicionPago = "",
+  defaultReferenciaGbp = "",
   lockOportunidad = false,
   submitLabel = "Crear solicitud",
   pendingLabel = "Creando…",
@@ -73,7 +76,7 @@ export function SolicitudForm({
   const [condicionPago, setCondicionPago] = useState<CondicionPago | "">(defaultCondicionPago);
   const [importe, setImporte] = useState("");
   const [fechaLimite, setFechaLimite] = useState("");
-  const [refGbp, setRefGbp] = useState("");
+  const [refGbp, setRefGbp] = useState(defaultReferenciaGbp);
   const [ccs, setCcs] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [grupoId, setGrupoId] = useState<number | null>(null);

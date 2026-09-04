@@ -1317,6 +1317,8 @@ function PedirComprasModal({ oportunidad, onClose }: { oportunidad: Oportunidad;
                 ? (String(oportunidad.dias) as CondicionPago)
                 : ""
             }
+            // El N° de pedido de la oportunidad se mapea a Referencia GBP.
+            defaultReferenciaGbp={oportunidad.numero_pedido ?? ""}
             lockOportunidad
             onCancel={onClose}
             adjuntosExtra={
