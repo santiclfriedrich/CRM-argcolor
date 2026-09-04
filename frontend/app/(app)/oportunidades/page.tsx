@@ -562,6 +562,18 @@ export default function OportunidadesPage() {
   const { seccion } = useSeccion();
   const esGub = seccion === "gubernamental";
   const { esResaltada, toggle: toggleResaltar } = useResaltadas();
+  // Ventana de "apertura próxima" (gubernamental): hoy … hoy+4 días. Si la
+  // apertura cae en ese rango, la fila se resalta en naranja como alerta.
+  const { hoyStr, limiteAperturaStr } = useMemo(() => {
+    const hoy = new Date();
+    const iso = (dt: Date) => dt.toISOString().slice(0, 10);
+    return {
+      hoyStr: iso(hoy),
+      limiteAperturaStr: iso(new Date(hoy.getTime() + 4 * 86400000)),
+    };
+  }, []);
+  const aperturaProxima = (o: Oportunidad) =>
+    esGub && !!o.apertura && o.apertura >= hoyStr && o.apertura <= limiteAperturaStr;
   const { toast, update } = useToast();
   const { data, isLoading, isError } = useOportunidades({ ...filtros, ambito: seccion });
   const createMut = useCreateOportunidad();
@@ -1030,9 +1042,11 @@ export default function OportunidadesPage() {
                   onClick={(e) => setMenu({ o, x: e.clientX, y: e.clientY })}
                   className={cn(
                     "cursor-pointer border-t border-line transition-colors",
-                    esResaltada(o.id)
-                      ? "bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-400/15 dark:hover:bg-yellow-400/25"
-                      : "hover:bg-surface2"
+                    aperturaProxima(o)
+                      ? "bg-orange-100 hover:bg-orange-200 dark:bg-orange-400/20 dark:hover:bg-orange-400/30"
+                      : esResaltada(o.id)
+                        ? "bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-400/15 dark:hover:bg-yellow-400/25"
+                        : "hover:bg-surface2"
                   )}
                 >
                   <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
