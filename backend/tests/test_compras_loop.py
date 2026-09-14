@@ -52,13 +52,14 @@ class FakeGmail:
     def __init__(self) -> None:
         self.enviado: dict | None = None
 
-    def send_message(self, to, subject, body, thread_id=None, in_reply_to=None, cc=None, attachments=None):  # noqa: ANN001, E501
+    def send_message(self, to, subject, body, thread_id=None, in_reply_to=None, cc=None, attachments=None, html=None):  # noqa: ANN001, E501
         self.enviado = {
             "to": to,
             "subject": subject,
             "cc": cc,
             "thread_id": thread_id,
             "attachments": attachments,
+            "html": html,
         }
         return {"message_id": "m-1", "thread_id": "hilo-compras"}
 
@@ -126,6 +127,8 @@ def test_enviar_solicitud_manda_por_gmail_y_guarda_hilo(client: TestClient) -> N
     # Fue al destinatario configurado, con CC.
     assert _fake_gmail.enviado["to"] == "compras@argentinacolor.com"
     assert _fake_gmail.enviado["cc"] == ["jefe@argentinacolor.com"]
+    # El mail viaja en HTML (con el texto plano como fallback).
+    assert _fake_gmail.enviado["html"] and "<table" in _fake_gmail.enviado["html"]
 
 
 def test_adjuntos_se_envian_a_compras(client: TestClient, tmp_path, monkeypatch) -> None:  # noqa: ANN001

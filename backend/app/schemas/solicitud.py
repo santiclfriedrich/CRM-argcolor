@@ -113,6 +113,7 @@ class EmailPreview(BaseModel):
     cc: list[str] = []
     subject: str
     body: str
+    html: str | None = None
 
 
 class ParseRespuestaRequest(BaseModel):

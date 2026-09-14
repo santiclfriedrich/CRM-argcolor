@@ -4,6 +4,7 @@
 `enviar_a_compras` lo manda por Gmail desde la casilla del vendedor.
 """
 
+import html as html_mod
 import re
 from datetime import datetime, timezone
 from typing import Protocol
@@ -133,6 +134,7 @@ class GmailSender(Protocol):
         in_reply_to: str | None = None,
         cc: list[str] | None = None,
         attachments: list[dict] | None = None,
+        html: str | None = None,
     ) -> dict[str, str | None]: ...
 
 # Clave en la tabla `configuracion` con destinatarios por defecto:
@@ -236,6 +238,10 @@ def build_email_preview(solicitud: SolicitudCompras, db: Session) -> dict:
     )
     condicion = solicitud.condicion_pago.value if solicitud.condicion_pago else "—"
 
+    numero_cliente = _fmt(solicitud.numero_cliente)
+    fecha_limite = _fmt(solicitud.fecha_limite)
+    ref_gbp = _fmt(solicitud.presupuesto_gbp_referencia)
+
     body = "\n".join(
         [
             "Hola,",
@@ -245,21 +251,82 @@ def build_email_preview(solicitud: SolicitudCompras, db: Session) -> dict:
             f"Solicitante: {vendedor}",
             f"Cliente: {cliente}",
             "",
-            f"Número de cliente: {_fmt(solicitud.numero_cliente)}",
+            f"Número de cliente: {numero_cliente}",
             "",
             "Requerimiento:",
             solicitud.requerimiento,
             "",
             f"Condición de pago: {condicion}",
             f"Importe aproximado: {importe}",
-            f"Fecha límite: {_fmt(solicitud.fecha_limite)}",
-            f"Referencia GBP: {_fmt(solicitud.presupuesto_gbp_referencia)}",
+            f"Fecha límite: {fecha_limite}",
+            f"Referencia GBP: {ref_gbp}",
             "",
             "Gracias.",
         ]
     )
 
-    return {"to": to, "cc": cc, "subject": subject, "body": body}
+    html = _build_email_html(
+        vendedor=vendedor,
+        cliente=cliente,
+        numero_cliente=numero_cliente,
+        requerimiento=solicitud.requerimiento or "—",
+        condicion=condicion,
+        importe=importe,
+        fecha_limite=fecha_limite,
+        ref_gbp=ref_gbp,
+    )
+
+    return {"to": to, "cc": cc, "subject": subject, "body": body, "html": html}
+
+
+def _build_email_html(
+    *,
+    vendedor: str,
+    cliente: str,
+    numero_cliente: str,
+    requerimiento: str,
+    condicion: str,
+    importe: str,
+    fecha_limite: str,
+    ref_gbp: str,
+) -> str:
+    """Versión HTML del mail a Compras (espejo del cuerpo de texto)."""
+    e = html_mod.escape
+    req_html = e(requerimiento).replace("\n", "<br>")
+
+    def fila(label: str, valor: str, *, fuerte: bool = False) -> str:
+        v = f"<strong>{e(valor)}</strong>" if fuerte else e(valor)
+        return (
+            '<tr>'
+            f'<td style="padding:3px 14px 3px 0;color:#6b7280;white-space:nowrap;'
+            f'vertical-align:top">{e(label)}</td>'
+            f'<td style="padding:3px 0;color:#111827">{v}</td>'
+            '</tr>'
+        )
+
+    return (
+        '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;'
+        'color:#111827;line-height:1.5">'
+        '<p style="margin:0 0 12px">Hola,</p>'
+        '<p style="margin:0 0 12px">Solicito cotización para el siguiente '
+        'requerimiento:</p>'
+        '<table style="border-collapse:collapse;font-size:14px;margin-bottom:12px">'
+        f'{fila("Solicitante", vendedor, fuerte=True)}'
+        f'{fila("Cliente", cliente, fuerte=True)}'
+        f'{fila("Número de cliente", numero_cliente)}'
+        '</table>'
+        '<p style="margin:0 0 4px;color:#6b7280">Requerimiento:</p>'
+        '<div style="border-left:3px solid #e5e7eb;padding:2px 0 2px 12px;'
+        f'margin-bottom:14px;white-space:pre-wrap">{req_html}</div>'
+        '<table style="border-collapse:collapse;font-size:14px;margin-bottom:14px">'
+        f'{fila("Condición de pago", condicion)}'
+        f'{fila("Importe aproximado", importe)}'
+        f'{fila("Fecha límite", fecha_limite)}'
+        f'{fila("Referencia GBP", ref_gbp)}'
+        '</table>'
+        '<p style="margin:0">Gracias.</p>'
+        '</div>'
+    )
 
 
 def _cargar_adjuntos(solicitud: SolicitudCompras) -> list[dict]:
@@ -300,6 +367,7 @@ def enviar_a_compras(db: Session, gmail: GmailSender, solicitud: SolicitudCompra
         to=preview["to"],
         subject=preview["subject"],
         body=preview["body"],
+        html=preview.get("html"),
         cc=preview["cc"] or None,
         attachments=_cargar_adjuntos(solicitud) or None,
     )
