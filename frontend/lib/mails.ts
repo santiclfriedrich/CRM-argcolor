@@ -4,8 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { oportunidadKeys } from "@/lib/oportunidades";
 import type {
+  CarpetaInbox,
   IngestEmailRequest,
   IngestResult,
+  InboxMail,
   Mail,
   MailDescartado,
   Seccion,
@@ -33,7 +35,45 @@ export const mailKeys = {
   all: ["mails"] as const,
   descartados: ["mails", "descartados"] as const,
   hilo: (mailId: number) => ["mails", "hilo", mailId] as const,
+  inbox: (carpeta: CarpetaInbox) => ["mails", "inbox", carpeta] as const,
 };
+
+// --- Inbox del CRM (bandeja tipo Gmail): por carpeta de la casilla del usuario ---
+export function useInbox(carpeta: CarpetaInbox) {
+  return useQuery({
+    queryKey: mailKeys.inbox(carpeta),
+    queryFn: async () =>
+      (await api.get<InboxMail[]>(`${BASE}/inbox`, { params: { carpeta } })).data,
+  });
+}
+
+export function useMarcarLeido() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, leido }: { id: number; leido: boolean }) =>
+      (await api.post<InboxMail>(`${BASE}/${id}/leido`, { leido })).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mails", "inbox"] }),
+  });
+}
+
+export function useEliminarMail() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`${BASE}/${id}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mails", "inbox"] }),
+  });
+}
+
+export function useRedactar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { para: string; asunto?: string; cuerpo: string }) =>
+      (await api.post<Mail>(`${BASE}/redactar`, body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mails", "inbox"] }),
+  });
+}
 
 // `ambito` limita la bandeja a la sección activa (Corporativo / Gubernamental).
 export function useMails(oportunidadId?: number, ambito?: Seccion) {

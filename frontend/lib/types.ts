@@ -438,6 +438,23 @@ export interface Mail {
   archivos: Adjunto[];
 }
 
+export type CarpetaInbox = "entrada" | "enviados" | "archivo";
+
+// Fila del inbox del CRM (bandeja tipo Gmail). Sin cuerpo completo: solo preview.
+export interface InboxMail {
+  id: number;
+  direccion: "entrante" | "saliente";
+  de: string | null;
+  para: string | null;
+  asunto: string | null;
+  fecha: string | null;
+  leido: boolean;
+  carpeta: CarpetaInbox | null;
+  gmail_thread_id: string | null;
+  tiene_cuerpo: boolean;
+  preview: string | null;
+}
+
 export type IngestEmailRequest = {
   de: string;
   asunto?: string | null;

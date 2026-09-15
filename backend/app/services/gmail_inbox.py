@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models.mails import DireccionMail, Mail
+from app.db.models.mails_descartados import MailDescartado
 from app.db.models.usuarios import Usuario
 
 logger = logging.getLogger(__name__)
@@ -83,8 +84,19 @@ def sync_inbox_for_user(
         m.gmail_message_id: m
         for m in db.scalars(select(Mail).where(Mail.gmail_message_id.in_(ids)))
     }
+    # Los que el usuario borró a mano en el CRM no se vuelven a traer.
+    eliminados = set(
+        db.scalars(
+            select(MailDescartado.gmail_message_id).where(
+                MailDescartado.gmail_message_id.in_(ids),
+                MailDescartado.categoria == "eliminado_manual",
+            )
+        )
+    )
 
     for mid in ids:
+        if mid in eliminados:
+            continue
         try:
             msg = gmail.get_message(mid, with_attachments=False)
             labels = msg.get("labels") or []

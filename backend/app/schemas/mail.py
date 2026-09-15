@@ -107,6 +107,41 @@ class MailListItem(BaseModel):
     archivos: list[AdjuntoRead] = []
 
 
+class InboxMailListItem(BaseModel):
+    """Fila del inbox del CRM (bandeja tipo Gmail): remitente/asunto/preview/estado.
+
+    No trae el cuerpo completo (egress): solo un `preview` recortado en SQL. El
+    texto entero se pide al abrir la conversación (/hilo)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    direccion: DireccionMail
+    de: str | None = None
+    para: str | None = None
+    asunto: str | None = None
+    fecha: datetime | None = None
+    leido: bool = False
+    carpeta: str | None = None
+    gmail_thread_id: str | None = None
+    tiene_cuerpo: bool = False
+    preview: str | None = None
+
+
+class RedactarRequest(BaseModel):
+    """Correo nuevo redactado desde el CRM."""
+
+    para: str
+    asunto: str | None = None
+    cuerpo: str
+
+
+class LeidoBody(BaseModel):
+    """Marcar un mail como leído/no leído (local al CRM)."""
+
+    leido: bool = True
+
+
 class DescartadoRead(BaseModel):
     """Mail que la IA clasificó como no comercial (registro mínimo)."""
 

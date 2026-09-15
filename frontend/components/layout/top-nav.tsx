@@ -63,7 +63,7 @@ export function TopNav() {
         <button
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
-          className="rounded-md p-1.5 text-white/70 transition hover:bg-white/10 lg:hidden"
+          className="rounded-md p-1.5 text-white/70 transition hover:bg-white/10 xl:hidden"
           aria-label="Menú"
         >
           {menuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -81,8 +81,9 @@ export function TopNav() {
           />
         </Link>
 
-        {/* Nav horizontal (desktop) */}
-        <nav className="hidden flex-1 items-center gap-0.5 lg:flex">
+        {/* Nav horizontal (desktop): recién a xl, donde entran todos los ítems
+            sin desbordarse. Debajo se usa el menú hamburguesa. */}
+        <nav className="hidden min-w-0 flex-1 items-center gap-0.5 overflow-hidden xl:flex">
           {nav.map(({ href, label }) => (
             <Link
               key={href}
@@ -157,7 +158,7 @@ export function TopNav() {
 
       {/* Menú mobile desplegable */}
       {menuOpen && (
-        <div className="border-t border-line lg:hidden">
+        <div className="border-t border-white/10 xl:hidden">
           <div className="flex items-center gap-2 px-3 pt-3 md:hidden">
             <span className="text-xs font-medium text-white/60">Sección:</span>
             <SeccionSwitcher />

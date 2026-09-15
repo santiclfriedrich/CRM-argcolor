@@ -1,6 +1,8 @@
 """Bandeja inteligente: ingesta manual de mails y listado de procesados."""
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, defer, selectinload, with_expression
 
@@ -22,10 +24,13 @@ from app.integrations.ai.base import AIProvider
 from app.schemas.mail import (
     AclaracionBody,
     DescartadoRead,
+    InboxMailListItem,
     IngestEmailRequest,
     IngestResult,
+    LeidoBody,
     MailListItem,
     MailRead,
+    RedactarRequest,
     ResponderRequest,
 )
 from app.services.acuse import send_aclaracion, send_acuse, send_respuesta
@@ -197,6 +202,80 @@ def list_mails(
     return list(db.scalars(query))
 
 
+_CARPETAS_INBOX = ("entrada", "enviados", "archivo")
+
+
+@router.get("/inbox", response_model=list[InboxMailListItem])
+def list_inbox(
+    carpeta: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> list[InboxMailListItem]:
+    """Inbox del CRM (bandeja tipo Gmail): los mails de la casilla del usuario
+    logueado, por carpeta (entrada/enviados/archivo). No trae el cuerpo entero,
+    solo un preview recortado en SQL."""
+    preview = func.substr(func.coalesce(Mail.cuerpo, ""), 1, 160)
+    tiene = func.length(func.coalesce(Mail.cuerpo, "")) > 0
+    query = (
+        select(
+            Mail.id,
+            Mail.direccion,
+            Mail.de,
+            Mail.para,
+            Mail.asunto,
+            Mail.fecha,
+            Mail.leido,
+            Mail.carpeta,
+            Mail.gmail_thread_id,
+            tiene.label("tiene_cuerpo"),
+            preview.label("preview"),
+        )
+        .where(Mail.usuario_id == current_user.id, Mail.carpeta.is_not(None))
+        .order_by(Mail.fecha.desc().nullslast(), Mail.id.desc())
+        .limit(_BANDEJA_LIMIT)
+    )
+    if carpeta in _CARPETAS_INBOX:
+        query = query.where(Mail.carpeta == carpeta)
+    return [InboxMailListItem.model_validate(dict(r._mapping)) for r in db.execute(query)]
+
+
+@router.post("/redactar", response_model=MailRead, status_code=201)
+def redactar_mail(
+    body: RedactarRequest,
+    db: Session = Depends(get_db),
+    gmail=Depends(get_user_gmail),  # noqa: ANN001 - GmailClient del usuario logueado
+    current_user: Usuario = Depends(get_current_user),
+) -> Mail:
+    """Envía un correo nuevo desde la casilla del usuario y lo guarda en Enviados."""
+    if not body.para.strip() or not body.cuerpo.strip():
+        raise HTTPException(status_code=400, detail="Faltan destinatario o cuerpo.")
+    try:
+        sent = gmail.send_message(
+            to=body.para, subject=body.asunto or "", body=body.cuerpo
+        )
+    except Exception as exc:  # noqa: BLE001 - frontera con Gmail
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"No se pudo enviar el correo: {exc}",
+        ) from exc
+    mail = Mail(
+        gmail_message_id=sent.get("message_id"),
+        gmail_thread_id=sent.get("thread_id"),
+        direccion=DireccionMail.saliente,
+        de=current_user.email,
+        para=body.para,
+        asunto=body.asunto,
+        cuerpo=body.cuerpo,
+        fecha=datetime.now(timezone.utc),
+        leido=True,
+        carpeta="enviados",
+        usuario_id=current_user.id,
+    )
+    db.add(mail)
+    db.commit()
+    return _get_loaded(db, mail.id)
+
+
 @router.get("/descartados", response_model=list[DescartadoRead])
 def list_descartados(
     db: Session = Depends(get_db),
@@ -289,6 +368,54 @@ def get_mail(
     mail = _get_loaded(db, mail_id)
     _assert_owner(mail, current_user)
     return mail
+
+
+@router.post("/{mail_id}/leido", response_model=InboxMailListItem)
+def marcar_leido(
+    mail_id: int,
+    body: LeidoBody | None = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> Mail:
+    """Marca un mail como leído/no leído (local al CRM; no viaja a Gmail)."""
+    mail = db.get(Mail, mail_id)
+    if mail is None:
+        raise NotFoundError("Mail no encontrado")
+    _assert_owner(mail, current_user)
+    mail.leido = body.leido if body is not None else True
+    db.commit()
+    db.refresh(mail)
+    return mail
+
+
+@router.delete("/{mail_id}", status_code=204)
+def eliminar_mail(
+    mail_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> Response:
+    """Elimina un mail SOLO del CRM (en Gmail queda intacto). Registra el id como
+    'eliminado_manual' para que el sync del buzón no lo vuelva a traer."""
+    mail = db.get(Mail, mail_id)
+    if mail is None:
+        raise NotFoundError("Mail no encontrado")
+    _assert_owner(mail, current_user)
+    if mail.gmail_message_id and not db.scalar(
+        select(MailDescartado.id).where(
+            MailDescartado.gmail_message_id == mail.gmail_message_id
+        )
+    ):
+        db.add(
+            MailDescartado(
+                gmail_message_id=mail.gmail_message_id,
+                categoria="eliminado_manual",
+                de=mail.de,
+                asunto=mail.asunto,
+            )
+        )
+    db.delete(mail)
+    db.commit()
+    return Response(status_code=204)
 
 
 @router.post("/{mail_id}/acuse", response_model=MailRead, status_code=201)

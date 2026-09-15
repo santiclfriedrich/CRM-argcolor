@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.db.base import Base
 from app.db.models.mails import DireccionMail, Mail
+from app.db.models.mails_descartados import MailDescartado
 from app.db.models.usuarios import Usuario
 from app.services.gmail_inbox import dias_ventana, sync_inbox_for_user
 
@@ -18,7 +19,7 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
-_TABLES = [Usuario.__table__, Mail.__table__]
+_TABLES = [Usuario.__table__, Mail.__table__, MailDescartado.__table__]
 
 
 @pytest.fixture()
