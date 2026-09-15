@@ -2,18 +2,18 @@
 
 import {
   Archive,
+  ChevronDown,
   ChevronLeft,
   Clock,
   Inbox as InboxIcon,
   Mail as MailIcon,
   Plus,
   RefreshCw,
+  Reply,
   Send,
-  Sparkles,
   Trash2,
 } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,22 @@ const FOLDERS: { key: FolderKey; label: string; icon: typeof InboxIcon }[] = [
   { key: "archivo", label: "Archivo", icon: Archive },
 ];
 
+// Conversación = mails agrupados por hilo de Gmail.
+type Conversacion = {
+  key: string;
+  latest: InboxMail;
+  ids: number[];
+  count: number;
+  unreadIds: number[];
+  remitentes: string;
+};
+
+function nombreEmail(raw: string | null): string {
+  if (!raw) return "—";
+  const m = raw.match(/^\s*"?([^"<]+?)"?\s*</);
+  return (m ? m[1] : raw).trim();
+}
+
 function fmtFecha(fecha: string | null): string {
   if (!fecha) return "";
   const d = new Date(fecha);
@@ -51,14 +67,40 @@ function fmtFecha(fecha: string | null): string {
     d.getDate() === hoy.getDate();
   return mismoDia
     ? d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
-    : d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
+    : d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
 }
 
-function nombreDe(mail: InboxMail): string {
-  const raw = (mail.direccion === "saliente" ? mail.para : mail.de) || "—";
-  // "Nombre Apellido <mail@x.com>" -> "Nombre Apellido"; si es solo mail, el mail.
-  const m = raw.match(/^\s*"?([^"<]+?)"?\s*</);
-  return (m ? m[1] : raw).trim();
+function agrupar(mails: InboxMail[]): Conversacion[] {
+  const map = new Map<string, InboxMail[]>();
+  for (const m of mails) {
+    const k = m.gmail_thread_id || `id-${m.id}`;
+    const arr = map.get(k);
+    if (arr) arr.push(m);
+    else map.set(k, [m]);
+  }
+  const convs: Conversacion[] = [];
+  for (const [key, grp] of map) {
+    const orden = [...grp].sort(
+      (a, b) => new Date(b.fecha ?? 0).getTime() - new Date(a.fecha ?? 0).getTime()
+    );
+    const nombres: string[] = [];
+    for (const m of orden) {
+      const n = m.direccion === "saliente" ? "Tú" : nombreEmail(m.de);
+      if (!nombres.includes(n)) nombres.push(n);
+    }
+    convs.push({
+      key,
+      latest: orden[0],
+      ids: grp.map((m) => m.id),
+      count: grp.length,
+      unreadIds: grp.filter((m) => !m.leido).map((m) => m.id),
+      remitentes: nombres.slice(0, 3).reverse().join(", "),
+    });
+  }
+  return convs.sort(
+    (a, b) =>
+      new Date(b.latest.fecha ?? 0).getTime() - new Date(a.latest.fecha ?? 0).getTime()
+  );
 }
 
 export default function BandejaPage() {
@@ -70,6 +112,13 @@ export default function BandejaPage() {
   const syncMut = useSyncGmail();
   const marcarLeido = useMarcarLeido();
 
+  const carpeta: CarpetaInbox = folder === "programados" ? "entrada" : folder;
+  const { data: mails, isLoading } = useInbox(carpeta);
+  const { data: entrada } = useInbox("entrada");
+  const noLeidos = (entrada ?? []).filter((m) => !m.leido).length;
+
+  const conversaciones = useMemo(() => agrupar(mails ?? []), [mails]);
+
   const sincronizar = () =>
     syncMut.mutate(undefined, {
       onSuccess: (r) => {
@@ -80,14 +129,9 @@ export default function BandejaPage() {
       onError: () => toast.toast("No se pudo sincronizar", "error"),
     });
 
-  const carpeta: CarpetaInbox = folder === "programados" ? "entrada" : folder;
-  const { data: mails, isLoading } = useInbox(carpeta);
-  const { data: entrada } = useInbox("entrada");
-  const noLeidos = (entrada ?? []).filter((m) => !m.leido).length;
-
-  const abrir = (mail: InboxMail) => {
-    setSelectedId(mail.id);
-    if (!mail.leido) marcarLeido.mutate({ id: mail.id, leido: true });
+  const abrir = (conv: Conversacion) => {
+    setSelectedId(conv.latest.id);
+    conv.unreadIds.forEach((id) => marcarLeido.mutate({ id, leido: true }));
   };
 
   const seleccionar = (k: FolderKey) => {
@@ -96,177 +140,148 @@ export default function BandejaPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight text-ink">Bandeja</h1>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={sincronizar}
-          disabled={syncMut.isPending}
-          title="Sincroniza tu casilla de Gmail"
-        >
-          <RefreshCw size={15} className={cn("mr-1.5", syncMut.isPending && "animate-spin")} />
-          Sincronizar
+    <div className="flex h-[calc(100vh-7.5rem)] min-h-[520px] w-full overflow-hidden rounded-xl border border-line bg-surface">
+      {/* Sidebar de carpetas */}
+      <aside className="hidden w-56 shrink-0 flex-col border-r border-line bg-surface2/40 p-3 md:flex">
+        <Button className="w-full" onClick={() => setComponer(true)}>
+          <Plus size={16} className="mr-1.5" /> Nuevo correo
         </Button>
-      </div>
-
-      <div className="flex h-[calc(100vh-11rem)] min-h-[520px] overflow-hidden rounded-xl border border-line bg-surface">
-        {/* Sidebar de carpetas */}
-        <aside className="hidden w-56 shrink-0 flex-col border-r border-line bg-surface2/40 p-3 md:flex">
-          <Button className="w-full" onClick={() => setComponer(true)}>
-            <Plus size={16} className="mr-1.5" /> Nuevo correo
-          </Button>
-          <nav className="mt-4 flex flex-col gap-0.5">
-            {FOLDERS.map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => seleccionar(key)}
-                className={cn(
-                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition",
-                  folder === key
-                    ? "bg-accent/10 text-accent"
-                    : "text-ink-2 hover:bg-surface2"
-                )}
-              >
-                <Icon size={17} className="shrink-0" />
-                <span className="flex-1 text-left">{label}</span>
-                {key === "entrada" && noLeidos > 0 && (
-                  <span className="rounded-full bg-accent px-1.5 py-0.5 text-xs font-semibold text-white">
-                    {noLeidos}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
-          <div className="my-3 border-t border-line" />
-          <Link
-            href="/bandeja/propuestas"
-            className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-ink-2 transition hover:bg-surface2"
-          >
-            <Sparkles size={17} className="shrink-0" />
-            Propuestas de la IA
-          </Link>
-        </aside>
-
-        {/* Lista de conversaciones */}
-        <section
-          className={cn(
-            "flex w-full flex-col md:w-96 md:shrink-0 md:border-r md:border-line",
-            selectedId !== null && "hidden md:flex"
-          )}
-        >
-          <div className="flex items-center gap-2 border-b border-line px-3 py-2.5">
-            <select
-              value={folder}
-              onChange={(e) => seleccionar(e.target.value as FolderKey)}
-              className="rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink md:hidden"
-            >
-              {FOLDERS.map((f) => (
-                <option key={f.key} value={f.key}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
-            <h2 className="hidden text-sm font-semibold text-ink md:block">
-              {FOLDERS.find((f) => f.key === folder)?.label}
-            </h2>
+        <nav className="mt-4 flex flex-col gap-0.5">
+          {FOLDERS.map(({ key, label, icon: Icon }) => (
             <button
+              key={key}
               type="button"
-              onClick={() => setComponer(true)}
-              className="ml-auto rounded-md p-1.5 text-ink-2 transition hover:bg-surface2 md:hidden"
-              aria-label="Nuevo correo"
+              onClick={() => seleccionar(key)}
+              className={cn(
+                "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition",
+                folder === key ? "bg-accent/10 text-accent" : "text-ink-2 hover:bg-surface2"
+              )}
             >
-              <Plus size={18} />
+              <Icon size={17} className="shrink-0" />
+              <span className="flex-1 text-left">{label}</span>
+              {key === "entrada" && noLeidos > 0 && (
+                <span className="rounded-full bg-accent px-1.5 py-0.5 text-xs font-semibold text-white">
+                  {noLeidos}
+                </span>
+              )}
             </button>
-          </div>
+          ))}
+        </nav>
+      </aside>
 
-          <div className="flex-1 overflow-y-auto">
-            {folder === "programados" ? (
-              <EmptyState
-                icon={Clock}
-                titulo="Programados"
-                detalle="Acá vas a poder redactar y programar el envío de un correo. Llega en la próxima fase."
-              />
-            ) : isLoading ? (
-              <p className="p-4 text-sm text-ink-2">Cargando…</p>
-            ) : !mails || mails.length === 0 ? (
-              <EmptyState
-                icon={MailIcon}
-                titulo="Sin correos"
-                detalle="No hay correos en esta carpeta dentro de la ventana sincronizada."
-              />
-            ) : (
-              <ul>
-                {mails.map((mail) => (
-                  <li key={mail.id}>
-                    <button
-                      type="button"
-                      onClick={() => abrir(mail)}
-                      className={cn(
-                        "flex w-full flex-col gap-0.5 border-b border-line px-4 py-3 text-left transition hover:bg-surface2",
-                        selectedId === mail.id && "bg-accent/5",
-                        !mail.leido && "bg-accent/[0.04]"
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        {!mail.leido && (
-                          <span className="h-2 w-2 shrink-0 rounded-full bg-accent" />
-                        )}
-                        <span
+      {/* Área principal: lista o detalle */}
+      <section className="flex min-w-0 flex-1 flex-col">
+        {selectedId !== null ? (
+          <ReadingPane
+            mailId={selectedId}
+            onBack={() => setSelectedId(null)}
+            onDeleted={() => setSelectedId(null)}
+          />
+        ) : (
+          <>
+            {/* Barra de la lista */}
+            <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
+              <select
+                value={folder}
+                onChange={(e) => seleccionar(e.target.value as FolderKey)}
+                className="rounded-md border border-line bg-surface px-2 py-1 text-sm text-ink md:hidden"
+              >
+                {FOLDERS.map((f) => (
+                  <option key={f.key} value={f.key}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+              <span className="text-sm font-medium text-ink-2">
+                {conversaciones.length} conversación
+                {conversaciones.length === 1 ? "" : "es"}
+              </span>
+              <button
+                type="button"
+                onClick={sincronizar}
+                disabled={syncMut.isPending}
+                className="ml-auto rounded-md p-1.5 text-ink-2 transition hover:bg-surface2 disabled:opacity-50"
+                title="Sincronizar"
+                aria-label="Sincronizar"
+              >
+                <RefreshCw size={16} className={cn(syncMut.isPending && "animate-spin")} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {folder === "programados" ? (
+                <EmptyState
+                  icon={Clock}
+                  titulo="Programados"
+                  detalle="Acá vas a poder redactar y programar el envío de un correo. Llega en la próxima fase."
+                />
+              ) : isLoading ? (
+                <p className="p-4 text-sm text-ink-2">Cargando…</p>
+              ) : conversaciones.length === 0 ? (
+                <EmptyState
+                  icon={MailIcon}
+                  titulo="Sin correos"
+                  detalle="No hay correos en esta carpeta dentro de la ventana sincronizada."
+                />
+              ) : (
+                <ul>
+                  {conversaciones.map((conv) => {
+                    const noLeido = conv.unreadIds.length > 0;
+                    return (
+                      <li key={conv.key}>
+                        <button
+                          type="button"
+                          onClick={() => abrir(conv)}
                           className={cn(
-                            "flex-1 truncate text-sm",
-                            mail.leido ? "text-ink-2" : "font-semibold text-ink"
+                            "flex w-full items-center gap-3 border-b border-line px-4 py-2.5 text-left transition hover:bg-surface2",
+                            noLeido && "bg-accent/[0.04]"
                           )}
                         >
-                          {nombreDe(mail)}
-                        </span>
-                        <span className="shrink-0 text-xs tabular-nums text-ink-2">
-                          {fmtFecha(mail.fecha)}
-                        </span>
-                      </div>
-                      <span
-                        className={cn(
-                          "truncate text-sm",
-                          mail.leido ? "text-ink-2" : "font-medium text-ink"
-                        )}
-                      >
-                        {mail.asunto || "(sin asunto)"}
-                      </span>
-                      {mail.preview && (
-                        <span className="truncate text-xs text-ink-2">{mail.preview}</span>
-                      )}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
-
-        {/* Panel de lectura */}
-        <section
-          className={cn(
-            "flex-1 flex-col overflow-hidden",
-            selectedId !== null ? "flex" : "hidden md:flex"
-          )}
-        >
-          {selectedId !== null ? (
-            <ReadingPane
-              mailId={selectedId}
-              onBack={() => setSelectedId(null)}
-              onDeleted={() => setSelectedId(null)}
-            />
-          ) : (
-            <EmptyState
-              icon={MailIcon}
-              titulo="Elegí un correo"
-              detalle="Seleccioná una conversación de la lista para leerla acá."
-            />
-          )}
-        </section>
-      </div>
+                          <span
+                            className={cn(
+                              "h-2 w-2 shrink-0 rounded-full",
+                              noLeido ? "bg-accent" : "bg-transparent"
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              "flex w-40 shrink-0 items-center gap-1.5 truncate text-sm",
+                              noLeido ? "font-semibold text-ink" : "text-ink"
+                            )}
+                          >
+                            <span className="truncate">{conv.remitentes || "—"}</span>
+                            {conv.count > 1 && (
+                              <span className="shrink-0 text-xs text-ink-2">{conv.count}</span>
+                            )}
+                          </span>
+                          <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                            <span
+                              className={cn(
+                                "shrink-0 text-sm",
+                                noLeido ? "font-semibold text-ink" : "text-ink"
+                              )}
+                            >
+                              {conv.latest.asunto || "(sin asunto)"}
+                            </span>
+                            {conv.latest.preview && (
+                              <span className="truncate text-sm text-ink-2">
+                                {conv.latest.preview}
+                              </span>
+                            )}
+                          </span>
+                          <span className="shrink-0 text-xs tabular-nums text-ink-2">
+                            {fmtFecha(conv.latest.fecha)}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </>
+        )}
+      </section>
 
       {componer && <ComposeModal onClose={() => setComponer(false)} />}
     </div>
@@ -288,8 +303,17 @@ function ReadingPane({
   const responder = useResponder(mailId);
   const toast = useToast();
   const [respuesta, setRespuesta] = useState("");
+  const [respondiendo, setRespondiendo] = useState(false);
 
   const asunto = hilo?.[0]?.asunto || "(sin asunto)";
+  const participantes = useMemo(() => {
+    const set = new Set<string>();
+    for (const m of hilo ?? []) {
+      const e = (m.direccion === "saliente" ? m.para : m.de) || "";
+      if (e) set.add(e);
+    }
+    return [...set];
+  }, [hilo]);
 
   const enviarRespuesta = () => {
     const texto = respuesta.trim();
@@ -297,6 +321,7 @@ function ReadingPane({
     responder.mutate(texto, {
       onSuccess: () => {
         setRespuesta("");
+        setRespondiendo(false);
         toast.toast("Respuesta enviada", "success");
       },
       onError: () => toast.toast("No se pudo enviar la respuesta", "error"),
@@ -304,17 +329,13 @@ function ReadingPane({
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       {/* Barra de acciones */}
       <div className="flex items-center gap-1 border-b border-line px-3 py-2">
-        <button
-          type="button"
-          onClick={onBack}
-          className="rounded-md p-1.5 text-ink-2 transition hover:bg-surface2 md:hidden"
-          aria-label="Volver"
-        >
-          <ChevronLeft size={18} />
-        </button>
+        <Button variant="ghost" size="sm" onClick={onBack}>
+          <ChevronLeft size={16} className="mr-1" /> Atrás
+        </Button>
+        <div className="mx-1 h-5 w-px bg-line" />
         <Button
           variant="ghost"
           size="sm"
@@ -326,11 +347,7 @@ function ReadingPane({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() =>
-            eliminar.mutate(mailId, {
-              onSuccess: onDeleted,
-            })
-          }
+          onClick={() => eliminar.mutate(mailId, { onSuccess: onDeleted })}
           disabled={eliminar.isPending}
           title="Eliminar del CRM (queda en Gmail)"
         >
@@ -338,50 +355,157 @@ function ReadingPane({
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
-        <h2 className="mb-4 text-xl font-bold tracking-tight text-ink">{asunto}</h2>
-        {isLoading ? (
-          <p className="text-sm text-ink-2">Cargando conversación…</p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {(hilo ?? []).map((m) => (
-              <div key={m.id} className="rounded-lg border border-line bg-surface2/40 p-3">
-                <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-semibold text-ink">
-                    {m.direccion === "saliente" ? m.de : m.de || "—"}
-                  </span>
-                  <span className="shrink-0 text-xs text-ink-2">
-                    {m.fecha ? new Date(m.fecha).toLocaleString("es-AR") : ""}
-                  </span>
-                </div>
-                <p className="whitespace-pre-wrap break-words text-sm text-ink">
-                  {m.cuerpo || ""}
-                </p>
+      <div className="flex min-h-0 flex-1">
+        {/* Conversación */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex-1 overflow-y-auto p-4 lg:p-6">
+            <h2 className="mb-4 text-xl font-bold tracking-tight text-ink">{asunto}</h2>
+            {isLoading ? (
+              <p className="text-sm text-ink-2">Cargando conversación…</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {(hilo ?? []).map((m) => (
+                  <div key={m.id} className="rounded-lg border border-line bg-surface p-4">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xs font-bold text-accent">
+                          {nombreEmail(m.direccion === "saliente" ? m.de : m.de)
+                            .slice(0, 2)
+                            .toUpperCase()}
+                        </span>
+                        <span className="truncate text-sm font-semibold text-ink">
+                          {m.de || "—"}
+                        </span>
+                      </div>
+                      <span className="shrink-0 text-xs text-ink-2">
+                        {m.fecha ? new Date(m.fecha).toLocaleString("es-AR") : ""}
+                      </span>
+                    </div>
+                    <p className="whitespace-pre-wrap break-words text-sm text-ink">
+                      {m.cuerpo || ""}
+                    </p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            )}
 
-      {/* Responder */}
-      <div className="border-t border-line p-3">
-        <Textarea
-          value={respuesta}
-          onChange={(e) => setRespuesta(e.target.value)}
-          placeholder="Escribí tu respuesta…"
-          rows={3}
-        />
-        <div className="mt-2 flex justify-end">
-          <Button
-            size="sm"
-            onClick={enviarRespuesta}
-            disabled={responder.isPending || !respuesta.trim()}
-          >
-            <Send size={15} className="mr-1.5" />
-            {responder.isPending ? "Enviando…" : "Responder"}
-          </Button>
+            {/* Responder */}
+            {respondiendo ? (
+              <div className="mt-4 rounded-lg border border-line bg-surface p-3">
+                <Textarea
+                  value={respuesta}
+                  onChange={(e) => setRespuesta(e.target.value)}
+                  placeholder="Escribí tu respuesta…"
+                  rows={4}
+                  autoFocus
+                />
+                <div className="mt-2 flex items-center justify-between">
+                  <Button variant="ghost" size="sm" onClick={() => setRespondiendo(false)}>
+                    Cancelar
+                  </Button>
+                  <SplitSend
+                    onSend={enviarRespuesta}
+                    pending={responder.isPending}
+                    disabled={!respuesta.trim()}
+                  />
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setRespondiendo(true)}
+                className="mt-4 flex items-center gap-2 rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink-2 transition hover:bg-surface2"
+              >
+                <Reply size={16} /> Responder
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Panel de participantes */}
+        <aside className="hidden w-64 shrink-0 border-l border-line bg-surface2/30 p-4 lg:block">
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-2">
+            {participantes.length} persona{participantes.length === 1 ? "" : "s"} en esta
+            conversación
+          </p>
+          <ul className="mt-3 flex flex-col gap-3">
+            {participantes.map((p) => (
+              <li key={p} className="flex items-center gap-2">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xs font-bold text-accent">
+                  {nombreEmail(p).slice(0, 2).toUpperCase()}
+                </span>
+                <span className="truncate text-sm text-ink">{nombreEmail(p)}</span>
+              </li>
+            ))}
+          </ul>
+        </aside>
       </div>
+    </div>
+  );
+}
+
+// Botón "Enviar" dividido: acción principal + flecha con opciones (Programar).
+function SplitSend({
+  onSend,
+  pending,
+  disabled,
+  label = "Enviar",
+}: {
+  onSend: () => void;
+  pending?: boolean;
+  disabled?: boolean;
+  label?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const toast = useToast();
+
+  return (
+    <div className="relative inline-flex">
+      <Button onClick={onSend} disabled={disabled || pending} className="rounded-r-none">
+        <Send size={15} className="mr-1.5" />
+        {pending ? "Enviando…" : label}
+      </Button>
+      <Button
+        onClick={() => setOpen((v) => !v)}
+        disabled={disabled || pending}
+        className="rounded-l-none border-l border-white/25 px-2"
+        aria-label="Más opciones de envío"
+      >
+        <ChevronDown size={15} />
+      </Button>
+      {open && (
+        <>
+          <button
+            type="button"
+            aria-hidden
+            tabIndex={-1}
+            className="fixed inset-0 z-40 cursor-default"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute bottom-full right-0 z-50 mb-1 w-52 rounded-lg border border-line bg-surface p-1 shadow-lg">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onSend();
+              }}
+              className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-ink transition hover:bg-surface2"
+            >
+              <Send size={15} /> Enviar ahora
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                toast.toast("La programación de envíos llega en la próxima fase", "info");
+              }}
+              className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-ink transition hover:bg-surface2"
+            >
+              <Clock size={15} /> Programar envío…
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -431,10 +555,11 @@ function ComposeModal({ onClose }: { onClose: () => void }) {
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button onClick={enviar} disabled={redactar.isPending || !para.trim() || !cuerpo.trim()}>
-            <Send size={15} className="mr-1.5" />
-            {redactar.isPending ? "Enviando…" : "Enviar"}
-          </Button>
+          <SplitSend
+            onSend={enviar}
+            pending={redactar.isPending}
+            disabled={!para.trim() || !cuerpo.trim()}
+          />
         </div>
       </div>
     </Modal>
