@@ -587,7 +587,7 @@ export function OportunidadForm({
 
       {esGubernamental && (
         <div className="rounded-xl border border-line bg-surface2 p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-2">
+          <p className="mb-2 text-xs font-semibold text-ink-2">
             Licitación (Gubernamental)
           </p>
           <div className="grid grid-cols-2 gap-3">

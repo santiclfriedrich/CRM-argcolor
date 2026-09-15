@@ -439,7 +439,7 @@ function ReadingPane({
 
         {/* Panel de participantes */}
         <aside className="hidden w-64 shrink-0 border-l border-line bg-surface2/30 p-4 lg:block">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-2">
+          <p className="text-xs font-semibold text-ink-2">
             {participantes.length} persona{participantes.length === 1 ? "" : "s"} en esta
             conversación
           </p>

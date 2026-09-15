@@ -357,7 +357,7 @@ function DashCard({
   return (
     <Card className="flex flex-col p-5">
       <div>
-        <p className="text-[13px] font-semibold uppercase tracking-wide text-ink">{titulo}</p>
+        <p className="text-[13px] font-semibold text-ink">{titulo}</p>
         <p className="mt-1 text-sm text-ink-2">{subtitulo}</p>
       </div>
       <div className="mt-4 flex flex-1 items-center gap-4">

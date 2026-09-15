@@ -1814,7 +1814,7 @@ function PropuestaCard({
       </div>
       {p.requerimiento && (
         <div className="mt-3">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-3">
+          <p className="mb-1 text-[11px] font-semibold text-ink-3">
             Requerimiento
           </p>
           <p className="whitespace-pre-wrap rounded-md bg-surface2 p-2.5 text-sm text-ink">
@@ -1840,7 +1840,7 @@ function PropuestaCard({
       )}
       {p.adjuntos.length > 0 && (
         <div className="mt-3">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-3">
+          <p className="mb-1 text-[11px] font-semibold text-ink-3">
             Adjuntos
           </p>
           <div className="flex flex-wrap gap-1.5">

@@ -229,7 +229,7 @@ function DetalleTarea({ tarea, onModificar }: { tarea: Tarea; onModificar: () =>
         </div>
 
         <div className="mt-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
+          <p className="text-xs font-semibold text-ink-3">
             Comentarios
           </p>
           <p className="mt-1 whitespace-pre-wrap text-sm text-ink">
@@ -244,7 +244,7 @@ function DetalleTarea({ tarea, onModificar }: { tarea: Tarea; onModificar: () =>
 function Campo({ label, valor, alerta }: { label: string; valor: string; alerta?: boolean }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">
+      <p className="text-xs font-semibold text-ink-3">
         {label}
       </p>
       <p className={`mt-0.5 text-sm ${alerta ? "font-semibold text-danger" : "text-ink"}`}>

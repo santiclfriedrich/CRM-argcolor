@@ -52,15 +52,6 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-navy px-6 text-center">
-      {/* Brillo sutil para dar profundidad al fondo navy. */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(60% 50% at 50% 0%, rgba(163,124,255,0.22), transparent 70%)",
-        }}
-      />
-
       <div className="relative z-10 flex w-full max-w-sm flex-col items-center">
         <Image
           src="/logo-largo.png"

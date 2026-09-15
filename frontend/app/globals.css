@@ -91,10 +91,8 @@
 }
 
 body {
-  /* Degradé muy sutil con un tinte de marca arriba, para que no se sienta plano. */
-  background:
-    radial-gradient(1100px 480px at 100% -8%, var(--tint), transparent 70%),
-    var(--background);
+  /* Fondo plano, sin gradientes de tinte (decisión de diseño: cero gradientes). */
+  background: var(--background);
   background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans, system-ui, sans-serif);

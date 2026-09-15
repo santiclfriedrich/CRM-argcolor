@@ -99,7 +99,7 @@ export function GlobalSearch() {
 
 function Grupo({ titulo }: { titulo: string }) {
   return (
-    <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-accent">
+    <div className="px-3 pb-1 pt-2 text-[11px] font-semibold text-accent">
       {titulo}
     </div>
   );

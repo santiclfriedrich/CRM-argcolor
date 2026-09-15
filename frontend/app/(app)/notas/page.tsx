@@ -159,7 +159,7 @@ export default function NotasPage() {
           ) : (
             grupos.map((g) => (
               <div key={g.titulo} className="mb-1">
-                <p className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-ink-3">
+                <p className="px-3 py-1 text-[11px] font-semibold text-ink-3">
                   {g.titulo}
                 </p>
                 {g.notas.map((n) => (
