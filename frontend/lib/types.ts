@@ -440,6 +440,17 @@ export interface Mail {
 
 export type CarpetaInbox = "entrada" | "enviados" | "archivo";
 
+// Correo programado pendiente de envío (Fase 3).
+export interface MailProgramado {
+  id: number;
+  para: string;
+  asunto: string | null;
+  programado_para: string;
+  enviado: boolean;
+  error: string | null;
+  created_at: string;
+}
+
 // Adjunto de un mail de Gmail (bytes se bajan a demanda).
 export interface AdjuntoGmail {
   filename: string;

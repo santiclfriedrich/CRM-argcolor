@@ -31,10 +31,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import {
   descargarGmailAdjunto,
+  useCancelarProgramado,
   useConversacion,
   useEliminarMail,
   useInbox,
   useMarcarLeido,
+  useProgramados,
+  useProgramar,
   useRedactar,
   useResponder,
   useSyncGmail,
@@ -363,11 +366,7 @@ export default function BandejaPage() {
 
             <div className="flex-1 overflow-y-auto">
               {folder === "programados" ? (
-                <EmptyState
-                  icon={Clock}
-                  titulo="Programados"
-                  detalle="Acá vas a poder redactar y programar el envío de un correo. Llega en la próxima fase."
-                />
+                <ProgramadosList />
               ) : isLoading ? (
                 <p className="p-4 text-sm text-ink-2">Cargando…</p>
               ) : conversaciones.length === 0 ? (
@@ -663,11 +662,13 @@ function ReadingPane({
 // Botón "Enviar" dividido: acción principal + flecha con opciones (Programar).
 function SplitSend({
   onSend,
+  onSchedule,
   pending,
   disabled,
   label = "Enviar",
 }: {
   onSend: () => void;
+  onSchedule?: () => void;
   pending?: boolean;
   disabled?: boolean;
   label?: string;
@@ -713,7 +714,8 @@ function SplitSend({
               type="button"
               onClick={() => {
                 setOpen(false);
-                toast.toast("La programación de envíos llega en la próxima fase", "info");
+                if (onSchedule) onSchedule();
+                else toast.toast("La programación es solo para correos nuevos", "info");
               }}
               className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-ink transition hover:bg-surface2"
             >
@@ -726,15 +728,26 @@ function SplitSend({
   );
 }
 
+function minDatetimeLocal(): string {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
+
 function ComposeModal({ onClose }: { onClose: () => void }) {
   const redactar = useRedactar();
+  const programar = useProgramar();
   const toast = useToast();
   const [para, setPara] = useState("");
   const [asunto, setAsunto] = useState("");
   const [cuerpo, setCuerpo] = useState("");
+  const [modoProgramar, setModoProgramar] = useState(false);
+  const [cuando, setCuando] = useState("");
+
+  const listo = para.trim() && cuerpo.trim();
 
   const enviar = () => {
-    if (!para.trim() || !cuerpo.trim()) return;
+    if (!listo) return;
     redactar.mutate(
       { para: para.trim(), asunto: asunto.trim() || undefined, cuerpo },
       {
@@ -743,6 +756,25 @@ function ComposeModal({ onClose }: { onClose: () => void }) {
           onClose();
         },
         onError: () => toast.toast("No se pudo enviar el correo", "error"),
+      }
+    );
+  };
+
+  const programarEnvio = () => {
+    if (!listo || !cuando) return;
+    programar.mutate(
+      {
+        para: para.trim(),
+        asunto: asunto.trim() || undefined,
+        cuerpo,
+        cuando: new Date(cuando).toISOString(),
+      },
+      {
+        onSuccess: () => {
+          toast.toast("Correo programado", "success");
+          onClose();
+        },
+        onError: () => toast.toast("No se pudo programar el correo", "error"),
       }
     );
   };
@@ -767,15 +799,47 @@ function ComposeModal({ onClose }: { onClose: () => void }) {
           <label className="mb-1 block text-sm font-medium text-ink-2">Mensaje</label>
           <Textarea value={cuerpo} onChange={(e) => setCuerpo(e.target.value)} rows={10} />
         </div>
+
+        {modoProgramar && (
+          <div className="rounded-lg border border-line bg-surface2/40 p-3">
+            <label className="mb-1 block text-sm font-medium text-ink">
+              Enviar el
+            </label>
+            <input
+              type="datetime-local"
+              value={cuando}
+              min={minDatetimeLocal()}
+              onChange={(e) => setCuando(e.target.value)}
+              className="rounded-md border border-line bg-surface px-2 py-1.5 text-sm text-ink"
+            />
+          </div>
+        )}
+
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <SplitSend
-            onSend={enviar}
-            pending={redactar.isPending}
-            disabled={!para.trim() || !cuerpo.trim()}
-          />
+          {modoProgramar ? (
+            <>
+              <Button variant="ghost" onClick={() => setModoProgramar(false)}>
+                Enviar ahora
+              </Button>
+              <Button
+                onClick={programarEnvio}
+                disabled={programar.isPending || !listo || !cuando}
+              >
+                <Clock size={15} className="mr-1.5" />
+                {programar.isPending ? "Programando…" : "Programar"}
+              </Button>
+            </>
+          ) : (
+            <SplitSend
+              onSend={enviar}
+              onSchedule={() => setModoProgramar(true)}
+              pending={redactar.isPending}
+              disabled={!listo}
+            />
+          )}
         </div>
       </div>
     </Modal>
@@ -1049,6 +1113,57 @@ function MenuFlotante({ children, onClose }: { children: ReactNode; onClose: () 
         {children}
       </div>
     </>
+  );
+}
+
+function ProgramadosList() {
+  const { data, isLoading } = useProgramados();
+  const cancelar = useCancelarProgramado();
+  const toast = useToast();
+
+  if (isLoading) return <p className="p-4 text-sm text-ink-2">Cargando…</p>;
+  if (!data || data.length === 0)
+    return (
+      <EmptyState
+        icon={Clock}
+        titulo="Sin correos programados"
+        detalle="Redactá un correo nuevo y elegí 'Programar envío…' para verlo acá."
+      />
+    );
+
+  return (
+    <ul>
+      {data.map((p) => (
+        <li key={p.id} className="flex items-center gap-3 border-b border-line px-4 py-3">
+          <Clock size={16} className="shrink-0 text-ink-3" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-ink">
+              {p.asunto || "(sin asunto)"}
+            </p>
+            <p className="truncate text-xs text-ink-3">Para {p.para}</p>
+            {p.error && (
+              <p className="truncate text-xs text-danger">Error: {p.error}</p>
+            )}
+          </div>
+          <span className="shrink-0 text-xs tabular-nums text-ink-2">
+            {new Date(p.programado_para).toLocaleString("es-AR")}
+          </span>
+          <button
+            type="button"
+            onClick={() =>
+              cancelar.mutate(p.id, {
+                onSuccess: () => toast.toast("Programado cancelado", "info"),
+              })
+            }
+            className="rounded-md p-1.5 text-ink-3 transition hover:bg-surface2 hover:text-danger"
+            title="Cancelar envío programado"
+            aria-label="Cancelar"
+          >
+            <Trash2 size={15} />
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
 

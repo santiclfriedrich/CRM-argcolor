@@ -38,6 +38,22 @@ def _run_poll() -> None:
         db.close()
 
 
+def _run_programados() -> None:
+    """Envía los correos programados que ya llegaron a su hora (Fase 3)."""
+    from app.db.session import SessionLocal
+    from app.services.mails_programados import enviar_programados_vencidos
+
+    db = SessionLocal()
+    try:
+        n = enviar_programados_vencidos(db)
+        if n:
+            logger.info("Programados: %s correo(s) enviado(s)", n)
+    except Exception:  # noqa: BLE001 - el job no debe tirar el scheduler
+        logger.exception("Falló el envío de correos programados")
+    finally:
+        db.close()
+
+
 def _run_seguimiento() -> None:
     """Chequeo diario de seguimiento (vencidas / sin avance) -> notificaciones."""
     from app.db.session import SessionLocal
@@ -124,6 +140,8 @@ def start_scheduler() -> None:
     _scheduler.add_job(_run_limpieza, "cron", hour=6, minute=0, id="limpieza_bandeja")
     # Recordatorios de tareas: chequeo frecuente (granularidad de ~5 min).
     _scheduler.add_job(_run_recordatorios, "interval", minutes=5, id="recordatorios")
+    # Correos programados: chequeo cada minuto para enviarlos a su hora.
+    _scheduler.add_job(_run_programados, "interval", minutes=1, id="mails_programados")
 
     # Sync incremental de clientes GBP: 1 vez al día de madrugada (07:00 UTC ≈
     # 04:00 ART). Cada corrida tarda ~1-3h (el fetch SOAP de GBP es lento), así

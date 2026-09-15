@@ -19,6 +19,7 @@ from app.db.models.adjuntos import Adjunto
 from app.db.models.clientes import Cliente
 from app.db.models.mails import DireccionMail, Mail
 from app.db.models.mails_descartados import MailDescartado
+from app.db.models.mails_programados import MailProgramado
 from app.db.models.oportunidades import (
     AmbitoOportunidad,
     EstadoOportunidad,
@@ -37,7 +38,9 @@ from app.schemas.mail import (
     IngestResult,
     LeidoBody,
     MailListItem,
+    MailProgramadoRead,
     MailRead,
+    ProgramarRequest,
     RedactarRequest,
     ResponderRequest,
     VincularOportunidadBody,
@@ -285,6 +288,63 @@ def redactar_mail(
     db.add(mail)
     db.commit()
     return _get_loaded(db, mail.id)
+
+
+@router.post("/programar", response_model=MailProgramadoRead, status_code=201)
+def programar_mail(
+    body: ProgramarRequest,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> MailProgramado:
+    """Programa el envío de un correo para una fecha/hora futura."""
+    if not body.para.strip() or not body.cuerpo.strip():
+        raise HTTPException(status_code=400, detail="Faltan destinatario o cuerpo.")
+    mp = MailProgramado(
+        usuario_id=current_user.id,
+        para=body.para.strip(),
+        asunto=body.asunto,
+        cuerpo=body.cuerpo,
+        programado_para=body.cuando,
+    )
+    db.add(mp)
+    db.commit()
+    db.refresh(mp)
+    return mp
+
+
+@router.get("/programados", response_model=list[MailProgramadoRead])
+def list_programados(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> list[MailProgramado]:
+    """Correos programados pendientes de la casilla del usuario."""
+    return list(
+        db.scalars(
+            select(MailProgramado)
+            .where(
+                MailProgramado.usuario_id == current_user.id,
+                MailProgramado.enviado.is_(False),
+            )
+            .order_by(MailProgramado.programado_para.asc())
+        )
+    )
+
+
+@router.delete("/programados/{programado_id}", status_code=204)
+def cancelar_programado(
+    programado_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> Response:
+    """Cancela (borra) un correo programado que todavía no se envió."""
+    mp = db.get(MailProgramado, programado_id)
+    if mp is None or mp.usuario_id != current_user.id:
+        raise NotFoundError("Programado no encontrado")
+    if mp.enviado:
+        raise HTTPException(status_code=400, detail="Ese correo ya fue enviado.")
+    db.delete(mp)
+    db.commit()
+    return Response(status_code=204)
 
 
 @router.get("/gmail-adjunto")

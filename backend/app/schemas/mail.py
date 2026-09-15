@@ -181,6 +181,29 @@ class LeidoBody(BaseModel):
     leido: bool = True
 
 
+class ProgramarRequest(BaseModel):
+    """Correo redactado para enviarse a una fecha/hora futura."""
+
+    para: str
+    asunto: str | None = None
+    cuerpo: str
+    cuando: datetime
+
+
+class MailProgramadoRead(BaseModel):
+    """Un correo programado pendiente de envío."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    para: str
+    asunto: str | None = None
+    programado_para: datetime
+    enviado: bool
+    error: str | None = None
+    created_at: datetime
+
+
 class DescartadoRead(BaseModel):
     """Mail que la IA clasificó como no comercial (registro mínimo)."""
 

@@ -8,6 +8,7 @@ from app.db.models.dominios_cliente import DominioCliente
 from app.db.models.grupos_compras import GrupoCompras
 from app.db.models.mails import DireccionMail, Mail
 from app.db.models.mails_descartados import MailDescartado
+from app.db.models.mails_programados import MailProgramado
 from app.db.models.notas_personales import NotaPersonal
 from app.db.models.notificaciones import Notificacion
 from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
@@ -35,6 +36,7 @@ __all__ = [
     "DireccionMail",
     "Mail",
     "MailDescartado",
+    "MailProgramado",
     "NotaPersonal",
     "Notificacion",
     "EstadoOportunidad",

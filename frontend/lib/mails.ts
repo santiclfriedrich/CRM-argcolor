@@ -12,6 +12,7 @@ import type {
   InboxMail,
   Mail,
   MailDescartado,
+  MailProgramado,
   Seccion,
 } from "@/lib/types";
 
@@ -115,6 +116,37 @@ export function useVincularOportunidad(mailId: number) {
       qc.invalidateQueries({ queryKey: ["mails", "inbox"] });
       qc.invalidateQueries({ queryKey: oportunidadKeys.all });
     },
+  });
+}
+
+// --- Correos programados (Fase 3) ---
+export function useProgramados() {
+  return useQuery({
+    queryKey: ["mails", "programados"],
+    queryFn: async () => (await api.get<MailProgramado[]>(`${BASE}/programados`)).data,
+  });
+}
+
+export function useProgramar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: {
+      para: string;
+      asunto?: string;
+      cuerpo: string;
+      cuando: string;
+    }) => (await api.post<MailProgramado>(`${BASE}/programar`, body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mails", "programados"] }),
+  });
+}
+
+export function useCancelarProgramado() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`${BASE}/programados/${id}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mails", "programados"] }),
   });
 }
 
