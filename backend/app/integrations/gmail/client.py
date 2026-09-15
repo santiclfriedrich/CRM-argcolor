@@ -143,6 +143,17 @@ def _collect_all_attachments(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return found
 
 
+def _tiene_adjuntos(payload: dict[str, Any]) -> bool:
+    """True si el mail trae algún adjunto real (parte con filename)."""
+
+    def walk(part: dict[str, Any]) -> bool:
+        if (part.get("filename") or "") and part.get("body", {}).get("attachmentId"):
+            return True
+        return any(walk(child) for child in part.get("parts") or [])
+
+    return walk(payload)
+
+
 def _collect_inline_images(payload: dict[str, Any]) -> list[dict[str, Any]]:
     """Imágenes embebidas por Content-ID (cid:) — logos/firmas — para inlinearlas
     como data URI en el HTML y que se vean igual que en Gmail."""
@@ -375,6 +386,7 @@ class GmailClient:
                 logger.warning("Batch get del mail %s falló: %s", request_id, exception)
                 return
             p = parse_gmail_message(response)
+            p["tiene_adjuntos"] = _tiene_adjuntos(response.get("payload", {}))
             p.pop("attachments", None)
             p.pop("document_attachments", None)
             p["images"] = []

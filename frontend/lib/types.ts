@@ -473,6 +473,7 @@ export interface InboxMail {
   carpeta: CarpetaInbox | null;
   gmail_thread_id: string | null;
   tiene_cuerpo: boolean;
+  tiene_adjuntos: boolean;
   preview: string | null;
 }
 

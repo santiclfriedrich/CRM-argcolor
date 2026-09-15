@@ -125,6 +125,7 @@ class InboxMailListItem(BaseModel):
     carpeta: str | None = None
     gmail_thread_id: str | None = None
     tiene_cuerpo: bool = False
+    tiene_adjuntos: bool = False
     preview: str | None = None
 
 

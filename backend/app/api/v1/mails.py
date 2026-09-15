@@ -224,6 +224,7 @@ def list_inbox(
             Mail.leido,
             Mail.carpeta,
             Mail.gmail_thread_id,
+            Mail.tiene_adjuntos,
             tiene.label("tiene_cuerpo"),
             preview.label("preview"),
         )

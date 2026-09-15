@@ -7,6 +7,7 @@ import {
   Clock,
   Download,
   Inbox as InboxIcon,
+  Lock,
   Mail as MailIcon,
   Paperclip,
   Plus,
@@ -52,6 +53,7 @@ type Conversacion = {
   count: number;
   unreadIds: number[];
   remitentes: string;
+  tieneAdjuntos: boolean;
 };
 
 function nombreEmail(raw: string | null): string {
@@ -98,6 +100,7 @@ function agrupar(mails: InboxMail[]): Conversacion[] {
       count: grp.length,
       unreadIds: grp.filter((m) => !m.leido).map((m) => m.id),
       remitentes: nombres.slice(0, 3).reverse().join(", "),
+      tieneAdjuntos: grp.some((m) => m.tiene_adjuntos),
     });
   }
   return convs.sort(
@@ -111,9 +114,12 @@ export default function BandejaPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [componer, setComponer] = useState(false);
 
+  const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
+
   const toast = useToast();
   const syncMut = useSyncGmail();
   const marcarLeido = useMarcarLeido();
+  const eliminar = useEliminarMail();
 
   const carpeta: CarpetaInbox = folder === "programados" ? "entrada" : folder;
   const { data: mails, isLoading } = useInbox(carpeta);
@@ -121,6 +127,26 @@ export default function BandejaPage() {
   const noLeidos = (entrada ?? []).filter((m) => !m.leido).length;
 
   const conversaciones = useMemo(() => agrupar(mails ?? []), [mails]);
+
+  const toggleSel = (key: string) =>
+    setSeleccion((s) => {
+      const n = new Set(s);
+      if (n.has(key)) n.delete(key);
+      else n.add(key);
+      return n;
+    });
+  const todasSel = conversaciones.length > 0 && seleccion.size === conversaciones.length;
+  const toggleTodas = () =>
+    setSeleccion(todasSel ? new Set() : new Set(conversaciones.map((c) => c.key)));
+
+  const eliminarSeleccionadas = () => {
+    const ids = conversaciones
+      .filter((c) => seleccion.has(c.key))
+      .flatMap((c) => c.ids);
+    ids.forEach((id) => eliminar.mutate(id));
+    setSeleccion(new Set());
+    if (selectedId !== null && ids.includes(selectedId)) setSelectedId(null);
+  };
 
   const sincronizar = () =>
     syncMut.mutate(undefined, {
@@ -183,7 +209,14 @@ export default function BandejaPage() {
         ) : (
           <>
             {/* Barra de la lista */}
-            <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
+            <div className="flex items-center gap-3 border-b border-line px-4 py-2">
+              <input
+                type="checkbox"
+                checked={todasSel}
+                onChange={toggleTodas}
+                className="h-4 w-4 shrink-0 rounded border-line accent-accent"
+                aria-label="Seleccionar todo"
+              />
               <select
                 value={folder}
                 onChange={(e) => seleccionar(e.target.value as FolderKey)}
@@ -195,10 +228,20 @@ export default function BandejaPage() {
                   </option>
                 ))}
               </select>
-              <span className="text-sm font-medium text-ink-2">
-                {conversaciones.length} conversación
-                {conversaciones.length === 1 ? "" : "es"}
-              </span>
+              {seleccion.size > 0 ? (
+                <button
+                  type="button"
+                  onClick={eliminarSeleccionadas}
+                  className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-danger transition hover:bg-danger/10"
+                >
+                  <Trash2 size={15} /> Eliminar ({seleccion.size})
+                </button>
+              ) : (
+                <span className="text-sm font-medium text-ink">
+                  {conversaciones.length} conversación
+                  {conversaciones.length === 1 ? "" : "es"}
+                </span>
+              )}
               <button
                 type="button"
                 onClick={sincronizar}
@@ -230,52 +273,72 @@ export default function BandejaPage() {
                 <ul>
                   {conversaciones.map((conv) => {
                     const noLeido = conv.unreadIds.length > 0;
+                    const sel = seleccion.has(conv.key);
                     return (
-                      <li key={conv.key}>
+                      <li
+                        key={conv.key}
+                        className={cn(
+                          "flex items-center gap-3 border-b border-line pl-4 pr-4 transition hover:bg-surface2",
+                          sel ? "bg-accent/[0.07]" : noLeido && "bg-accent/[0.035]"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={sel}
+                          onChange={() => toggleSel(conv.key)}
+                          className="h-4 w-4 shrink-0 rounded border-line accent-accent"
+                          aria-label="Seleccionar conversación"
+                        />
+                        <span
+                          className={cn(
+                            "h-2 w-2 shrink-0 rounded-full",
+                            noLeido ? "bg-accent" : "bg-transparent"
+                          )}
+                        />
                         <button
                           type="button"
                           onClick={() => abrir(conv)}
-                          className={cn(
-                            "flex w-full items-center gap-3 border-b border-line px-4 py-2.5 text-left transition hover:bg-surface2",
-                            noLeido && "bg-accent/[0.04]"
-                          )}
+                          className="flex min-w-0 flex-1 items-center gap-4 py-3 text-left"
                         >
                           <span
                             className={cn(
-                              "h-2 w-2 shrink-0 rounded-full",
-                              noLeido ? "bg-accent" : "bg-transparent"
-                            )}
-                          />
-                          <span
-                            className={cn(
-                              "flex w-40 shrink-0 items-center gap-1.5 truncate text-sm",
-                              noLeido ? "font-semibold text-ink" : "text-ink"
+                              "flex w-48 shrink-0 items-center gap-1.5 text-sm",
+                              noLeido ? "font-bold text-ink" : "font-medium text-ink"
                             )}
                           >
                             <span className="truncate">{conv.remitentes || "—"}</span>
                             {conv.count > 1 && (
-                              <span className="shrink-0 text-xs text-ink-2">{conv.count}</span>
+                              <span className="shrink-0 text-xs font-normal text-ink-3">
+                                {conv.count}
+                              </span>
                             )}
                           </span>
                           <span className="flex min-w-0 flex-1 items-baseline gap-2">
                             <span
                               className={cn(
-                                "shrink-0 text-sm",
-                                noLeido ? "font-semibold text-ink" : "text-ink"
+                                "shrink-0 truncate text-sm text-ink",
+                                noLeido ? "font-bold" : "font-medium"
                               )}
+                              style={{ maxWidth: "45%" }}
                             >
                               {conv.latest.asunto || "(sin asunto)"}
                             </span>
                             {conv.latest.preview && (
-                              <span className="truncate text-sm text-ink-2">
+                              <span className="truncate text-sm text-ink-3">
                                 {conv.latest.preview}
                               </span>
                             )}
                           </span>
-                          <span className="shrink-0 text-xs tabular-nums text-ink-2">
+                        </button>
+                        <div className="flex shrink-0 items-center gap-3">
+                          {conv.tieneAdjuntos && (
+                            <Paperclip size={15} className="text-ink-3" aria-label="Con adjuntos" />
+                          )}
+                          <Lock size={14} className="text-ink-3" aria-label="Privado" />
+                          <span className="w-16 shrink-0 text-right text-xs tabular-nums text-ink-2">
                             {fmtFecha(conv.latest.fecha)}
                           </span>
-                        </button>
+                        </div>
                       </li>
                     );
                   })}

@@ -118,6 +118,7 @@ def sync_inbox_for_user(
             # Ya lo tenía el pipeline comercial: solo reflejamos estado/dueño.
             existente.leido = leido
             existente.carpeta = carpeta
+            existente.tiene_adjuntos = bool(msg.get("tiene_adjuntos"))
             if existente.usuario_id is None:
                 existente.usuario_id = usuario.id
             resultado["actualizados"] += 1  # type: ignore[operator]
@@ -135,6 +136,7 @@ def sync_inbox_for_user(
                     fecha=msg.get("fecha"),
                     leido=leido,
                     carpeta=carpeta,
+                    tiene_adjuntos=bool(msg.get("tiene_adjuntos")),
                     usuario_id=usuario.id,
                 )
             )

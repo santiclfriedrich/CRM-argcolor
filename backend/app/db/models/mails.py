@@ -46,6 +46,11 @@ class Mail(Base, TimestampMixin):
     # Carpeta del inbox del CRM: 'entrada' | 'enviados' | 'archivo' (derivada de
     # los labels de Gmail INBOX/SENT). None en mails viejos no sincronizados.
     carpeta: Mapped[str | None] = mapped_column(String(20), index=True)
+    # Si el mail trae adjuntos (para mostrar el clip en la lista). Se calcula en
+    # el sync sin bajar los bytes.
+    tiene_adjuntos: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     # with_variant: JSONB en Postgres; JSON en SQLite (solo para tests).
     adjuntos: Mapped[dict | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
     datos_extraidos_ia: Mapped[dict | None] = mapped_column(
