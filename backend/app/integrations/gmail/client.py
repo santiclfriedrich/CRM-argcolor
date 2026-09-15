@@ -225,6 +225,7 @@ def parse_gmail_message(msg: dict[str, Any]) -> dict[str, Any]:
     return {
         "message_id": msg.get("id"),
         "thread_id": msg.get("threadId"),
+        "labels": msg.get("labelIds") or [],
         "rfc_message_id": _header(headers, "Message-ID"),
         "de": parseaddr(de_raw or "")[1] or de_raw,
         "para": _header(headers, "To"),
@@ -305,7 +306,7 @@ class GmailClient:
         )
         return [parse_gmail_message(m) for m in raw.get("messages", [])]
 
-    def get_message(self, message_id: str) -> dict[str, Any]:
+    def get_message(self, message_id: str, with_attachments: bool = True) -> dict[str, Any]:
         raw = (
             self._service.users()
             .messages()
@@ -313,12 +314,19 @@ class GmailClient:
             .execute()
         )
         parsed = parse_gmail_message(raw)
-        parsed["images"] = self._download_attachments(
-            message_id, parsed.pop("attachments", []), MAX_IMAGES
-        )
-        parsed["documentos"] = self._download_attachments(
-            message_id, parsed.pop("document_attachments", []), MAX_DOCS
-        )
+        if with_attachments:
+            parsed["images"] = self._download_attachments(
+                message_id, parsed.pop("attachments", []), MAX_IMAGES
+            )
+            parsed["documentos"] = self._download_attachments(
+                message_id, parsed.pop("document_attachments", []), MAX_DOCS
+            )
+        else:
+            # Sync de buzón (inbox): no bajamos los bytes de adjuntos (egress).
+            parsed.pop("attachments", None)
+            parsed.pop("document_attachments", None)
+            parsed["images"] = []
+            parsed["documentos"] = []
         return parsed
 
     def _download_attachments(

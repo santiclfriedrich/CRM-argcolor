@@ -224,7 +224,28 @@ def poll_user_mailbox(
         }
     query = build_poll_query(db)
     gmail = GmailClient(refresh_token=token)
-    return poll_once(db, ai, gmail, query=query, default_vendedor_id=usuario.id)
+    resultado = poll_once(db, ai, gmail, query=query, default_vendedor_id=usuario.id)
+    _sync_inbox_seguro(db, gmail, usuario)
+    return resultado
+
+
+def _sync_inbox_seguro(db: Session, gmail: object, usuario: Usuario) -> None:
+    """Sincroniza el buzón completo a la bandeja (inbox del CRM), aislado: si
+    falla, no rompe el poll comercial."""
+    from app.services.gmail_inbox import sync_inbox_for_user
+
+    try:
+        r = sync_inbox_for_user(db, gmail, usuario)  # type: ignore[arg-type]
+        if r["nuevos"] or r["actualizados"]:
+            logger.info(
+                "Inbox sync (%s): %s nuevos, %s actualizados",
+                usuario.email,
+                r["nuevos"],
+                r["actualizados"],
+            )
+    except Exception:  # noqa: BLE001 - el inbox no debe cortar el poll comercial
+        db.rollback()
+        logger.exception("Falló el sync de inbox de %s", usuario.email)
 
 
 def poll_all_mailboxes(
@@ -289,6 +310,7 @@ def poll_all_mailboxes(
                     continue
                 gmail = GmailClient(refresh_token=token)
                 _merge(poll_once(db, ai, gmail, query=query, default_vendedor_id=usuario.id))
+                _sync_inbox_seguro(db, gmail, usuario)
             except Exception as exc:  # noqa: BLE001 - una casilla rota no corta el resto
                 total["errores"] += 1  # type: ignore[operator]
                 total["ultimo_error"] = _humanize_error(exc)
