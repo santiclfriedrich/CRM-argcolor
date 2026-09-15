@@ -14,10 +14,10 @@
   --c-surface-3: #f1f5f9;
   --c-line: #b4bece;
   /* Tinta con más presencia: el secundario/terciario no son grises lavados, para
-     que el texto no se vea apagado (predomina la tinta oscura, no el gris). */
+     que el texto y los iconos no se vean apagados (predomina la tinta oscura). */
   --c-ink: #0f172a;
-  --c-ink-2: #334155;
-  --c-ink-3: #64748b;
+  --c-ink-2: #1e293b;
+  --c-ink-3: #475569;
   /* Acento violeta de marca, oscurecido (#5813c1). RGB triplet para modificadores de opacidad. */
   --c-accent: 88 19 193;
   --c-accent-dim: rgba(88, 19, 193, 0.1);
@@ -64,8 +64,8 @@
   --c-surface-3: #1e2030;
   --c-line: rgba(255, 255, 255, 0.17);
   --c-ink: #f4f5ff;
-  --c-ink-2: #c9cce3;
-  --c-ink-3: #9295ae;
+  --c-ink-2: #dcdef0;
+  --c-ink-3: #adb0c8;
   /* Violeta más luminoso para leer sobre el fondo casi negro. */
   --c-accent: 163 124 255;
   --c-accent-dim: rgba(163, 124, 255, 0.15);
