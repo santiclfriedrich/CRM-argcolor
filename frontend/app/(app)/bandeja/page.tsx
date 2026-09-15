@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   Clock,
   Download,
+  Filter,
   Inbox as InboxIcon,
   Lock,
   Mail as MailIcon,
@@ -13,10 +14,13 @@ import {
   Plus,
   RefreshCw,
   Reply,
+  Search,
   Send,
+  Settings2,
+  Tag,
   Trash2,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { type ReactNode, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -115,6 +119,9 @@ export default function BandejaPage() {
   const [componer, setComponer] = useState(false);
 
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
+  const [busqueda, setBusqueda] = useState("");
+  const [filtro, setFiltro] = useState<"todos" | "no_leidos" | "adjuntos">("todos");
+  const [menuAbierto, setMenuAbierto] = useState<string | null>(null);
 
   const toast = useToast();
   const syncMut = useSyncGmail();
@@ -126,7 +133,20 @@ export default function BandejaPage() {
   const { data: entrada } = useInbox("entrada");
   const noLeidos = (entrada ?? []).filter((m) => !m.leido).length;
 
-  const conversaciones = useMemo(() => agrupar(mails ?? []), [mails]);
+  const todas = useMemo(() => agrupar(mails ?? []), [mails]);
+  const conversaciones = useMemo(() => {
+    let cs = todas;
+    if (filtro === "no_leidos") cs = cs.filter((c) => c.unreadIds.length > 0);
+    else if (filtro === "adjuntos") cs = cs.filter((c) => c.tieneAdjuntos);
+    const q = busqueda.trim().toLowerCase();
+    if (q)
+      cs = cs.filter((c) =>
+        `${c.remitentes} ${c.latest.asunto ?? ""} ${c.latest.preview ?? ""}`
+          .toLowerCase()
+          .includes(q)
+      );
+    return cs;
+  }, [todas, filtro, busqueda]);
 
   const toggleSel = (key: string) =>
     setSeleccion((s) => {
@@ -209,7 +229,7 @@ export default function BandejaPage() {
         ) : (
           <>
             {/* Barra de la lista */}
-            <div className="flex items-center gap-3 border-b border-line px-4 py-2">
+            <div className="flex items-center gap-2 border-b border-line px-3 py-2">
               <input
                 type="checkbox"
                 checked={todasSel}
@@ -217,6 +237,16 @@ export default function BandejaPage() {
                 className="h-4 w-4 shrink-0 rounded border-line accent-accent"
                 aria-label="Seleccionar todo"
               />
+              <button
+                type="button"
+                onClick={sincronizar}
+                disabled={syncMut.isPending}
+                className="rounded-md p-1.5 text-ink-2 transition hover:bg-surface2 disabled:opacity-50"
+                title="Sincronizar"
+                aria-label="Sincronizar"
+              >
+                <RefreshCw size={16} className={cn(syncMut.isPending && "animate-spin")} />
+              </button>
               <select
                 value={folder}
                 onChange={(e) => seleccionar(e.target.value as FolderKey)}
@@ -237,21 +267,93 @@ export default function BandejaPage() {
                   <Trash2 size={15} /> Eliminar ({seleccion.size})
                 </button>
               ) : (
-                <span className="text-sm font-medium text-ink">
+                <span className="hidden text-sm font-medium text-ink sm:block">
                   {conversaciones.length} conversación
                   {conversaciones.length === 1 ? "" : "es"}
                 </span>
               )}
-              <button
-                type="button"
-                onClick={sincronizar}
-                disabled={syncMut.isPending}
-                className="ml-auto rounded-md p-1.5 text-ink-2 transition hover:bg-surface2 disabled:opacity-50"
-                title="Sincronizar"
-                aria-label="Sincronizar"
-              >
-                <RefreshCw size={16} className={cn(syncMut.isPending && "animate-spin")} />
-              </button>
+
+              {/* Controles a la derecha */}
+              <div className="ml-auto flex items-center gap-1">
+                <div className="relative hidden md:block">
+                  <Search
+                    size={15}
+                    className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3"
+                  />
+                  <input
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
+                    placeholder="Buscar…"
+                    className="w-36 rounded-md border border-line bg-surface py-1.5 pl-8 pr-2 text-sm text-ink placeholder:text-ink-3 focus:w-48 focus:outline-none focus:ring-1 focus:ring-accent"
+                  />
+                </div>
+
+                <ToolbarButton
+                  icon={Clock}
+                  label="Estado de seguimiento"
+                  onClick={() => toast.toast("Estado de seguimiento: próximamente", "info")}
+                />
+                <ToolbarButton
+                  icon={Tag}
+                  label="Etiquetas"
+                  onClick={() => toast.toast("Etiquetas: próximamente", "info")}
+                />
+
+                <div className="relative">
+                  <ToolbarButton
+                    icon={Filter}
+                    label="Filtros"
+                    activo={filtro !== "todos"}
+                    onClick={() =>
+                      setMenuAbierto((m) => (m === "filtros" ? null : "filtros"))
+                    }
+                  />
+                  {menuAbierto === "filtros" && (
+                    <MenuFlotante onClose={() => setMenuAbierto(null)}>
+                      {(
+                        [
+                          ["todos", "Todos"],
+                          ["no_leidos", "No leídos"],
+                          ["adjuntos", "Con adjuntos"],
+                        ] as const
+                      ).map(([val, txt]) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => {
+                            setFiltro(val);
+                            setMenuAbierto(null);
+                          }}
+                          className={cn(
+                            "flex w-full items-center rounded-md px-2.5 py-2 text-left text-sm transition hover:bg-surface2",
+                            filtro === val ? "font-semibold text-accent" : "text-ink"
+                          )}
+                        >
+                          {txt}
+                        </button>
+                      ))}
+                    </MenuFlotante>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => toast.toast("Buscador general arriba a la derecha", "info")}
+                  className="rounded-md p-1.5 text-ink-2 transition hover:bg-surface2 md:hidden"
+                  aria-label="Buscar"
+                >
+                  <Search size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toast.toast("Configuración de la bandeja: próximamente", "info")}
+                  className="rounded-md p-1.5 text-ink-2 transition hover:bg-surface2"
+                  aria-label="Configuración"
+                  title="Configuración"
+                >
+                  <Settings2 size={16} />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto">
@@ -712,6 +814,51 @@ function AdjuntoChip({ adj }: { adj: AdjuntoGmail }) {
       <span className="max-w-[220px] truncate">{adj.filename}</span>
       <Download size={14} className="shrink-0 text-ink-2" />
     </button>
+  );
+}
+
+function ToolbarButton({
+  icon: Icon,
+  label,
+  activo,
+  onClick,
+}: {
+  icon: typeof InboxIcon;
+  label: string;
+  activo?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      className={cn(
+        "flex items-center gap-1.5 rounded-md border border-line px-2 py-1.5 text-sm transition hover:bg-surface2",
+        activo ? "border-accent/40 text-accent" : "text-ink-2"
+      )}
+    >
+      <Icon size={15} className="shrink-0" />
+      <span className="hidden lg:inline">{label}</span>
+      <ChevronDown size={13} className="text-ink-3" />
+    </button>
+  );
+}
+
+function MenuFlotante({ children, onClose }: { children: ReactNode; onClose: () => void }) {
+  return (
+    <>
+      <button
+        type="button"
+        aria-hidden
+        tabIndex={-1}
+        className="fixed inset-0 z-40 cursor-default"
+        onClick={onClose}
+      />
+      <div className="absolute right-0 top-full z-50 mt-1 w-44 rounded-lg border border-line bg-surface p-1 shadow-lg">
+        {children}
+      </div>
+    </>
   );
 }
 
