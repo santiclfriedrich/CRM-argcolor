@@ -42,8 +42,8 @@ class FakeGmail:
     def list_message_ids(self, query: str, max_results: int = 25) -> list[str]:
         return list(self.mensajes.keys())
 
-    def get_message(self, message_id: str, with_attachments: bool = True) -> dict[str, Any]:
-        return self.mensajes[message_id]
+    def get_messages_bulk(self, ids: list[str]) -> list[dict[str, Any]]:
+        return [self.mensajes[mid] for mid in ids if mid in self.mensajes]
 
 
 def _msg(mid: str, *, labels: list[str], de: str, asunto: str) -> dict[str, Any]:

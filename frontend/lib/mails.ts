@@ -167,6 +167,7 @@ export function useReprocesarDescartado() {
 // Dispara un polling manual de la casilla comercial (requiere Gmail configurado).
 export type SyncResult = {
   procesados: number;
+  actualizados?: number;
   errores: number;
   ultimo_error: string | null;
 };
@@ -174,7 +175,10 @@ export type SyncResult = {
 export function useSyncGmail() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => (await api.post<SyncResult>(`${BASE}/sync`)).data,
+    // timeout holgado: el sync de inbox es rápido (batch), pero no lo dejamos
+    // colgado para siempre si la red o Gmail no responden.
+    mutationFn: async () =>
+      (await api.post<SyncResult>(`${BASE}/sync`, undefined, { timeout: 60000 })).data,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: mailKeys.all });
       qc.invalidateQueries({ queryKey: oportunidadKeys.all });

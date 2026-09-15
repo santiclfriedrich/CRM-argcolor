@@ -31,7 +31,7 @@ _MAX_MENSAJES = 200
 
 class GmailLike(Protocol):
     def list_message_ids(self, query: str, max_results: int = 25) -> list[str]: ...
-    def get_message(self, message_id: str, with_attachments: bool = True) -> dict[str, Any]: ...
+    def get_messages_bulk(self, ids: list[str]) -> list[dict[str, Any]]: ...
 
 
 def dias_ventana(usuario: Usuario) -> int:
@@ -94,45 +94,84 @@ def sync_inbox_for_user(
         )
     )
 
-    for mid in ids:
-        if mid in eliminados:
-            continue
-        try:
-            msg = gmail.get_message(mid, with_attachments=False)
-            labels = msg.get("labels") or []
-            carpeta, direccion = _carpeta_y_direccion(labels)
-            leido = "UNREAD" not in labels
+    # Batch: una sola bajada para todos los mails de la ventana (no una request
+    # por mail, que colgaba el botón Sincronizar).
+    pendientes = [mid for mid in ids if mid not in eliminados]
+    try:
+        mensajes = {m.get("message_id"): m for m in gmail.get_messages_bulk(pendientes)}
+    except Exception as exc:  # noqa: BLE001 - frontera con Gmail
+        resultado["errores"] += 1  # type: ignore[operator]
+        resultado["ultimo_error"] = str(exc)[:200]
+        logger.exception("Falló la bajada batch del buzón")
+        return resultado
 
-            existente = existentes.get(mid)
-            if existente is not None:
-                # Ya lo tenía el pipeline comercial: solo reflejamos estado/dueño.
-                existente.leido = leido
-                existente.carpeta = carpeta
-                if existente.usuario_id is None:
-                    existente.usuario_id = usuario.id
-                resultado["actualizados"] += 1  # type: ignore[operator]
-            else:
-                db.add(
-                    Mail(
-                        gmail_message_id=msg.get("message_id"),
-                        gmail_thread_id=msg.get("thread_id"),
-                        rfc_message_id=msg.get("rfc_message_id"),
-                        direccion=direccion,
-                        de=msg.get("de"),
-                        para=msg.get("para"),
-                        asunto=msg.get("asunto"),
-                        cuerpo=msg.get("cuerpo") or "",
-                        fecha=msg.get("fecha"),
-                        leido=leido,
-                        carpeta=carpeta,
-                        usuario_id=usuario.id,
-                    )
+    for mid in pendientes:
+        msg = mensajes.get(mid)
+        if msg is None:
+            continue
+        labels = msg.get("labels") or []
+        carpeta, direccion = _carpeta_y_direccion(labels)
+        leido = "UNREAD" not in labels
+
+        existente = existentes.get(mid)
+        if existente is not None:
+            # Ya lo tenía el pipeline comercial: solo reflejamos estado/dueño.
+            existente.leido = leido
+            existente.carpeta = carpeta
+            if existente.usuario_id is None:
+                existente.usuario_id = usuario.id
+            resultado["actualizados"] += 1  # type: ignore[operator]
+        else:
+            db.add(
+                Mail(
+                    gmail_message_id=msg.get("message_id"),
+                    gmail_thread_id=msg.get("thread_id"),
+                    rfc_message_id=msg.get("rfc_message_id"),
+                    direccion=direccion,
+                    de=msg.get("de"),
+                    para=msg.get("para"),
+                    asunto=msg.get("asunto"),
+                    cuerpo=msg.get("cuerpo") or "",
+                    fecha=msg.get("fecha"),
+                    leido=leido,
+                    carpeta=carpeta,
+                    usuario_id=usuario.id,
                 )
-                resultado["nuevos"] += 1  # type: ignore[operator]
-            db.commit()
-        except Exception as exc:  # noqa: BLE001 - un mail malo no corta el lote
-            db.rollback()
-            resultado["errores"] += 1  # type: ignore[operator]
-            resultado["ultimo_error"] = str(exc)[:200]
-            logger.exception("Error sincronizando el mail %s al inbox; se omite", mid)
+            )
+            resultado["nuevos"] += 1  # type: ignore[operator]
+
+    try:
+        db.commit()
+    except Exception as exc:  # noqa: BLE001 - un commit fallido no debe romper el poll
+        db.rollback()
+        resultado["errores"] += 1  # type: ignore[operator]
+        resultado["ultimo_error"] = str(exc)[:200]
+        logger.exception("Falló el commit del sync de buzón")
     return resultado
+
+
+def sync_inbox_manual(db: Session, usuario: Usuario) -> dict[str, int | str | None]:
+    """Sync de buzón disparado por el botón Sincronizar: SOLO la bandeja del
+    usuario (rápido, sin IA). El poll comercial e ingest de Compras corren en el
+    scheduler de fondo. Devuelve {nuevos, actualizados, errores, ultimo_error}."""
+    from app.core.crypto import decrypt
+    from app.integrations.gmail.client import GmailClient
+
+    vacio: dict[str, int | str | None] = {
+        "nuevos": 0,
+        "actualizados": 0,
+        "errores": 0,
+        "ultimo_error": None,
+    }
+    if not usuario.sync_mail_activo:
+        return {**vacio, "ultimo_error": "Tu sincronización de mails está pausada."}
+    if not usuario.gmail_refresh_token:
+        return {
+            **vacio,
+            "ultimo_error": "No tenés Gmail conectado. Conectalo desde tu perfil.",
+        }
+    token = decrypt(usuario.gmail_refresh_token)
+    if not token:
+        return {**vacio, "ultimo_error": "No se pudo leer tu token de Gmail. Reconectá."}
+    gmail = GmailClient(refresh_token=token)
+    return sync_inbox_for_user(db, gmail, usuario)

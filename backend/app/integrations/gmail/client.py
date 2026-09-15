@@ -6,6 +6,7 @@ recibo) se agrega en el Slice 4. El parsing de mensajes es una función pura
 """
 
 import base64
+import logging
 import re
 from datetime import datetime, timezone
 from email.message import EmailMessage
@@ -19,6 +20,8 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 # readonly para leer; send queda pedido de antemano para el acuse (Slice 4).
 GMAIL_SCOPES = [
@@ -295,6 +298,37 @@ class GmailClient:
             .execute()
         )
         return [m["id"] for m in resp.get("messages", [])]
+
+    def get_messages_bulk(self, ids: list[str]) -> list[dict[str, Any]]:
+        """Trae varios mensajes en pocas llamadas (batch HTTP de Gmail, de a 100),
+        SIN bajar los bytes de adjuntos. Es lo que usa el sync de buzón para no
+        hacer una request por mail (lo que colgaba el botón Sincronizar)."""
+        if not ids:
+            return []
+        parsed: dict[str, dict[str, Any]] = {}
+
+        def _cb(request_id: str, response: dict[str, Any], exception: Exception | None) -> None:
+            if exception is not None:
+                logger.warning("Batch get del mail %s falló: %s", request_id, exception)
+                return
+            p = parse_gmail_message(response)
+            p.pop("attachments", None)
+            p.pop("document_attachments", None)
+            p["images"] = []
+            p["documentos"] = []
+            parsed[request_id] = p
+
+        for i in range(0, len(ids), 100):  # Gmail limita el batch a 100 requests
+            batch = self._service.new_batch_http_request(callback=_cb)
+            for mid in ids[i : i + 100]:
+                batch.add(
+                    self._service.users()
+                    .messages()
+                    .get(userId=self._user, id=mid, format="full"),
+                    request_id=mid,
+                )
+            batch.execute()
+        return [parsed[mid] for mid in ids if mid in parsed]
 
     def get_thread(self, thread_id: str) -> list[dict[str, Any]]:
         """Devuelve los mensajes de un hilo (parseados), en orden cronológico."""

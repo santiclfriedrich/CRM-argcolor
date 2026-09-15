@@ -66,8 +66,19 @@ export default function BandejaPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [componer, setComponer] = useState(false);
 
+  const toast = useToast();
   const syncMut = useSyncGmail();
   const marcarLeido = useMarcarLeido();
+
+  const sincronizar = () =>
+    syncMut.mutate(undefined, {
+      onSuccess: (r) => {
+        if (r.ultimo_error) toast.toast(r.ultimo_error, "error");
+        else if (r.procesados) toast.toast(`${r.procesados} correo(s) nuevo(s)`, "success");
+        else toast.toast("Bandeja al día", "info");
+      },
+      onError: () => toast.toast("No se pudo sincronizar", "error"),
+    });
 
   const carpeta: CarpetaInbox = folder === "programados" ? "entrada" : folder;
   const { data: mails, isLoading } = useInbox(carpeta);
@@ -91,7 +102,7 @@ export default function BandejaPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => syncMut.mutate()}
+          onClick={sincronizar}
           disabled={syncMut.isPending}
           title="Sincroniza tu casilla de Gmail"
         >

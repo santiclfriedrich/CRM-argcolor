@@ -34,7 +34,7 @@ from app.schemas.mail import (
     ResponderRequest,
 )
 from app.services.acuse import send_aclaracion, send_acuse, send_respuesta
-from app.services.gmail_poller import poll_user_mailbox
+from app.services.gmail_inbox import sync_inbox_manual
 from app.services.ingest import process_incoming_email
 from app.services.storage import get_storage
 
@@ -129,30 +129,26 @@ def ingest_email(
 @router.post("/sync")
 def sync_gmail(
     db: Session = Depends(get_db),
-    ai: AIProvider = Depends(get_ai),
     current_user: Usuario = Depends(get_current_user),
 ) -> dict[str, int | str | None]:
-    """Sincroniza SOLO la casilla del usuario logueado (su propio Gmail).
-
-    Cada vendedor lee únicamente su casilla y los mails quedan a su nombre; el
-    sync de un usuario nunca toca la de otro. El polling de todas las casillas
-    corre aparte en el scheduler de fondo.
-    Devuelve {procesados, errores, ultimo_error}."""
+    """Sincroniza la BANDEJA (inbox) de la casilla del usuario logueado: rápido y
+    sin IA (batch de Gmail). El poll comercial y la ingesta de respuestas de
+    Compras corren en el scheduler de fondo cada pocos minutos, así el botón no
+    se cuelga esperando a la IA.
+    Devuelve {procesados, actualizados, errores, ultimo_error}."""
     try:
-        resultado = poll_user_mailbox(db, ai, current_user)
+        r = sync_inbox_manual(db, current_user)
     except Exception as exc:  # noqa: BLE001 - frontera con Gmail
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Error al sincronizar Gmail: {exc}",
         ) from exc
-    # Auto-ingesta de respuestas de Compras desde los hilos de las solicitudes.
-    from app.services.compras_ingest import ingerir_respuestas_compras
-
-    try:
-        resultado["respuestas_compras"] = ingerir_respuestas_compras(db, ai)
-    except Exception:  # noqa: BLE001 - no debe cortar el sync
-        resultado["respuestas_compras"] = 0
-    return resultado
+    return {
+        "procesados": r["nuevos"],
+        "actualizados": r["actualizados"],
+        "errores": r["errores"],
+        "ultimo_error": r["ultimo_error"],
+    }
 
 
 # Tope de seguridad de la bandeja: se muestran los más nuevos. Es holgado para
