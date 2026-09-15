@@ -100,6 +100,24 @@ export function useEliminarMail() {
   });
 }
 
+// Crear una oportunidad nueva desde el mail o asociarlo a una existente.
+export function useVincularOportunidad(mailId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: {
+      modo: "crear" | "asociar";
+      oportunidad_id?: number;
+      cliente_id?: number;
+      requerimiento_ia?: boolean;
+      sincronizar_adjuntos?: boolean;
+    }) => (await api.post(`${BASE}/${mailId}/oportunidad`, body)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mails", "inbox"] });
+      qc.invalidateQueries({ queryKey: oportunidadKeys.all });
+    },
+  });
+}
+
 export function useRedactar() {
   const qc = useQueryClient();
   return useMutation({

@@ -415,6 +415,20 @@ class GmailClient:
         )
         return [parse_gmail_message(m) for m in raw.get("messages", [])]
 
+    def get_message_attachments(self, message_id: str) -> list[dict[str, Any]]:
+        """Metadatos de los adjuntos de UN mensaje (para sincronizarlos a una
+        oportunidad). No baja los bytes: eso se hace con get_attachment_bytes."""
+        raw = (
+            self._service.users()
+            .messages()
+            .get(userId=self._user, id=message_id, format="full")
+            .execute()
+        )
+        return [
+            {**a, "message_id": message_id}
+            for a in _collect_all_attachments(raw.get("payload", {}))
+        ]
+
     def get_attachment_bytes(self, message_id: str, attachment_id: str) -> bytes:
         """Baja los bytes de un adjunto (a demanda, al abrir/descargar)."""
         resp = (

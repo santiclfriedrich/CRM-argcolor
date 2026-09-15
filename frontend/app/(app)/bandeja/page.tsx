@@ -19,6 +19,7 @@ import {
   Send,
   Settings2,
   Tag,
+  Target,
   Trash2,
 } from "lucide-react";
 import { type ReactNode, useMemo, useRef, useState } from "react";
@@ -37,7 +38,9 @@ import {
   useRedactar,
   useResponder,
   useSyncGmail,
+  useVincularOportunidad,
 } from "@/lib/mails";
+import { useOportunidades } from "@/lib/oportunidades";
 import type { AdjuntoGmail, CarpetaInbox, InboxMail } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -118,6 +121,7 @@ export default function BandejaPage() {
   const [folder, setFolder] = useState<FolderKey>("entrada");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [componer, setComponer] = useState(false);
+  const [vincularId, setVincularId] = useState<number | null>(null);
 
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [busqueda, setBusqueda] = useState("");
@@ -442,10 +446,7 @@ export default function BandejaPage() {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              toast.toast(
-                                "Vincular a una oportunidad: llega en la próxima fase",
-                                "info"
-                              );
+                              setVincularId(conv.latest.id);
                             }}
                             className="hidden items-center gap-1 rounded-md border border-line bg-surface px-2 py-1 text-xs font-medium text-ink-2 transition hover:bg-surface2 group-hover:flex"
                           >
@@ -470,6 +471,9 @@ export default function BandejaPage() {
       </section>
 
       {componer && <ComposeModal onClose={() => setComponer(false)} />}
+      {vincularId !== null && (
+        <VincularModal mailId={vincularId} onClose={() => setVincularId(null)} />
+      )}
     </div>
   );
 }
@@ -490,6 +494,7 @@ function ReadingPane({
   const toast = useToast();
   const [respuesta, setRespuesta] = useState("");
   const [respondiendo, setRespondiendo] = useState(false);
+  const [mostrarVincular, setMostrarVincular] = useState(false);
 
   const asunto = hilo?.[0]?.asunto || "(sin asunto)";
   const participantes = useMemo(() => {
@@ -538,6 +543,15 @@ function ReadingPane({
           title="Eliminar del CRM (queda en Gmail)"
         >
           <Trash2 size={15} className="mr-1.5" /> Eliminar
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="ml-auto"
+          onClick={() => setMostrarVincular(true)}
+          title="Crear o asociar una oportunidad desde este mail"
+        >
+          <Target size={15} className="mr-1.5" /> Vincular a oportunidad
         </Button>
       </div>
 
@@ -638,6 +652,10 @@ function ReadingPane({
           </ul>
         </aside>
       </div>
+
+      {mostrarVincular && (
+        <VincularModal mailId={mailId} onClose={() => setMostrarVincular(false)} />
+      )}
     </div>
   );
 }
@@ -832,6 +850,160 @@ function AdjuntoChip({ adj }: { adj: AdjuntoGmail }) {
       <span className="max-w-[220px] truncate">{adj.filename}</span>
       <Download size={14} className="shrink-0 text-ink-2" />
     </button>
+  );
+}
+
+// Crear una oportunidad nueva desde el mail, o asociarlo a una existente. El
+// requerimiento se toma tal cual del cuerpo o se limpia con IA; opcionalmente se
+// sincronizan los adjuntos del mail a la oportunidad.
+function VincularModal({ mailId, onClose }: { mailId: number; onClose: () => void }) {
+  const vincular = useVincularOportunidad(mailId);
+  const { data: oportunidades } = useOportunidades();
+  const toast = useToast();
+  const [tab, setTab] = useState<"crear" | "asociar">("crear");
+  const [reqIA, setReqIA] = useState(false);
+  const [syncAdj, setSyncAdj] = useState(true);
+  const [q, setQ] = useState("");
+  const [opId, setOpId] = useState<number | null>(null);
+
+  const lista = useMemo(() => {
+    const arr = oportunidades ?? [];
+    const s = q.trim().toLowerCase();
+    const filtradas = s
+      ? arr.filter((o) => `#${o.id} ${o.asunto ?? ""}`.toLowerCase().includes(s))
+      : arr;
+    return filtradas.slice(0, 40);
+  }, [oportunidades, q]);
+
+  const confirmar = () => {
+    if (tab === "asociar" && !opId) return;
+    vincular.mutate(
+      tab === "crear"
+        ? { modo: "crear", requerimiento_ia: reqIA, sincronizar_adjuntos: syncAdj }
+        : { modo: "asociar", oportunidad_id: opId!, sincronizar_adjuntos: syncAdj },
+      {
+        onSuccess: () => {
+          toast.toast(tab === "crear" ? "Oportunidad creada" : "Mail vinculado", "success");
+          onClose();
+        },
+        onError: () => toast.toast("No se pudo vincular la oportunidad", "error"),
+      }
+    );
+  };
+
+  return (
+    <Modal open onClose={onClose} title="Vincular a oportunidad" size="lg">
+      <div className="mb-4 flex gap-1 rounded-lg bg-surface2 p-1">
+        {(
+          [
+            ["crear", "Crear nueva"],
+            ["asociar", "Asociar existente"],
+          ] as const
+        ).map(([t, txt]) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={cn(
+              "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition",
+              tab === t ? "bg-surface text-ink shadow-sm" : "text-ink-2"
+            )}
+          >
+            {txt}
+          </button>
+        ))}
+      </div>
+
+      {tab === "crear" ? (
+        <div>
+          <p className="mb-2 text-sm font-medium text-ink">Requerimiento</p>
+          <div className="flex flex-col gap-2">
+            <label className="flex items-start gap-2 rounded-lg border border-line p-3 text-sm text-ink">
+              <input
+                type="radio"
+                checked={!reqIA}
+                onChange={() => setReqIA(false)}
+                className="mt-0.5 accent-accent"
+              />
+              <span>
+                <span className="font-medium">Tal cual del cuerpo del mail</span>
+                <span className="block text-xs text-ink-3">
+                  Copia el texto como lo escribió el cliente.
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2 rounded-lg border border-line p-3 text-sm text-ink">
+              <input
+                type="radio"
+                checked={reqIA}
+                onChange={() => setReqIA(true)}
+                className="mt-0.5 accent-accent"
+              />
+              <span>
+                <span className="font-medium">Limpiar con IA</span>
+                <span className="block text-xs text-ink-3">
+                  La IA ordena el requerimiento a partir del cuerpo.
+                </span>
+              </span>
+            </label>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar oportunidad por N° o asunto…"
+          />
+          <div className="max-h-64 overflow-y-auto rounded-lg border border-line">
+            {lista.length === 0 ? (
+              <p className="p-3 text-sm text-ink-2">Sin resultados.</p>
+            ) : (
+              lista.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => setOpId(o.id)}
+                  className={cn(
+                    "flex w-full items-center gap-2 border-b border-line px-3 py-2 text-left text-sm transition last:border-0 hover:bg-surface2",
+                    opId === o.id && "bg-accent/10"
+                  )}
+                >
+                  <span className="font-mono text-xs text-ink-3">#{o.id}</span>
+                  <span className="truncate text-ink">{o.asunto || "(sin asunto)"}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      <label className="mt-4 flex items-center gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          checked={syncAdj}
+          onChange={(e) => setSyncAdj(e.target.checked)}
+          className="h-4 w-4 rounded border-line accent-accent"
+        />
+        Sincronizar los adjuntos del mail a la oportunidad
+      </label>
+
+      <div className="mt-5 flex justify-end gap-2">
+        <Button variant="outline" onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button
+          onClick={confirmar}
+          disabled={vincular.isPending || (tab === "asociar" && !opId)}
+        >
+          {vincular.isPending
+            ? "Guardando…"
+            : tab === "crear"
+              ? "Crear oportunidad"
+              : "Asociar"}
+        </Button>
+      </div>
+    </Modal>
   );
 }
 

@@ -1,6 +1,7 @@
 """Pydantic schemas para la bandeja de mails y la ingesta manual."""
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -158,6 +159,20 @@ class RedactarRequest(BaseModel):
     para: str
     asunto: str | None = None
     cuerpo: str
+
+
+class VincularOportunidadBody(BaseModel):
+    """Crear o asociar una oportunidad a partir de un mail."""
+
+    modo: Literal["crear", "asociar"]
+    # Para 'asociar': la oportunidad existente a la que se vincula el mail.
+    oportunidad_id: int | None = None
+    # Para 'crear': cliente (si no viene, se detecta por el dominio del remitente).
+    cliente_id: int | None = None
+    # Para 'crear': True = requerimiento limpiado por IA; False = tal cual del cuerpo.
+    requerimiento_ia: bool = False
+    # Bajar los adjuntos del mail y guardarlos en la oportunidad.
+    sincronizar_adjuntos: bool = True
 
 
 class LeidoBody(BaseModel):

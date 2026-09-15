@@ -1,5 +1,6 @@
 """Bandeja inteligente: ingesta manual de mails y listado de procesados."""
 
+import re
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -15,9 +16,15 @@ from app.api.deps import (
 )
 from app.core.exceptions import NotFoundError
 from app.db.models.adjuntos import Adjunto
+from app.db.models.clientes import Cliente
 from app.db.models.mails import DireccionMail, Mail
 from app.db.models.mails_descartados import MailDescartado
-from app.db.models.oportunidades import AmbitoOportunidad, Oportunidad
+from app.db.models.oportunidades import (
+    AmbitoOportunidad,
+    EstadoOportunidad,
+    Oportunidad,
+    ambito_desde_tipo,
+)
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.integrations.ai.base import AIProvider
@@ -33,10 +40,16 @@ from app.schemas.mail import (
     MailRead,
     RedactarRequest,
     ResponderRequest,
+    VincularOportunidadBody,
 )
+from app.schemas.oportunidad import OportunidadRead
 from app.services.acuse import send_aclaracion, send_acuse, send_respuesta
 from app.services.gmail_inbox import sync_inbox_manual
-from app.services.ingest import process_incoming_email
+from app.services.ingest import (
+    _match_cliente_y_contacto,
+    componer_requerimiento,
+    process_incoming_email,
+)
 from app.services.storage import get_storage
 
 router = APIRouter(prefix="/mails", tags=["bandeja"])
@@ -331,6 +344,125 @@ def get_conversacion(
             detail=f"No se pudo leer la conversación: {exc}",
         ) from exc
     return [ConversacionMensaje.model_validate(m) for m in mensajes]
+
+
+_SAFE_NOMBRE = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def _gmail_del_usuario(usuario: Usuario):  # noqa: ANN201 - GmailClient
+    """GmailClient del usuario (para bajar adjuntos). 400 si no está conectado."""
+    from app.core.crypto import decrypt
+    from app.integrations.gmail.client import GmailClient
+
+    if not usuario.gmail_refresh_token:
+        raise HTTPException(status_code=400, detail="No tenés Gmail conectado.")
+    token = decrypt(usuario.gmail_refresh_token)
+    if not token:
+        raise HTTPException(status_code=400, detail="No se pudo leer tu token de Gmail.")
+    return GmailClient(refresh_token=token)
+
+
+def _sync_adjuntos_del_mail(db: Session, gmail, mail: Mail) -> int:  # noqa: ANN001
+    """Baja los adjuntos del mail de Gmail y los guarda como Adjunto (mail_id)."""
+    if not mail.gmail_message_id:
+        return 0
+    try:
+        metas = gmail.get_message_attachments(mail.gmail_message_id)
+    except Exception:  # noqa: BLE001 - frontera con Gmail
+        return 0
+    existentes = {
+        a.nombre_archivo
+        for a in db.scalars(select(Adjunto).where(Adjunto.mail_id == mail.id))
+    }
+    storage = get_storage()
+    n = 0
+    for a in metas:
+        nombre = a.get("filename") or "adjunto"
+        if nombre in existentes:
+            continue
+        try:
+            data = gmail.get_attachment_bytes(a["message_id"], a["attachment_id"])
+        except Exception:  # noqa: BLE001 - un adjunto roto no corta el resto
+            continue
+        if not data:
+            continue
+        safe = _SAFE_NOMBRE.sub("_", nombre).strip("_") or "adjunto"
+        key = f"mails/{mail.id}/{safe}"
+        storage.put(key, data, a.get("mime"))
+        db.add(
+            Adjunto(
+                mail_id=mail.id,
+                nombre_archivo=nombre,
+                mime_type=a.get("mime"),
+                path_storage=key,
+            )
+        )
+        n += 1
+    return n
+
+
+@router.post("/{mail_id}/oportunidad", response_model=OportunidadRead, status_code=201)
+def vincular_oportunidad(
+    mail_id: int,
+    body: VincularOportunidadBody,
+    db: Session = Depends(get_db),
+    ai: AIProvider = Depends(get_ai),
+    current_user: Usuario = Depends(get_current_user),
+) -> Oportunidad:
+    """Crea una oportunidad nueva desde el mail o lo asocia a una existente.
+
+    Requerimiento: tal cual del cuerpo o limpiado por IA (según `requerimiento_ia`).
+    Con `sincronizar_adjuntos`, baja los adjuntos del mail y los guarda en la
+    oportunidad (útil para el flujo de Compras)."""
+    mail = db.get(Mail, mail_id)
+    if mail is None:
+        raise NotFoundError("Mail no encontrado")
+    _assert_owner(mail, current_user)
+
+    if body.modo == "asociar":
+        if not body.oportunidad_id:
+            raise HTTPException(status_code=400, detail="Falta la oportunidad a asociar.")
+        op = db.get(Oportunidad, body.oportunidad_id)
+        if op is None:
+            raise NotFoundError("Oportunidad no encontrada")
+        mail.oportunidad_id = op.id
+    else:  # crear
+        cliente_id = body.cliente_id
+        if cliente_id is None:
+            cliente_id, _ = _match_cliente_y_contacto(db, mail.de)
+        if body.requerimiento_ia:
+            try:
+                datos = ai.extract_email_data(mail.cuerpo or "")
+                requerimiento = componer_requerimiento(datos) or (mail.cuerpo or "")
+            except Exception:  # noqa: BLE001 - si la IA falla, cae al texto tal cual
+                requerimiento = mail.cuerpo or ""
+        else:
+            requerimiento = mail.cuerpo or ""
+        tipo = (
+            db.scalar(select(Cliente.tipo).where(Cliente.id == cliente_id))
+            if cliente_id
+            else None
+        )
+        op = Oportunidad(
+            cliente_id=cliente_id,
+            vendedor_id=current_user.id,
+            creado_por_id=current_user.id,
+            asunto=mail.asunto,
+            requerimiento=requerimiento,
+            estado=EstadoOportunidad.nueva,
+            fuente="mail",
+            ambito=ambito_desde_tipo(tipo),
+        )
+        db.add(op)
+        db.flush()
+        mail.oportunidad_id = op.id
+
+    if body.sincronizar_adjuntos:
+        _sync_adjuntos_del_mail(db, _gmail_del_usuario(current_user), mail)
+
+    db.commit()
+    db.refresh(op)
+    return op
 
 
 @router.get("/descartados", response_model=list[DescartadoRead])
