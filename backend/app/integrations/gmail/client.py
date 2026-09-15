@@ -105,6 +105,69 @@ def _extract_text(payload: dict[str, Any]) -> str:
     return ""
 
 
+def _extract_html(payload: dict[str, Any]) -> str:
+    """Devuelve el HTML crudo del mail (parte text/html), para renderizarlo tal
+    cual en el detalle (tablas, formato, etc.). "" si el mail es solo texto."""
+    mime = payload.get("mimeType", "")
+    body = payload.get("body", {})
+    if mime == "text/html" and body.get("data"):
+        return _decode_body(body["data"])
+    for part in payload.get("parts") or []:
+        html = _extract_html(part)
+        if html:
+            return html
+    return ""
+
+
+def _collect_all_attachments(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Todos los adjuntos reales (con filename) del mail, para listarlos y bajarlos
+    a demanda. No baja bytes: solo metadatos + attachment_id."""
+    found: list[dict[str, Any]] = []
+
+    def walk(part: dict[str, Any]) -> None:
+        nombre = part.get("filename") or ""
+        body = part.get("body", {})
+        if nombre and body.get("attachmentId"):
+            found.append(
+                {
+                    "filename": nombre,
+                    "mime": part.get("mimeType") or "application/octet-stream",
+                    "size": body.get("size") or 0,
+                    "attachment_id": body.get("attachmentId"),
+                }
+            )
+        for child in part.get("parts") or []:
+            walk(child)
+
+    walk(payload)
+    return found
+
+
+def _collect_inline_images(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Imágenes embebidas por Content-ID (cid:) — logos/firmas — para inlinearlas
+    como data URI en el HTML y que se vean igual que en Gmail."""
+    found: list[dict[str, Any]] = []
+
+    def walk(part: dict[str, Any]) -> None:
+        mime = part.get("mimeType", "")
+        cid = _header(part.get("headers") or [], "Content-ID")
+        body = part.get("body", {})
+        if mime.startswith("image/") and cid and (body.get("attachmentId") or body.get("data")):
+            found.append(
+                {
+                    "cid": cid.strip().lstrip("<").rstrip(">"),
+                    "mime": mime,
+                    "attachment_id": body.get("attachmentId"),
+                    "data": body.get("data"),
+                }
+            )
+        for child in part.get("parts") or []:
+            walk(child)
+
+    walk(payload)
+    return found
+
+
 def _header(headers: list[dict[str, str]], name: str) -> str | None:
     return next((h["value"] for h in headers if h["name"].lower() == name.lower()), None)
 
@@ -339,6 +402,66 @@ class GmailClient:
             .execute()
         )
         return [parse_gmail_message(m) for m in raw.get("messages", [])]
+
+    def get_attachment_bytes(self, message_id: str, attachment_id: str) -> bytes:
+        """Baja los bytes de un adjunto (a demanda, al abrir/descargar)."""
+        resp = (
+            self._service.users()
+            .messages()
+            .attachments()
+            .get(userId=self._user, messageId=message_id, id=attachment_id)
+            .execute()
+        )
+        data = resp.get("data", "")
+        return base64.urlsafe_b64decode(data) if data else b""
+
+    def get_thread_render(self, thread_id: str) -> list[dict[str, Any]]:
+        """Trae el hilo con el HTML real de cada mail (imágenes inline embebidas
+        como data URI) + metadatos de adjuntos. Para mostrar el detalle EXACTO
+        como en Gmail. Es una lectura en vivo (no toca la DB)."""
+        raw = (
+            self._service.users()
+            .threads()
+            .get(userId=self._user, id=thread_id, format="full")
+            .execute()
+        )
+        mensajes: list[dict[str, Any]] = []
+        for m in raw.get("messages", []):
+            payload = m.get("payload", {})
+            headers = payload.get("headers", [])
+            mid = m.get("id")
+            html = _extract_html(payload)
+            if html:
+                for img in _collect_inline_images(payload):
+                    try:
+                        crudo = (
+                            base64.urlsafe_b64decode(img["data"])
+                            if img.get("data")
+                            else self.get_attachment_bytes(mid, img["attachment_id"])
+                        )
+                    except Exception:  # noqa: BLE001 - una imagen rota no corta el mail
+                        continue
+                    if crudo:
+                        uri = f"data:{img['mime']};base64,{base64.b64encode(crudo).decode()}"
+                        html = html.replace(f"cid:{img['cid']}", uri)
+            fecha = None
+            if m.get("internalDate"):
+                fecha = datetime.fromtimestamp(int(m["internalDate"]) / 1000, tz=timezone.utc)
+            mensajes.append(
+                {
+                    "message_id": mid,
+                    "de": _header(headers, "From"),
+                    "para": _header(headers, "To"),
+                    "asunto": _header(headers, "Subject"),
+                    "fecha": fecha,
+                    "html": html or None,
+                    "texto": _extract_text(payload),
+                    "adjuntos": [
+                        {**a, "message_id": mid} for a in _collect_all_attachments(payload)
+                    ],
+                }
+            )
+        return mensajes
 
     def get_message(self, message_id: str, with_attachments: bool = True) -> dict[str, Any]:
         raw = (

@@ -23,6 +23,7 @@ from app.db.session import get_db
 from app.integrations.ai.base import AIProvider
 from app.schemas.mail import (
     AclaracionBody,
+    ConversacionMensaje,
     DescartadoRead,
     InboxMailListItem,
     IngestEmailRequest,
@@ -270,6 +271,65 @@ def redactar_mail(
     db.add(mail)
     db.commit()
     return _get_loaded(db, mail.id)
+
+
+@router.get("/gmail-adjunto")
+def descargar_gmail_adjunto(
+    message_id: str = Query(...),
+    attachment_id: str = Query(...),
+    filename: str = Query(default="adjunto"),
+    mime: str | None = Query(default=None),
+    gmail=Depends(get_user_gmail),  # noqa: ANN001 - GmailClient del usuario logueado
+    _: Usuario = Depends(get_current_user),
+) -> Response:
+    """Baja los bytes de un adjunto directo de Gmail (a demanda)."""
+    try:
+        data = gmail.get_attachment_bytes(message_id, attachment_id)
+    except Exception as exc:  # noqa: BLE001 - frontera con Gmail
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"No se pudo bajar el adjunto: {exc}",
+        ) from exc
+    return Response(
+        content=data,
+        media_type=mime or "application/octet-stream",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
+
+
+@router.get("/{mail_id}/conversacion", response_model=list[ConversacionMensaje])
+def get_conversacion(
+    mail_id: int,
+    db: Session = Depends(get_db),
+    gmail=Depends(get_user_gmail),  # noqa: ANN001 - GmailClient del usuario logueado
+    current_user: Usuario = Depends(get_current_user),
+) -> list[ConversacionMensaje]:
+    """Hilo del mail tal cual está en Gmail (HTML real + adjuntos), para mostrar
+    el detalle EXACTO como en Gmail. Lectura en vivo; si el mail no tiene hilo de
+    Gmail, cae al texto guardado."""
+    mail = db.get(Mail, mail_id)
+    if mail is None:
+        raise NotFoundError("Mail no encontrado")
+    _assert_owner(mail, current_user)
+    if not mail.gmail_thread_id:
+        return [
+            ConversacionMensaje(
+                message_id=mail.gmail_message_id or str(mail.id),
+                de=mail.de,
+                para=mail.para,
+                asunto=mail.asunto,
+                fecha=mail.fecha,
+                texto=mail.cuerpo or "",
+            )
+        ]
+    try:
+        mensajes = gmail.get_thread_render(mail.gmail_thread_id)
+    except Exception as exc:  # noqa: BLE001 - frontera con Gmail
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"No se pudo leer la conversación: {exc}",
+        ) from exc
+    return [ConversacionMensaje.model_validate(m) for m in mensajes]
 
 
 @router.get("/descartados", response_model=list[DescartadoRead])

@@ -128,6 +128,29 @@ class InboxMailListItem(BaseModel):
     preview: str | None = None
 
 
+class AdjuntoGmail(BaseModel):
+    """Adjunto de un mail (metadatos; los bytes se bajan a demanda)."""
+
+    filename: str
+    mime: str | None = None
+    size: int = 0
+    attachment_id: str
+    message_id: str
+
+
+class ConversacionMensaje(BaseModel):
+    """Un mensaje del hilo tal cual viene de Gmail: HTML real + adjuntos."""
+
+    message_id: str | None = None
+    de: str | None = None
+    para: str | None = None
+    asunto: str | None = None
+    fecha: datetime | None = None
+    html: str | None = None
+    texto: str = ""
+    adjuntos: list[AdjuntoGmail] = []
+
+
 class RedactarRequest(BaseModel):
     """Correo nuevo redactado desde el CRM."""
 

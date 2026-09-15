@@ -440,6 +440,27 @@ export interface Mail {
 
 export type CarpetaInbox = "entrada" | "enviados" | "archivo";
 
+// Adjunto de un mail de Gmail (bytes se bajan a demanda).
+export interface AdjuntoGmail {
+  filename: string;
+  mime: string | null;
+  size: number;
+  attachment_id: string;
+  message_id: string;
+}
+
+// Un mensaje del hilo tal cual viene de Gmail (HTML real + adjuntos).
+export interface ConversacionMensaje {
+  message_id: string | null;
+  de: string | null;
+  para: string | null;
+  asunto: string | null;
+  fecha: string | null;
+  html: string | null;
+  texto: string;
+  adjuntos: AdjuntoGmail[];
+}
+
 // Fila del inbox del CRM (bandeja tipo Gmail). Sin cuerpo completo: solo preview.
 export interface InboxMail {
   id: number;

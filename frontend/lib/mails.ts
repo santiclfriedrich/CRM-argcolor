@@ -4,7 +4,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { oportunidadKeys } from "@/lib/oportunidades";
 import type {
+  AdjuntoGmail,
   CarpetaInbox,
+  ConversacionMensaje,
   IngestEmailRequest,
   IngestResult,
   InboxMail,
@@ -36,7 +38,39 @@ export const mailKeys = {
   descartados: ["mails", "descartados"] as const,
   hilo: (mailId: number) => ["mails", "hilo", mailId] as const,
   inbox: (carpeta: CarpetaInbox) => ["mails", "inbox", carpeta] as const,
+  conversacion: (mailId: number) => ["mails", "conversacion", mailId] as const,
 };
+
+// Hilo del mail tal cual viene de Gmail (HTML real + adjuntos): para el detalle.
+export function useConversacion(mailId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: mailKeys.conversacion(mailId),
+    queryFn: async () =>
+      (await api.get<ConversacionMensaje[]>(`${BASE}/${mailId}/conversacion`)).data,
+    enabled,
+  });
+}
+
+// Baja un adjunto directo de Gmail (con el JWT que mete axios) y lo abre/guarda.
+export async function descargarGmailAdjunto(adj: AdjuntoGmail): Promise<void> {
+  const res = await api.get(`${BASE}/gmail-adjunto`, {
+    params: {
+      message_id: adj.message_id,
+      attachment_id: adj.attachment_id,
+      filename: adj.filename,
+      mime: adj.mime ?? undefined,
+    },
+    responseType: "blob",
+  });
+  const url = URL.createObjectURL(res.data as Blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = adj.filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 // --- Inbox del CRM (bandeja tipo Gmail): por carpeta de la casilla del usuario ---
 export function useInbox(carpeta: CarpetaInbox) {

@@ -5,15 +5,17 @@ import {
   ChevronDown,
   ChevronLeft,
   Clock,
+  Download,
   Inbox as InboxIcon,
   Mail as MailIcon,
+  Paperclip,
   Plus,
   RefreshCw,
   Reply,
   Send,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,15 +23,16 @@ import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import {
+  descargarGmailAdjunto,
+  useConversacion,
   useEliminarMail,
-  useHilo,
   useInbox,
   useMarcarLeido,
   useRedactar,
   useResponder,
   useSyncGmail,
 } from "@/lib/mails";
-import type { CarpetaInbox, InboxMail } from "@/lib/types";
+import type { AdjuntoGmail, CarpetaInbox, InboxMail } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type FolderKey = CarpetaInbox | "programados";
@@ -297,7 +300,7 @@ function ReadingPane({
   onBack: () => void;
   onDeleted: () => void;
 }) {
-  const { data: hilo, isLoading } = useHilo(mailId, true);
+  const { data: hilo, isLoading } = useConversacion(mailId, true);
   const eliminar = useEliminarMail();
   const marcarLeido = useMarcarLeido();
   const responder = useResponder(mailId);
@@ -309,8 +312,8 @@ function ReadingPane({
   const participantes = useMemo(() => {
     const set = new Set<string>();
     for (const m of hilo ?? []) {
-      const e = (m.direccion === "saliente" ? m.para : m.de) || "";
-      if (e) set.add(e);
+      if (m.de) set.add(m.de);
+      if (m.para) set.add(m.para);
     }
     return [...set];
   }, [hilo]);
@@ -365,13 +368,14 @@ function ReadingPane({
             ) : (
               <div className="flex flex-col gap-3">
                 {(hilo ?? []).map((m) => (
-                  <div key={m.id} className="rounded-lg border border-line bg-surface p-4">
+                  <div
+                    key={m.message_id}
+                    className="rounded-lg border border-line bg-surface p-4"
+                  >
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xs font-bold text-accent">
-                          {nombreEmail(m.direccion === "saliente" ? m.de : m.de)
-                            .slice(0, 2)
-                            .toUpperCase()}
+                          {nombreEmail(m.de).slice(0, 2).toUpperCase()}
                         </span>
                         <span className="truncate text-sm font-semibold text-ink">
                           {m.de || "—"}
@@ -381,9 +385,20 @@ function ReadingPane({
                         {m.fecha ? new Date(m.fecha).toLocaleString("es-AR") : ""}
                       </span>
                     </div>
-                    <p className="whitespace-pre-wrap break-words text-sm text-ink">
-                      {m.cuerpo || ""}
-                    </p>
+                    {m.html ? (
+                      <EmailFrame html={m.html} />
+                    ) : (
+                      <p className="whitespace-pre-wrap break-words text-sm text-ink">
+                        {m.texto}
+                      </p>
+                    )}
+                    {m.adjuntos.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
+                        {m.adjuntos.map((a) => (
+                          <AdjuntoChip key={a.attachment_id} adj={a} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -563,6 +578,77 @@ function ComposeModal({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </Modal>
+  );
+}
+
+// Renderiza el HTML real del mail en un iframe aislado (sin scripts), auto-alto,
+// para que se vea EXACTO como en Gmail (tablas, formato, imágenes).
+function EmailFrame({ html }: { html: string }) {
+  const ref = useRef<HTMLIFrameElement>(null);
+  const [altura, setAltura] = useState(80);
+
+  const doc = useMemo(
+    () =>
+      "<!doctype html><html><head><meta charset='utf-8'><base target='_blank'>" +
+      "<style>html,body{margin:0;padding:0}" +
+      "body{font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111827;" +
+      "line-height:1.5;word-break:break-word}img{max-width:100%;height:auto}" +
+      "table{max-width:100%}</style></head><body>" +
+      html +
+      "</body></html>",
+    [html]
+  );
+
+  const ajustar = () => {
+    const cuerpo = ref.current?.contentWindow?.document?.body;
+    if (cuerpo) setAltura(Math.min(6000, cuerpo.scrollHeight + 8));
+  };
+
+  return (
+    <iframe
+      ref={ref}
+      title="Contenido del correo"
+      srcDoc={doc}
+      sandbox="allow-same-origin allow-popups"
+      onLoad={() => {
+        ajustar();
+        // Reajuste tras cargar imágenes remotas (que llegan después del load).
+        setTimeout(ajustar, 400);
+        setTimeout(ajustar, 1200);
+      }}
+      className="w-full border-0"
+      style={{ height: altura }}
+    />
+  );
+}
+
+function AdjuntoChip({ adj }: { adj: AdjuntoGmail }) {
+  const [bajando, setBajando] = useState(false);
+  const toast = useToast();
+
+  const bajar = async () => {
+    setBajando(true);
+    try {
+      await descargarGmailAdjunto(adj);
+    } catch {
+      toast.toast("No se pudo bajar el adjunto", "error");
+    } finally {
+      setBajando(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={bajar}
+      disabled={bajando}
+      className="flex items-center gap-2 rounded-lg border border-line bg-surface2/50 px-3 py-1.5 text-sm text-ink transition hover:bg-surface2 disabled:opacity-60"
+      title={`Descargar ${adj.filename}`}
+    >
+      <Paperclip size={14} className="shrink-0 text-ink-2" />
+      <span className="max-w-[220px] truncate">{adj.filename}</span>
+      <Download size={14} className="shrink-0 text-ink-2" />
+    </button>
   );
 }
 
