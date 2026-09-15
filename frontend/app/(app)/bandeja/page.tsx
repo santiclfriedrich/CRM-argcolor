@@ -8,6 +8,7 @@ import {
   Download,
   Filter,
   Inbox as InboxIcon,
+  Link2,
   Lock,
   Mail as MailIcon,
   Paperclip,
@@ -380,7 +381,7 @@ export default function BandejaPage() {
                       <li
                         key={conv.key}
                         className={cn(
-                          "flex items-center gap-3 border-b border-line pl-4 pr-4 transition hover:bg-surface2",
+                          "group flex items-center gap-3 border-b border-line pl-4 pr-4 transition hover:bg-surface2",
                           sel ? "bg-accent/[0.07]" : noLeido && "bg-accent/[0.035]"
                         )}
                       >
@@ -421,18 +422,35 @@ export default function BandejaPage() {
                                 "shrink-0 truncate text-sm text-ink",
                                 noLeido ? "font-bold" : "font-medium"
                               )}
-                              style={{ maxWidth: "45%" }}
+                              style={{ maxWidth: "16rem" }}
                             >
                               {conv.latest.asunto || "(sin asunto)"}
                             </span>
                             {conv.latest.preview && (
-                              <span className="truncate text-sm text-ink-3">
+                              <span
+                                className="min-w-0 truncate text-sm text-ink-3"
+                                style={{ maxWidth: "22rem" }}
+                              >
                                 {conv.latest.preview}
                               </span>
                             )}
                           </span>
                         </button>
                         <div className="flex shrink-0 items-center gap-3">
+                          {/* Vincular a oportunidad: aparece solo al pasar el mouse. */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toast.toast(
+                                "Vincular a una oportunidad: llega en la próxima fase",
+                                "info"
+                              );
+                            }}
+                            className="hidden items-center gap-1 rounded-md border border-line bg-surface px-2 py-1 text-xs font-medium text-ink-2 transition hover:bg-surface2 group-hover:flex"
+                          >
+                            <Link2 size={13} /> Vincular
+                          </button>
                           {conv.tieneAdjuntos && (
                             <Paperclip size={15} className="text-ink-3" aria-label="Con adjuntos" />
                           )}
