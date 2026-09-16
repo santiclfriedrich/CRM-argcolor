@@ -186,6 +186,89 @@ class GBPClient:
         filas = parse_tables(self._call("Customers_funGetXMLData", body, autenticado=True))
         return filas[0] if filas else None
 
+    # --- ESCRITURA: alta de clientes (flujo bidireccional CRM -> GBP) ---
+    def buscar_por_cuit(self, cuit: str) -> list[dict[str, str]]:
+        """Dedup previo al alta: busca clientes por CUIT (con guiones)."""
+        if self._token is None:
+            self.authenticate()
+        body = (
+            f'<CustomersByTaxNumber_funGetXMLData xmlns="{self._ns}">'
+            f"<strTaxNumber>{escape(cuit)}</strTaxNumber>"
+            "</CustomersByTaxNumber_funGetXMLData>"
+        )
+        return parse_tables(
+            self._call("CustomersByTaxNumber_funGetXMLData", body, autenticado=True)
+        )
+
+    def fetch_states(self, country: str = "54") -> list[dict[str, str]]:
+        """Provincias del país (Argentina=54): state_id + nombre, para mapear."""
+        if self._token is None:
+            self.authenticate()
+        body = (
+            f'<States_funGetXMLData xmlns="{self._ns}">'
+            f"<pCountry>{escape(country)}</pCountry>"
+            "</States_funGetXMLData>"
+        )
+        return parse_tables(self._call("States_funGetXMLData", body, autenticado=True))
+
+    def crear_cliente(
+        self,
+        *,
+        name: str,
+        state: str,
+        address: str,
+        city: str,
+        zip: str,  # noqa: A002 - nombre del parámetro del WS
+        fiscalclass: str,
+        taxnumbertype: str,
+        taxnumber: str,
+        email: str,
+        phone: str,
+        country: str = "54",
+        nickname: str = "",
+        pass1: str = "",
+        pass2: str = "",
+    ) -> str:
+        """Da de alta un cliente (Customers_setNEWCustomer). Devuelve el texto del
+        resultado: el nuevo cust_id (entero positivo) o un código negativo si falló."""
+        if self._token is None:
+            self.authenticate()
+        # El orden de los elementos respeta el del WSDL del WS.
+        campos = {
+            "pname": name,
+            "pcountry": country,
+            "pstate": state,
+            "paddress": address,
+            "pcity": city,
+            "pzip": zip,
+            "pfiscalclass": fiscalclass,
+            "ptaxnumbertype": taxnumbertype,
+            "ptaxnumber": taxnumber,
+            "pemail": email,
+            "pphone": phone,
+            "pnickname": nickname,
+            "ppass1": pass1,
+            "ppass2": pass2,
+        }
+        inner = "".join(f"<{k}>{escape(v or '')}</{k}>" for k, v in campos.items())
+        body = f'<Customers_setNEWCustomer xmlns="{self._ns}">{inner}</Customers_setNEWCustomer>'
+        return (self._call("Customers_setNEWCustomer", body, autenticado=True) or "").strip()
+
+    def set_clase_cliente(self, cust_id: int, ck_id: int) -> list[dict[str, str]]:
+        """Setea la Clase de Cliente (ck_id) vía el GBPScript BI.SetClaseCliente."""
+        if self._token is None:
+            self.authenticate()
+        import json
+
+        params = json.dumps({"cust_id": int(cust_id), "ck_id": int(ck_id)})
+        body = (
+            f'<wsGBPScriptExecute4Dataset xmlns="{self._ns}">'
+            "<strScriptLabel>BI.SetClaseCliente</strScriptLabel>"
+            f"<strJSonParameters>{escape(params)}</strJSonParameters>"
+            "</wsGBPScriptExecute4Dataset>"
+        )
+        return parse_tables(self._call("wsGBPScriptExecute4Dataset", body, autenticado=True))
+
     def iter_pages(self) -> Iterator[list[dict[str, str]]]:
         """Itera las PÁGINAS de clientes del ERP (cada una es una lista de filas).
 

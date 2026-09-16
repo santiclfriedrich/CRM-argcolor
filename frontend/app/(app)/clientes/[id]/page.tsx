@@ -1,6 +1,14 @@
 "use client";
 
-import { ArrowLeft, Building2, ListChecks, Save, Target, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Building2,
+  Link2,
+  ListChecks,
+  Save,
+  Target,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -13,7 +21,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useConfirm } from "@/components/ui/confirm-dialog";
-import { useCliente, useDeleteCliente, useUpdateCliente } from "@/lib/clientes";
+import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+import { useToast } from "@/components/ui/toast";
+import {
+  useCliente,
+  useCrearEnGbp,
+  useDeleteCliente,
+  useProvinciasGbp,
+  useUpdateCliente,
+} from "@/lib/clientes";
 import { ESTADO_META, useOportunidades } from "@/lib/oportunidades";
 import { fmtMonto } from "@/lib/presupuestos";
 import { type Tarea, useTareas } from "@/lib/tareas";
@@ -32,6 +49,7 @@ export default function ClienteDetailPage() {
   const { data: oportunidades } = useOportunidades({ cliente_id: clienteId });
   const { data: misTareas } = useTareas();
   const [editarTarea, setEditarTarea] = useState<Tarea | null>(null);
+  const [gbpOpen, setGbpOpen] = useState(false);
   const confirm = useConfirm();
 
   if (isLoading) return <p className="text-ink-2">Cargando…</p>;
@@ -88,16 +106,27 @@ export default function ClienteDetailPage() {
             )}
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={eliminar}
-          disabled={deleteMut.isPending}
-          className="shrink-0 text-danger"
-        >
-          <Trash2 size={14} /> {deleteMut.isPending ? "Eliminando…" : "Eliminar cuenta"}
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          {cliente.numero_cliente ? (
+            <Badge tone="success">GBP N° {cliente.numero_cliente}</Badge>
+          ) : (
+            <Button variant="outline" size="sm" onClick={() => setGbpOpen(true)}>
+              <Link2 size={14} /> Crear en GBP
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={eliminar}
+            disabled={deleteMut.isPending}
+            className="text-danger"
+          >
+            <Trash2 size={14} /> {deleteMut.isPending ? "Eliminando…" : "Eliminar cuenta"}
+          </Button>
+        </div>
       </div>
+
+      {gbpOpen && <CrearEnGbpModal clienteId={clienteId} onClose={() => setGbpOpen(false)} />}
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Columna principal */}
@@ -238,5 +267,100 @@ export default function ClienteDetailPage() {
         <TareaModal open tarea={editarTarea} onClose={() => setEditarTarea(null)} />
       )}
     </div>
+  );
+}
+
+function CrearEnGbpModal({
+  clienteId,
+  onClose,
+}: {
+  clienteId: number;
+  onClose: () => void;
+}) {
+  const { data: provincias, isLoading, isError } = useProvinciasGbp(true);
+  const crear = useCrearEnGbp(clienteId);
+  const toast = useToast();
+  const [stateId, setStateId] = useState("");
+  const [fiscal, setFiscal] = useState("1");
+  const [city, setCity] = useState("");
+  const [zip, setZip] = useState("");
+
+  const confirmar = () => {
+    if (!stateId) return;
+    crear.mutate(
+      { state_id: stateId, fiscalclass: fiscal, city, zip },
+      {
+        onSuccess: (r) => {
+          toast.toast(
+            r.dedup
+              ? `Ya existía en GBP — vinculado (N° ${r.numero_cliente})`
+              : `Cliente creado en GBP (N° ${r.numero_cliente})`,
+            "success"
+          );
+          onClose();
+        },
+        onError: (e) => toast.toast(errorMessage(e), "error"),
+      }
+    );
+  };
+
+  return (
+    <Modal open onClose={onClose} title="Crear en GBP">
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-ink-2">
+          Se da de alta el cliente en GBP con su CUIT y se guarda el N° de cliente. Si el
+          CUIT ya existe en GBP, se vincula ese cliente sin duplicar.
+        </p>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-ink-2">Provincia</label>
+          {isError ? (
+            <p className="text-sm text-danger">No se pudieron traer las provincias de GBP.</p>
+          ) : (
+            <select
+              value={stateId}
+              onChange={(e) => setStateId(e.target.value)}
+              disabled={isLoading}
+              className="w-full rounded-md border border-line bg-surface px-2 py-2 text-sm text-ink"
+            >
+              <option value="">{isLoading ? "Cargando…" : "Elegí una provincia"}</option>
+              {(provincias ?? []).map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nombre}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-ink-2">
+            Condición IVA (código GBP)
+          </label>
+          <Input value={fiscal} onChange={(e) => setFiscal(e.target.value)} />
+          <p className="mt-1 text-xs text-ink-3">1 = Responsable Inscripto.</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink-2">Ciudad</label>
+            <Input value={city} onChange={(e) => setCity(e.target.value)} />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink-2">CP</label>
+            <Input value={zip} onChange={(e) => setZip(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={confirmar} disabled={crear.isPending || !stateId}>
+            {crear.isPending ? "Creando…" : "Crear en GBP"}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

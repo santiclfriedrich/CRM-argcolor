@@ -1,6 +1,7 @@
 """CRUD endpoints for clientes."""
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, load_only, selectinload
 
@@ -164,3 +165,93 @@ def delete_cliente(
         raise NotFoundError("Cliente no encontrado")
     eliminar_cliente(db, cliente)
     return Response(status_code=204)
+
+
+# --- Alta bidireccional en GBP -------------------------------------------------
+class AltaGbpBody(BaseModel):
+    """Datos para dar de alta el cliente en GBP (los que el CRM no tiene
+    estructurados: provincia y condición IVA se completan al momento)."""
+
+    state_id: str  # id de provincia de GBP (States_funGetXMLData)
+    fiscalclass: str = "1"  # condición IVA (1 = Responsable Inscripto)
+    taxnumbertype: str = "80"  # tipo de documento (80 = CUIT)
+    city: str = ""
+    zip: str = ""
+    address: str | None = None
+    email: str | None = None
+    phone: str | None = None
+
+
+@router.get("/gbp/provincias")
+def gbp_provincias(_: Usuario = Depends(get_current_user)) -> list[dict[str, str]]:
+    """Provincias de GBP (para el selector del alta): [{id, nombre}]."""
+    from app.integrations.gbp.client import GBPClient
+
+    try:
+        with GBPClient() as erp:
+            filas = erp.fetch_states("54")
+    except Exception as exc:  # noqa: BLE001 - frontera con GBP
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"No se pudieron traer las provincias de GBP: {exc}",
+        ) from exc
+    out: list[dict[str, str]] = []
+    for f in filas:
+        sid = f.get("state_id") or f.get("id")
+        if not sid:
+            continue
+        nombre = (
+            f.get("state_name")
+            or f.get("name")
+            or f.get("descripcion")
+            or f.get("state_description")
+            or str(sid)
+        )
+        out.append({"id": str(sid), "nombre": nombre})
+    return out
+
+
+@router.post("/{cliente_id}/gbp")
+def alta_cliente_gbp(
+    cliente_id: int,
+    body: AltaGbpBody,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> dict:
+    """Da de alta el cliente en GBP (o lo vincula si el CUIT ya existe) y guarda el
+    cust_id como `numero_cliente`."""
+    cliente = db.get(Cliente, cliente_id)
+    if cliente is None:
+        raise NotFoundError("Cliente no encontrado")
+    if cliente.numero_cliente:
+        raise HTTPException(
+            status_code=400,
+            detail=f"El cliente ya tiene N° de cliente ({cliente.numero_cliente}).",
+        )
+
+    from app.integrations.gbp.client import GBPClient
+    from app.services.gbp_alta import crear_cliente_en_gbp
+
+    try:
+        with GBPClient() as erp:
+            resultado = crear_cliente_en_gbp(
+                db,
+                erp,
+                cliente,
+                state_id=body.state_id,
+                fiscalclass=body.fiscalclass,
+                taxnumbertype=body.taxnumbertype,
+                city=body.city,
+                zip_code=body.zip,
+                address=body.address,
+                email=body.email,
+                phone=body.phone,
+            )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001 - frontera con GBP
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Error al comunicarse con GBP: {exc}",
+        ) from exc
+    return {**resultado, "numero_cliente": cliente.numero_cliente}

@@ -79,6 +79,50 @@ export function useDeleteCliente() {
   });
 }
 
+// ---------- Alta bidireccional en GBP ----------
+
+export interface ProvinciaGbp {
+  id: string;
+  nombre: string;
+}
+
+export function useProvinciasGbp(enabled: boolean) {
+  return useQuery({
+    queryKey: ["clientes", "gbp", "provincias"],
+    queryFn: async () => (await api.get<ProvinciaGbp[]>(`${BASE}/gbp/provincias`)).data,
+    enabled,
+    staleTime: 1000 * 60 * 60,
+  });
+}
+
+export function useCrearEnGbp(clienteId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: {
+      state_id: string;
+      fiscalclass?: string;
+      taxnumbertype?: string;
+      city?: string;
+      zip?: string;
+      address?: string;
+      email?: string;
+      phone?: string;
+    }) =>
+      (
+        await api.post<{
+          cust_id: number;
+          dedup: boolean;
+          clase_ok: boolean | null;
+          numero_cliente: string;
+        }>(`${BASE}/${clienteId}/gbp`, body)
+      ).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: clienteKeys.detail(clienteId) });
+      qc.invalidateQueries({ queryKey: clienteKeys.all });
+    },
+  });
+}
+
 // ---------- Contactos (anidados) ----------
 
 export function useCreateContacto(clienteId: number) {
