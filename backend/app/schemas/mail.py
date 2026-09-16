@@ -151,6 +151,9 @@ class ConversacionMensaje(BaseModel):
     html: str | None = None
     texto: str = ""
     adjuntos: list[AdjuntoGmail] = []
+    # Email tracking (solo salientes enviados desde el CRM).
+    rastreado: bool = False
+    abierto_en: datetime | None = None
 
 
 class RedactarRequest(BaseModel):

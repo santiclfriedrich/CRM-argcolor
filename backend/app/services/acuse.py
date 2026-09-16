@@ -100,13 +100,18 @@ def _send_and_record(
     if not mail.de:
         raise ValueError("El mail entrante no tiene remitente; no se puede responder.")
 
+    from app.services.tracking import cuerpo_con_pixel, nuevo_token
+
     in_reply_to = _rfc_message_id(db, gmail, mail)
+    token = nuevo_token()
+    html = cuerpo_con_pixel(body, token)
     sent = gmail.send_message(
         to=mail.de,
         subject=subject,
         body=body,
         thread_id=mail.gmail_thread_id,
         in_reply_to=in_reply_to,
+        **({"html": html} if html else {}),
     )
     salida = Mail(
         gmail_message_id=sent.get("message_id"),
@@ -118,6 +123,7 @@ def _send_and_record(
         asunto=subject,
         cuerpo=body,
         fecha=datetime.now(timezone.utc),
+        track_token=token if html else None,
     )
     db.add(salida)
     db.commit()

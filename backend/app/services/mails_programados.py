@@ -47,8 +47,17 @@ def enviar_programados_vencidos(db: Session) -> int:
             db.commit()
             continue
         try:
+            from app.services.tracking import cuerpo_con_pixel, nuevo_token
+
             gmail = GmailClient(refresh_token=token)
-            sent = gmail.send_message(to=mp.para, subject=mp.asunto or "", body=mp.cuerpo)
+            track = nuevo_token()
+            html = cuerpo_con_pixel(mp.cuerpo, track)
+            sent = gmail.send_message(
+                to=mp.para,
+                subject=mp.asunto or "",
+                body=mp.cuerpo,
+                **({"html": html} if html else {}),
+            )
             mp.enviado = True
             mp.fecha_envio = datetime.now(timezone.utc)
             mp.error = None
@@ -65,6 +74,7 @@ def enviar_programados_vencidos(db: Session) -> int:
                     leido=True,
                     carpeta="enviados",
                     usuario_id=usuario.id,
+                    track_token=track if html else None,
                 )
             )
             enviados += 1

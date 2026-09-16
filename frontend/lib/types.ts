@@ -470,6 +470,8 @@ export interface ConversacionMensaje {
   html: string | null;
   texto: string;
   adjuntos: AdjuntoGmail[];
+  rastreado: boolean;
+  abierto_en: string | null;
 }
 
 // Fila del inbox del CRM (bandeja tipo Gmail). Sin cuerpo completo: solo preview.

@@ -54,6 +54,7 @@ from app.services.ingest import (
     process_incoming_email,
 )
 from app.services.storage import get_storage
+from app.services.tracking import cuerpo_con_pixel, nuevo_token
 
 router = APIRouter(prefix="/mails", tags=["bandeja"])
 
@@ -263,9 +264,14 @@ def redactar_mail(
     """Envía un correo nuevo desde la casilla del usuario y lo guarda en Enviados."""
     if not body.para.strip() or not body.cuerpo.strip():
         raise HTTPException(status_code=400, detail="Faltan destinatario o cuerpo.")
+    token = nuevo_token()
+    html = cuerpo_con_pixel(body.cuerpo, token)
     try:
         sent = gmail.send_message(
-            to=body.para, subject=body.asunto or "", body=body.cuerpo
+            to=body.para,
+            subject=body.asunto or "",
+            body=body.cuerpo,
+            **({"html": html} if html else {}),
         )
     except Exception as exc:  # noqa: BLE001 - frontera con Gmail
         raise HTTPException(
@@ -284,6 +290,7 @@ def redactar_mail(
         leido=True,
         carpeta="enviados",
         usuario_id=current_user.id,
+        track_token=token if html else None,
     )
     db.add(mail)
     db.commit()
@@ -347,6 +354,30 @@ def cancelar_programado(
     return Response(status_code=204)
 
 
+# GIF transparente de 1x1 (el pixel de tracking).
+_PIXEL_GIF = (
+    b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00"
+    b"\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;"
+)
+
+
+@router.get("/track/{token}")
+def track_open(token: str, db: Session = Depends(get_db)) -> Response:
+    """Endpoint PÚBLICO (sin auth): lo pide el lector del destinatario al abrir el
+    mail. Registra la apertura y devuelve un gif 1x1 transparente."""
+    mail = db.scalar(select(Mail).where(Mail.track_token == token))
+    if mail is not None:
+        mail.aperturas = (mail.aperturas or 0) + 1
+        if mail.abierto_en is None:
+            mail.abierto_en = datetime.now(timezone.utc)
+        db.commit()
+    return Response(
+        content=_PIXEL_GIF,
+        media_type="image/gif",
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "no-cache"},
+    )
+
+
 @router.get("/gmail-adjunto")
 def descargar_gmail_adjunto(
     message_id: str = Query(...),
@@ -403,6 +434,21 @@ def get_conversacion(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"No se pudo leer la conversación: {exc}",
         ) from exc
+    # Enriquecer con el estado de apertura (tracking) de los salientes propios.
+    ids = [m["message_id"] for m in mensajes if m.get("message_id")]
+    rastreados = {
+        row.gmail_message_id: row
+        for row in db.scalars(
+            select(Mail).where(
+                Mail.gmail_message_id.in_(ids), Mail.track_token.is_not(None)
+            )
+        )
+    }
+    for m in mensajes:
+        row = rastreados.get(m.get("message_id"))
+        if row is not None:
+            m["rastreado"] = True
+            m["abierto_en"] = row.abierto_en
     return [ConversacionMensaje.model_validate(m) for m in mensajes]
 
 

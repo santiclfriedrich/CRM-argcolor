@@ -126,6 +126,10 @@ class Settings(BaseSettings):
     def company_email_domains(self) -> list[str]:
         return [d.strip().lower() for d in self.COMPANY_EMAIL_DOMAINS.split(",") if d.strip()]
 
+    # URL pública del backend (para el pixel de seguimiento de mails). En Railway
+    # va el dominio del backend; vacío en dev => el tracking queda desactivado.
+    PUBLIC_BASE_URL: str = ""
+
     # --- CORS ---
     ALLOWED_ORIGINS: str = "http://localhost:3000"
 

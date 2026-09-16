@@ -3,7 +3,17 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Enum, ForeignKey, String, Text, text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, query_expression, relationship
 
@@ -50,6 +60,13 @@ class Mail(Base, TimestampMixin):
     # el sync sin bajar los bytes.
     tiene_adjuntos: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    # Email tracking (salientes enviados desde el CRM): token del pixel, cuándo se
+    # abrió por primera vez y cuántas aperturas se registraron.
+    track_token: Mapped[str | None] = mapped_column(String(64), unique=True, index=True)
+    abierto_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    aperturas: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
     )
     # with_variant: JSONB en Postgres; JSON en SQLite (solo para tests).
     adjuntos: Mapped[dict | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))

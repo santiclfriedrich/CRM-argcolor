@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   Clock,
   Download,
+  Eye,
   Filter,
   Inbox as InboxIcon,
   Link2,
@@ -577,9 +578,27 @@ function ReadingPane({
                           {m.de || "—"}
                         </span>
                       </div>
-                      <span className="shrink-0 text-xs text-ink-2">
-                        {m.fecha ? new Date(m.fecha).toLocaleString("es-AR") : ""}
-                      </span>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {m.rastreado && (
+                          <span
+                            className={cn(
+                              "flex items-center gap-1 text-xs",
+                              m.abierto_en ? "text-success" : "text-ink-3"
+                            )}
+                            title={
+                              m.abierto_en
+                                ? `Abierto ${new Date(m.abierto_en).toLocaleString("es-AR")}`
+                                : "Enviado — todavía sin abrir"
+                            }
+                          >
+                            <Eye size={13} />
+                            {m.abierto_en ? "Abierto" : "Sin abrir"}
+                          </span>
+                        )}
+                        <span className="text-xs text-ink-2">
+                          {m.fecha ? new Date(m.fecha).toLocaleString("es-AR") : ""}
+                        </span>
+                      </div>
                     </div>
                     {m.html ? (
                       <EmailFrame html={m.html} />
