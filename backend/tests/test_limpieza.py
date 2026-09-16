@@ -44,20 +44,25 @@ def _mail(**kw) -> Mail:  # noqa: ANN003
     return Mail(**base)
 
 
-def test_limpia_solo_viejo_no_leido_no_vinculado(db: Session) -> None:
-    viejo = _mail(gmail_message_id="borrar")  # viejo, no leído, sin oportunidad
-    leido = _mail(gmail_message_id="leido", leido=True)  # abierto -> se conserva
+def test_limpia_recibidos_viejos_no_vinculados(db: Session) -> None:
+    viejo = _mail(gmail_message_id="borrar")  # viejo, sin oportunidad -> se borra
+    leido = _mail(gmail_message_id="leido-viejo", leido=True)  # abierto pero viejo -> se borra
     vinculado = _mail(gmail_message_id="op", oportunidad_id=1)  # vinculado -> se conserva
     reciente = _mail(
         gmail_message_id="reciente",
         fecha=datetime.now(timezone.utc) - timedelta(days=2),
     )  # dentro de la ventana -> se conserva
+    enviado = _mail(
+        gmail_message_id="enviado",
+        carpeta="enviados",
+        direccion=DireccionMail.saliente,
+    )  # Enviados -> se conserva
     fuera = _mail(gmail_message_id="nocarpeta", carpeta=None)  # no es del inbox
-    db.add_all([viejo, leido, vinculado, reciente, fuera])
+    db.add_all([viejo, leido, vinculado, reciente, enviado, fuera])
     db.commit()
 
     borrados = limpiar_inbox_viejo(db, dias=15)
-    assert borrados == 1
+    assert borrados == 2
 
     quedan = {m.gmail_message_id for m in db.scalars(select(Mail))}
-    assert quedan == {"leido", "op", "reciente", "nocarpeta"}
+    assert quedan == {"op", "reciente", "enviado", "nocarpeta"}

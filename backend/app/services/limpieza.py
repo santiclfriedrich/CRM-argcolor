@@ -62,16 +62,17 @@ def limpiar_descartados_viejos(db: Session, dias: int = DIAS_DESCARTADOS) -> int
 
 
 def limpiar_inbox_viejo(db: Session, dias: int = DIAS_INBOX) -> int:
-    """Borra mails del inbox que son las TRES cosas a la vez: más viejos que
-    `dias`, NO abiertos (leido=False) y NO vinculados a ninguna oportunidad.
+    """Borra mails RECIBIDOS de la bandeja más viejos que `dias` que NO estén
+    vinculados a ninguna oportunidad (estén abiertos o no).
 
-    Así lo asociado a una oportunidad o lo ya abierto queda siempre protegido; se
-    limpia solo el ruido viejo que nadie miró. No hace falta marcarlos como
-    'eliminado_manual' porque ya están fuera de la ventana del sync."""
+    Lo único que protege a un mail es estar vinculado a una oportunidad. Se
+    limitan a los recibidos (Entrada/Archivo): los Enviados se conservan porque
+    guardan el estado de apertura (tracking) y son el registro de salida. No hace
+    falta marcarlos como 'eliminado_manual' porque ya están fuera de la ventana
+    del sync."""
     corte = datetime.now(timezone.utc) - timedelta(days=dias)
     cond = (
-        Mail.carpeta.is_not(None),  # es del inbox sincronizado
-        Mail.leido.is_(False),  # no abierto en el CRM
+        Mail.carpeta.in_(("entrada", "archivo")),  # recibidos (no Enviados)
         Mail.oportunidad_id.is_(None),  # no vinculado a oportunidad
         func.coalesce(Mail.fecha, Mail.created_at) < corte,
     )
