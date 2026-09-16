@@ -494,16 +494,29 @@ function ReadingPane({
   const toast = useToast();
   const [respuesta, setRespuesta] = useState("");
   const [respondiendo, setRespondiendo] = useState(false);
-  const [mostrarVincular, setMostrarVincular] = useState(false);
+  const [vincularTab, setVincularTab] = useState<"crear" | "asociar" | null>(null);
 
   const asunto = hilo?.[0]?.asunto || "(sin asunto)";
+  // Participantes deduplicados por email (una persona puede venir como
+  // "Nombre <mail>" o solo "mail", y aparecer en varios mensajes del hilo).
   const participantes = useMemo(() => {
-    const set = new Set<string>();
-    for (const m of hilo ?? []) {
-      if (m.de) set.add(m.de);
-      if (m.para) set.add(m.para);
+    const map = new Map<string, string>(); // email -> nombre a mostrar
+    const agregar = (raw: string | null) => {
+      if (!raw) return;
+      for (const parte of raw.split(",")) {
+        const s = parte.trim();
+        if (!s) continue;
+        const m = s.match(/<([^>]+)>/);
+        const email = (m ? m[1] : s).trim().toLowerCase();
+        if (!email.includes("@")) continue;
+        if (!map.has(email)) map.set(email, nombreEmail(s));
+      }
+    };
+    for (const msg of hilo ?? []) {
+      agregar(msg.de);
+      agregar(msg.para);
     }
-    return [...set];
+    return [...map.entries()].map(([email, nombre]) => ({ email, nombre }));
   }, [hilo]);
 
   const enviarRespuesta = () => {
@@ -543,15 +556,6 @@ function ReadingPane({
           title="Eliminar del CRM (queda en Gmail)"
         >
           <Trash2 size={15} className="mr-1.5" /> Eliminar
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="ml-auto"
-          onClick={() => setMostrarVincular(true)}
-          title="Crear o asociar una oportunidad desde este mail"
-        >
-          <Target size={15} className="mr-1.5" /> Vincular a oportunidad
         </Button>
       </div>
 
@@ -660,19 +664,48 @@ function ReadingPane({
           </p>
           <ul className="mt-3 flex flex-col gap-3">
             {participantes.map((p) => (
-              <li key={p} className="flex items-center gap-2">
+              <li key={p.email} className="flex items-center gap-2.5">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/15 text-xs font-bold text-accent">
-                  {nombreEmail(p).slice(0, 2).toUpperCase()}
+                  {p.nombre.slice(0, 2).toUpperCase()}
                 </span>
-                <span className="truncate text-sm text-ink">{nombreEmail(p)}</span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-ink">{p.nombre}</p>
+                  <p className="truncate text-xs text-ink-3">{p.email}</p>
+                </div>
               </li>
             ))}
           </ul>
+
+          <div className="mt-6 border-t border-line pt-4">
+            <p className="text-sm font-semibold text-ink">Oportunidad</p>
+            <p className="mb-3 mt-0.5 text-xs text-ink-3">
+              Asociá este mail a una oportunidad existente o creá una nueva.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="outline"
+                className="w-full justify-center"
+                onClick={() => setVincularTab("asociar")}
+              >
+                <Link2 size={15} className="mr-1.5" /> Asociar a existente
+              </Button>
+              <Button
+                className="w-full justify-center"
+                onClick={() => setVincularTab("crear")}
+              >
+                <Target size={15} className="mr-1.5" /> Crear oportunidad nueva
+              </Button>
+            </div>
+          </div>
         </aside>
       </div>
 
-      {mostrarVincular && (
-        <VincularModal mailId={mailId} onClose={() => setMostrarVincular(false)} />
+      {vincularTab && (
+        <VincularModal
+          mailId={mailId}
+          tabInicial={vincularTab}
+          onClose={() => setVincularTab(null)}
+        />
       )}
     </div>
   );
@@ -939,11 +972,19 @@ function AdjuntoChip({ adj }: { adj: AdjuntoGmail }) {
 // Crear una oportunidad nueva desde el mail, o asociarlo a una existente. El
 // requerimiento se toma tal cual del cuerpo o se limpia con IA; opcionalmente se
 // sincronizan los adjuntos del mail a la oportunidad.
-function VincularModal({ mailId, onClose }: { mailId: number; onClose: () => void }) {
+function VincularModal({
+  mailId,
+  onClose,
+  tabInicial = "crear",
+}: {
+  mailId: number;
+  onClose: () => void;
+  tabInicial?: "crear" | "asociar";
+}) {
   const vincular = useVincularOportunidad(mailId);
   const { data: oportunidades } = useOportunidades();
   const toast = useToast();
-  const [tab, setTab] = useState<"crear" | "asociar">("crear");
+  const [tab, setTab] = useState<"crear" | "asociar">(tabInicial);
   const [reqIA, setReqIA] = useState(false);
   const [syncAdj, setSyncAdj] = useState(true);
   const [q, setQ] = useState("");
