@@ -27,6 +27,8 @@ logger = logging.getLogger(__name__)
 GMAIL_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.send",
+    # Leer la firma configurada en Gmail (settings.sendAs).
+    "https://www.googleapis.com/auth/gmail.settings.basic",
 ]
 _TOKEN_URI = "https://oauth2.googleapis.com/token"
 
@@ -428,6 +430,24 @@ class GmailClient:
             {**a, "message_id": message_id}
             for a in _collect_all_attachments(raw.get("payload", {}))
         ]
+
+    def get_signature(self) -> str:
+        """Firma de Gmail del usuario (HTML). "" si no hay o falta el scope."""
+        try:
+            resp = (
+                self._service.users()
+                .settings()
+                .sendAs()
+                .list(userId=self._user)
+                .execute()
+            )
+        except Exception:  # noqa: BLE001 - sin scope / sin permiso => sin firma
+            return ""
+        envs = resp.get("sendAs", [])
+        elegido = next((s for s in envs if s.get("isDefault")), None) or (
+            envs[0] if envs else None
+        )
+        return (elegido or {}).get("signature", "") or ""
 
     def get_attachment_bytes(self, message_id: str, attachment_id: str) -> bytes:
         """Baja los bytes de un adjunto (a demanda, al abrir/descargar)."""

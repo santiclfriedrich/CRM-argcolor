@@ -130,13 +130,33 @@ export function useProgramados() {
 export function useProgramar() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: {
+    mutationFn: async (data: {
       para: string;
       asunto?: string;
       cuerpo: string;
+      html?: string;
       cuando: string;
-    }) => (await api.post<MailProgramado>(`${BASE}/programar`, body)).data,
+      files?: File[];
+    }) => {
+      const fd = new FormData();
+      fd.append("para", data.para);
+      if (data.asunto) fd.append("asunto", data.asunto);
+      fd.append("cuerpo", data.cuerpo);
+      if (data.html) fd.append("html", data.html);
+      fd.append("cuando", data.cuando);
+      (data.files ?? []).forEach((f) => fd.append("files", f));
+      return (await api.post<MailProgramado>(`${BASE}/programar`, fd)).data;
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["mails", "programados"] }),
+  });
+}
+
+// Firma de Gmail del usuario (HTML) para pre-cargar al redactar/responder.
+export function useFirma() {
+  return useQuery({
+    queryKey: ["mails", "firma"],
+    queryFn: async () => (await api.get<{ html: string }>(`${BASE}/firma`)).data.html,
+    staleTime: 1000 * 60 * 30,
   });
 }
 

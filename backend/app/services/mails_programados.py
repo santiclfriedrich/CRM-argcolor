@@ -17,6 +17,31 @@ from app.db.models.usuarios import Usuario
 logger = logging.getLogger(__name__)
 
 
+def _leer_adjuntos(metas: list | None) -> list[dict]:
+    """Baja del storage los adjuntos guardados para el programado
+    ([{filename, content, mime}])."""
+    from app.services.storage import get_storage
+
+    storage = get_storage()
+    out: list[dict] = []
+    for m in metas or []:
+        key = m.get("path")
+        if not key:
+            continue
+        try:
+            data = storage.get(key)
+        except FileNotFoundError:
+            continue
+        out.append(
+            {
+                "filename": m.get("filename") or "adjunto",
+                "content": data,
+                "mime": m.get("mime") or "application/octet-stream",
+            }
+        )
+    return out
+
+
 def enviar_programados_vencidos(db: Session) -> int:
     """Manda los programados con `programado_para <= ahora` y no enviados.
 
@@ -51,12 +76,14 @@ def enviar_programados_vencidos(db: Session) -> int:
 
             gmail = GmailClient(refresh_token=token)
             track = nuevo_token()
-            html, rastreable = componer_html(None, mp.cuerpo, track)
+            html, rastreable = componer_html(mp.html, mp.cuerpo, track)
+            adjuntos = _leer_adjuntos(mp.adjuntos)
             sent = gmail.send_message(
                 to=mp.para,
                 subject=mp.asunto or "",
                 body=mp.cuerpo,
                 **({"html": html} if html else {}),
+                **({"attachments": adjuntos} if adjuntos else {}),
             )
             mp.enviado = True
             mp.fecha_envio = datetime.now(timezone.utc)

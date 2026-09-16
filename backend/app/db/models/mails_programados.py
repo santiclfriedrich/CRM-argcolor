@@ -2,7 +2,8 @@
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -18,6 +19,10 @@ class MailProgramado(Base, TimestampMixin):
     para: Mapped[str] = mapped_column(String(500), nullable=False)
     asunto: Mapped[str | None] = mapped_column(String(500))
     cuerpo: Mapped[str] = mapped_column(Text, nullable=False)
+    # Cuerpo con formato (editor rico) y adjuntos guardados en storage hasta el
+    # envío ([{filename, mime, path}]).
+    html: Mapped[str | None] = mapped_column(Text)
+    adjuntos: Mapped[list | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
     programado_para: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, index=True
     )

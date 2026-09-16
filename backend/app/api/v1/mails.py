@@ -50,7 +50,6 @@ from app.schemas.mail import (
     MailListItem,
     MailProgramadoRead,
     MailRead,
-    ProgramarRequest,
     VincularOportunidadBody,
 )
 from app.schemas.oportunidad import OportunidadRead
@@ -311,23 +310,63 @@ def redactar_mail(
     return _get_loaded(db, mail.id)
 
 
+@router.get("/firma")
+def get_firma(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> dict[str, str]:
+    """Devuelve la firma de Gmail del usuario (HTML) para pre-cargarla al redactar/
+    responder. "" si no tiene Gmail conectado o falta el permiso."""
+    if not current_user.gmail_refresh_token:
+        return {"html": ""}
+    try:
+        return {"html": _gmail_del_usuario(current_user).get_signature()}
+    except Exception:  # noqa: BLE001 - sin firma no es un error para el usuario
+        return {"html": ""}
+
+
 @router.post("/programar", response_model=MailProgramadoRead, status_code=201)
 def programar_mail(
-    body: ProgramarRequest,
+    para: str = Form(...),
+    asunto: str | None = Form(default=None),
+    cuerpo: str = Form(default=""),
+    html: str | None = Form(default=None),
+    cuando: datetime = Form(...),
+    files: list[UploadFile] = File(default=[]),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> MailProgramado:
-    """Programa el envío de un correo para una fecha/hora futura."""
-    if not body.para.strip() or not body.cuerpo.strip():
+    """Programa el envío de un correo (con formato y adjuntos) a futuro."""
+    if not para.strip() or (not cuerpo.strip() and not (html and html.strip())):
         raise HTTPException(status_code=400, detail="Faltan destinatario o cuerpo.")
     mp = MailProgramado(
         usuario_id=current_user.id,
-        para=body.para.strip(),
-        asunto=body.asunto,
-        cuerpo=body.cuerpo,
-        programado_para=body.cuando,
+        para=para.strip(),
+        asunto=asunto,
+        cuerpo=cuerpo,
+        html=html,
+        programado_para=cuando,
     )
     db.add(mp)
+    db.flush()
+    metas: list[dict] = []
+    storage = get_storage()
+    for idx, f in enumerate(files or []):
+        data = f.file.read()
+        if not data:
+            continue
+        nombre = f.filename or "adjunto"
+        safe = _SAFE_NOMBRE.sub("_", nombre).strip("_") or "adjunto"
+        key = f"programados/{mp.id}/{idx}_{safe}"
+        storage.put(key, data, f.content_type)
+        metas.append(
+            {
+                "filename": nombre,
+                "mime": f.content_type or "application/octet-stream",
+                "path": key,
+            }
+        )
+    mp.adjuntos = metas or None
     db.commit()
     db.refresh(mp)
     return mp

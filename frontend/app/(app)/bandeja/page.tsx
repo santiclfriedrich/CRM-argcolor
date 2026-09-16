@@ -35,6 +35,7 @@ import {
 import {
   forwardRef,
   type ReactNode,
+  useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -50,6 +51,7 @@ import {
   useCancelarProgramado,
   useConversacion,
   useEliminarMail,
+  useFirma,
   useInbox,
   useMarcarLeido,
   useProgramados,
@@ -503,6 +505,7 @@ function ReadingPane({
   onDeleted: () => void;
 }) {
   const { data: hilo, isLoading } = useConversacion(mailId, true);
+  const { data: firma } = useFirma();
   const eliminar = useEliminarMail();
   const marcarLeido = useMarcarLeido();
   const responder = useResponder(mailId);
@@ -655,6 +658,7 @@ function ReadingPane({
                   ref={replyRef}
                   placeholder="Escribí tu respuesta…"
                   minHeight={140}
+                  initialHtml={firma ? `<br><br>${firma}` : undefined}
                   onInput={setReplyVacio}
                 />
                 <AdjuntosChips
@@ -753,10 +757,27 @@ type RichEditorHandle = {
 // como HTML. Uncontrolled: el padre lee el contenido con el ref al enviar.
 const RichEditor = forwardRef<
   RichEditorHandle,
-  { placeholder?: string; minHeight?: number; onInput?: (vacio: boolean) => void }
->(function RichEditor({ placeholder = "Escribí tu mensaje…", minHeight = 160, onInput }, ref) {
+  {
+    placeholder?: string;
+    minHeight?: number;
+    initialHtml?: string;
+    onInput?: (vacio: boolean) => void;
+  }
+>(function RichEditor(
+  { placeholder = "Escribí tu mensaje…", minHeight = 160, initialHtml, onInput },
+  ref
+) {
   const elRef = useRef<HTMLDivElement>(null);
   const imgInput = useRef<HTMLInputElement>(null);
+
+  // Contenido inicial (ej. la firma de Gmail). Se setea una sola vez al montar.
+  useEffect(() => {
+    if (initialHtml && elRef.current) {
+      elRef.current.innerHTML = initialHtml;
+      onInput?.(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const vacio = () =>
     !(elRef.current?.innerText.trim() || elRef.current?.querySelector("img"));
@@ -1004,6 +1025,7 @@ function minDatetimeLocal(): string {
 function ComposeModal({ onClose }: { onClose: () => void }) {
   const redactar = useRedactar();
   const programar = useProgramar();
+  const { data: firma } = useFirma();
   const toast = useToast();
   const [para, setPara] = useState("");
   const [asunto, setAsunto] = useState("");
@@ -1042,7 +1064,9 @@ function ComposeModal({ onClose }: { onClose: () => void }) {
         para: para.trim(),
         asunto: asunto.trim() || undefined,
         cuerpo: editorRef.current?.getText() ?? "",
+        html: editorRef.current?.getHtml() || undefined,
         cuando: new Date(cuando).toISOString(),
+        files: adjuntos,
       },
       {
         onSuccess: () => {
@@ -1072,7 +1096,18 @@ function ComposeModal({ onClose }: { onClose: () => void }) {
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-ink-2">Mensaje</label>
-          <RichEditor ref={editorRef} minHeight={200} onInput={setVacio} />
+          {firma === undefined ? (
+            <p className="rounded-lg border border-line px-3 py-6 text-sm text-ink-2">
+              Cargando…
+            </p>
+          ) : (
+            <RichEditor
+              ref={editorRef}
+              minHeight={200}
+              initialHtml={firma ? `<br><br>${firma}` : undefined}
+              onInput={setVacio}
+            />
+          )}
           <div className="mt-2">
             <AdjuntosChips
               files={adjuntos}
