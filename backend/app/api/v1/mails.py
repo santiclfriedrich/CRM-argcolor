@@ -3,7 +3,17 @@
 import re
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+    status,
+)
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, defer, selectinload, with_expression
 
@@ -41,8 +51,6 @@ from app.schemas.mail import (
     MailProgramadoRead,
     MailRead,
     ProgramarRequest,
-    RedactarRequest,
-    ResponderRequest,
     VincularOportunidadBody,
 )
 from app.schemas.oportunidad import OportunidadRead
@@ -54,7 +62,7 @@ from app.services.ingest import (
     process_incoming_email,
 )
 from app.services.storage import get_storage
-from app.services.tracking import cuerpo_con_pixel, nuevo_token
+from app.services.tracking import componer_html, nuevo_token
 
 router = APIRouter(prefix="/mails", tags=["bandeja"])
 
@@ -256,22 +264,28 @@ def list_inbox(
 
 @router.post("/redactar", response_model=MailRead, status_code=201)
 def redactar_mail(
-    body: RedactarRequest,
+    para: str = Form(...),
+    asunto: str | None = Form(default=None),
+    cuerpo: str = Form(default=""),
+    html: str | None = Form(default=None),
+    files: list[UploadFile] = File(default=[]),
     db: Session = Depends(get_db),
     gmail=Depends(get_user_gmail),  # noqa: ANN001 - GmailClient del usuario logueado
     current_user: Usuario = Depends(get_current_user),
 ) -> Mail:
-    """Envía un correo nuevo desde la casilla del usuario y lo guarda en Enviados."""
-    if not body.para.strip() or not body.cuerpo.strip():
+    """Envía un correo nuevo desde la casilla del usuario y lo guarda en Enviados.
+    Acepta cuerpo con formato (HTML) y adjuntos (multipart)."""
+    if not para.strip() or (not cuerpo.strip() and not (html and html.strip())):
         raise HTTPException(status_code=400, detail="Faltan destinatario o cuerpo.")
     token = nuevo_token()
-    html = cuerpo_con_pixel(body.cuerpo, token)
+    html_out, rastreable = componer_html(html, cuerpo, token)
     try:
         sent = gmail.send_message(
-            to=body.para,
-            subject=body.asunto or "",
-            body=body.cuerpo,
-            **({"html": html} if html else {}),
+            to=para,
+            subject=asunto or "",
+            body=cuerpo,
+            **({"html": html_out} if html_out else {}),
+            **({"attachments": _leer_uploads(files)} if files else {}),
         )
     except Exception as exc:  # noqa: BLE001 - frontera con Gmail
         raise HTTPException(
@@ -283,14 +297,14 @@ def redactar_mail(
         gmail_thread_id=sent.get("thread_id"),
         direccion=DireccionMail.saliente,
         de=current_user.email,
-        para=body.para,
-        asunto=body.asunto,
-        cuerpo=body.cuerpo,
+        para=para,
+        asunto=asunto,
+        cuerpo=cuerpo,
         fecha=datetime.now(timezone.utc),
         leido=True,
         carpeta="enviados",
         usuario_id=current_user.id,
-        track_token=token if html else None,
+        track_token=token if rastreable else None,
     )
     db.add(mail)
     db.commit()
@@ -628,23 +642,51 @@ def get_hilo(
     return list(db.scalars(query))
 
 
+def _leer_uploads(files: list[UploadFile] | None) -> list[dict]:
+    """Lee los archivos subidos y los deja listos para Gmail
+    ([{filename, content, mime}]). Ignora los vacíos."""
+    adjuntos: list[dict] = []
+    for f in files or []:
+        data = f.file.read()
+        if not data:
+            continue
+        adjuntos.append(
+            {
+                "filename": f.filename or "adjunto",
+                "content": data,
+                "mime": f.content_type or "application/octet-stream",
+            }
+        )
+    return adjuntos
+
+
 @router.post("/{mail_id}/responder", response_model=MailRead, status_code=201)
 def responder_mail(
     mail_id: int,
-    body: ResponderRequest,
+    cuerpo: str = Form(default=""),
+    html: str | None = Form(default=None),
+    asunto: str | None = Form(default=None),
+    files: list[UploadFile] = File(default=[]),
     db: Session = Depends(get_db),
     gmail=Depends(get_user_gmail),  # noqa: ANN001 - GmailClient del usuario logueado
     current_user: Usuario = Depends(get_current_user),
 ) -> Mail:
-    """Responde al cliente con texto libre, dentro del mismo hilo, desde la
-    casilla del vendedor logueado (chat de la bandeja)."""
-    if not body.cuerpo or not body.cuerpo.strip():
+    """Responde al cliente dentro del mismo hilo, desde la casilla del vendedor.
+    Acepta cuerpo con formato (HTML) y adjuntos (multipart)."""
+    if not cuerpo.strip() and not (html and html.strip()):
         raise HTTPException(status_code=400, detail="La respuesta no puede estar vacía.")
     mail = _get_loaded(db, mail_id)
     _assert_owner(mail, current_user)
     try:
         salida = send_respuesta(
-            db, gmail, mail, body.cuerpo, remitente=current_user.email, asunto=body.asunto
+            db,
+            gmail,
+            mail,
+            cuerpo,
+            remitente=current_user.email,
+            asunto=asunto,
+            html=html,
+            attachments=_leer_uploads(files) or None,
         )
     except Exception as exc:  # noqa: BLE001 - frontera con Gmail
         raise HTTPException(

@@ -2,33 +2,48 @@
 
 import {
   Archive,
+  Bold,
   ChevronDown,
   ChevronLeft,
   Clock,
   Download,
   Eye,
   Filter,
+  Image as ImageIcon,
   Inbox as InboxIcon,
+  Italic,
   Link2,
+  List,
+  ListOrdered,
   Lock,
   Mail as MailIcon,
   Paperclip,
   Plus,
   RefreshCw,
+  RemoveFormatting,
   Reply,
   Search,
   Send,
   Settings2,
+  Strikethrough,
   Tag,
   Target,
   Trash2,
+  Underline,
+  X,
 } from "lucide-react";
-import { type ReactNode, useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  type ReactNode,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import {
   descargarGmailAdjunto,
@@ -492,8 +507,10 @@ function ReadingPane({
   const marcarLeido = useMarcarLeido();
   const responder = useResponder(mailId);
   const toast = useToast();
-  const [respuesta, setRespuesta] = useState("");
   const [respondiendo, setRespondiendo] = useState(false);
+  const [adjReply, setAdjReply] = useState<File[]>([]);
+  const [replyVacio, setReplyVacio] = useState(true);
+  const replyRef = useRef<RichEditorHandle>(null);
   const [vincularTab, setVincularTab] = useState<"crear" | "asociar" | null>(null);
 
   const asunto = hilo?.[0]?.asunto || "(sin asunto)";
@@ -520,16 +537,24 @@ function ReadingPane({
   }, [hilo]);
 
   const enviarRespuesta = () => {
-    const texto = respuesta.trim();
-    if (!texto) return;
-    responder.mutate(texto, {
-      onSuccess: () => {
-        setRespuesta("");
-        setRespondiendo(false);
-        toast.toast("Respuesta enviada", "success");
+    if (replyRef.current?.isEmpty() && adjReply.length === 0) return;
+    responder.mutate(
+      {
+        cuerpo: replyRef.current?.getText() ?? "",
+        html: replyRef.current?.getHtml() || undefined,
+        files: adjReply,
       },
-      onError: () => toast.toast("No se pudo enviar la respuesta", "error"),
-    });
+      {
+        onSuccess: () => {
+          replyRef.current?.clear();
+          setAdjReply([]);
+          setReplyVacio(true);
+          setRespondiendo(false);
+          toast.toast("Respuesta enviada", "success");
+        },
+        onError: () => toast.toast("No se pudo enviar la respuesta", "error"),
+      }
+    );
   };
 
   return (
@@ -625,22 +650,28 @@ function ReadingPane({
 
             {/* Responder */}
             {respondiendo ? (
-              <div className="mt-4 rounded-lg border border-line bg-surface p-3">
-                <Textarea
-                  value={respuesta}
-                  onChange={(e) => setRespuesta(e.target.value)}
+              <div className="mt-4">
+                <RichEditor
+                  ref={replyRef}
                   placeholder="Escribí tu respuesta…"
-                  rows={4}
-                  autoFocus
+                  minHeight={140}
+                  onInput={setReplyVacio}
                 />
-                <div className="mt-2 flex items-center justify-between">
-                  <Button variant="ghost" size="sm" onClick={() => setRespondiendo(false)}>
-                    Cancelar
-                  </Button>
+                <AdjuntosChips
+                  files={adjReply}
+                  onQuitar={(i) => setAdjReply((a) => a.filter((_, j) => j !== i))}
+                />
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1">
+                    <BotonAdjuntar onFiles={(fs) => setAdjReply((a) => [...a, ...fs])} />
+                    <Button variant="ghost" size="sm" onClick={() => setRespondiendo(false)}>
+                      Cancelar
+                    </Button>
+                  </div>
                   <SplitSend
                     onSend={enviarRespuesta}
                     pending={responder.isPending}
-                    disabled={!respuesta.trim()}
+                    disabled={replyVacio && adjReply.length === 0}
                   />
                 </div>
               </div>
@@ -707,6 +738,190 @@ function ReadingPane({
           onClose={() => setVincularTab(null)}
         />
       )}
+    </div>
+  );
+}
+
+type RichEditorHandle = {
+  getHtml: () => string;
+  getText: () => string;
+  clear: () => void;
+  isEmpty: () => boolean;
+};
+
+// Editor de texto con formato (negrita, listas, links, imágenes inline). Sale
+// como HTML. Uncontrolled: el padre lee el contenido con el ref al enviar.
+const RichEditor = forwardRef<
+  RichEditorHandle,
+  { placeholder?: string; minHeight?: number; onInput?: (vacio: boolean) => void }
+>(function RichEditor({ placeholder = "Escribí tu mensaje…", minHeight = 160, onInput }, ref) {
+  const elRef = useRef<HTMLDivElement>(null);
+  const imgInput = useRef<HTMLInputElement>(null);
+
+  const vacio = () =>
+    !(elRef.current?.innerText.trim() || elRef.current?.querySelector("img"));
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      getHtml: () => elRef.current?.innerHTML ?? "",
+      getText: () => elRef.current?.innerText ?? "",
+      clear: () => {
+        if (elRef.current) elRef.current.innerHTML = "";
+        onInput?.(true);
+      },
+      isEmpty: vacio,
+    }),
+    [onInput]
+  );
+
+  const cmd = (c: string, val?: string) => {
+    elRef.current?.focus();
+    document.execCommand(c, false, val);
+    onInput?.(vacio());
+  };
+  const insertarImagen = (file: File) => {
+    const r = new FileReader();
+    r.onload = () => cmd("insertImage", r.result as string);
+    r.readAsDataURL(file);
+  };
+  const enlazar = () => {
+    const url = window.prompt("URL del enlace:");
+    if (url) cmd("createLink", url);
+  };
+
+  const Btn = ({
+    onClick,
+    title,
+    children,
+  }: {
+    onClick: () => void;
+    title: string;
+    children: ReactNode;
+  }) => (
+    <button
+      type="button"
+      title={title}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+      className="rounded p-1.5 text-ink-2 transition hover:bg-surface2"
+    >
+      {children}
+    </button>
+  );
+
+  return (
+    <div className="rounded-lg border border-line">
+      <div className="flex flex-wrap items-center gap-0.5 border-b border-line px-1.5 py-1">
+        <Btn onClick={() => cmd("bold")} title="Negrita">
+          <Bold size={15} />
+        </Btn>
+        <Btn onClick={() => cmd("italic")} title="Cursiva">
+          <Italic size={15} />
+        </Btn>
+        <Btn onClick={() => cmd("underline")} title="Subrayado">
+          <Underline size={15} />
+        </Btn>
+        <Btn onClick={() => cmd("strikeThrough")} title="Tachado">
+          <Strikethrough size={15} />
+        </Btn>
+        <span className="mx-1 h-4 w-px bg-line" />
+        <Btn onClick={() => cmd("insertUnorderedList")} title="Lista">
+          <List size={15} />
+        </Btn>
+        <Btn onClick={() => cmd("insertOrderedList")} title="Lista numerada">
+          <ListOrdered size={15} />
+        </Btn>
+        <span className="mx-1 h-4 w-px bg-line" />
+        <Btn onClick={enlazar} title="Insertar enlace">
+          <Link2 size={15} />
+        </Btn>
+        <Btn onClick={() => imgInput.current?.click()} title="Insertar imagen">
+          <ImageIcon size={15} />
+        </Btn>
+        <Btn onClick={() => cmd("removeFormat")} title="Quitar formato">
+          <RemoveFormatting size={15} />
+        </Btn>
+        <input
+          ref={imgInput}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) insertarImagen(f);
+            e.target.value = "";
+          }}
+        />
+      </div>
+      <div
+        ref={elRef}
+        contentEditable
+        suppressContentEditableWarning
+        data-placeholder={placeholder}
+        onInput={() => onInput?.(vacio())}
+        className="max-h-80 overflow-y-auto px-3 py-2 text-sm text-ink focus:outline-none [&_a]:text-accent [&_a]:underline [&_img]:my-1 [&_img]:max-w-full [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5"
+        style={{ minHeight }}
+      />
+    </div>
+  );
+});
+
+// Botón para adjuntar archivos (abre el selector).
+function BotonAdjuntar({ onFiles }: { onFiles: (files: File[]) => void }) {
+  const inp = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => inp.current?.click()}
+        title="Adjuntar archivos"
+        className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-ink-2 transition hover:bg-surface2"
+      >
+        <Paperclip size={15} /> Adjuntar
+      </button>
+      <input
+        ref={inp}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          onFiles(Array.from(e.target.files ?? []));
+          e.target.value = "";
+        }}
+      />
+    </>
+  );
+}
+
+// Chips de adjuntos con botón para quitar.
+function AdjuntosChips({
+  files,
+  onQuitar,
+}: {
+  files: File[];
+  onQuitar: (i: number) => void;
+}) {
+  if (files.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {files.map((f, i) => (
+        <span
+          key={`${f.name}-${i}`}
+          className="flex items-center gap-1.5 rounded-md border border-line bg-surface2/50 px-2 py-1 text-xs text-ink"
+        >
+          <Paperclip size={12} className="text-ink-3" />
+          <span className="max-w-[180px] truncate">{f.name}</span>
+          <button
+            type="button"
+            onClick={() => onQuitar(i)}
+            className="text-ink-3 transition hover:text-danger"
+            aria-label="Quitar adjunto"
+          >
+            <X size={13} />
+          </button>
+        </span>
+      ))}
     </div>
   );
 }
@@ -792,16 +1007,24 @@ function ComposeModal({ onClose }: { onClose: () => void }) {
   const toast = useToast();
   const [para, setPara] = useState("");
   const [asunto, setAsunto] = useState("");
-  const [cuerpo, setCuerpo] = useState("");
+  const [adjuntos, setAdjuntos] = useState<File[]>([]);
+  const [vacio, setVacio] = useState(true);
+  const editorRef = useRef<RichEditorHandle>(null);
   const [modoProgramar, setModoProgramar] = useState(false);
   const [cuando, setCuando] = useState("");
 
-  const listo = para.trim() && cuerpo.trim();
+  const listo = Boolean(para.trim()) && (!vacio || adjuntos.length > 0);
 
   const enviar = () => {
     if (!listo) return;
     redactar.mutate(
-      { para: para.trim(), asunto: asunto.trim() || undefined, cuerpo },
+      {
+        para: para.trim(),
+        asunto: asunto.trim() || undefined,
+        cuerpo: editorRef.current?.getText() ?? "",
+        html: editorRef.current?.getHtml() || undefined,
+        files: adjuntos,
+      },
       {
         onSuccess: () => {
           toast.toast("Correo enviado", "success");
@@ -818,7 +1041,7 @@ function ComposeModal({ onClose }: { onClose: () => void }) {
       {
         para: para.trim(),
         asunto: asunto.trim() || undefined,
-        cuerpo,
+        cuerpo: editorRef.current?.getText() ?? "",
         cuando: new Date(cuando).toISOString(),
       },
       {
@@ -849,7 +1072,16 @@ function ComposeModal({ onClose }: { onClose: () => void }) {
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium text-ink-2">Mensaje</label>
-          <Textarea value={cuerpo} onChange={(e) => setCuerpo(e.target.value)} rows={10} />
+          <RichEditor ref={editorRef} minHeight={200} onInput={setVacio} />
+          <div className="mt-2">
+            <AdjuntosChips
+              files={adjuntos}
+              onQuitar={(i) => setAdjuntos((a) => a.filter((_, j) => j !== i))}
+            />
+          </div>
+          <div className="mt-2">
+            <BotonAdjuntar onFiles={(fs) => setAdjuntos((a) => [...a, ...fs])} />
+          </div>
         </div>
 
         {modoProgramar && (

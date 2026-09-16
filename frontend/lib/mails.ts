@@ -153,8 +153,21 @@ export function useCancelarProgramado() {
 export function useRedactar() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (body: { para: string; asunto?: string; cuerpo: string }) =>
-      (await api.post<Mail>(`${BASE}/redactar`, body)).data,
+    mutationFn: async (data: {
+      para: string;
+      asunto?: string;
+      cuerpo: string;
+      html?: string;
+      files?: File[];
+    }) => {
+      const fd = new FormData();
+      fd.append("para", data.para);
+      if (data.asunto) fd.append("asunto", data.asunto);
+      fd.append("cuerpo", data.cuerpo);
+      if (data.html) fd.append("html", data.html);
+      (data.files ?? []).forEach((f) => fd.append("files", f));
+      return (await api.post<Mail>(`${BASE}/redactar`, fd)).data;
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["mails", "inbox"] }),
   });
 }
@@ -224,15 +237,28 @@ export function useHilo(mailId: number, enabled: boolean) {
   });
 }
 
-// Responde al cliente con texto libre, dentro del mismo hilo, desde tu casilla.
+// Responde al cliente dentro del mismo hilo, desde tu casilla. Acepta cuerpo con
+// formato (HTML) y adjuntos (multipart).
 export function useResponder(mailId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (cuerpo: string) =>
-      (await api.post<Mail>(`${BASE}/${mailId}/responder`, { cuerpo })).data,
+    mutationFn: async (data: {
+      cuerpo: string;
+      html?: string;
+      asunto?: string;
+      files?: File[];
+    }) => {
+      const fd = new FormData();
+      fd.append("cuerpo", data.cuerpo);
+      if (data.html) fd.append("html", data.html);
+      if (data.asunto) fd.append("asunto", data.asunto);
+      (data.files ?? []).forEach((f) => fd.append("files", f));
+      return (await api.post<Mail>(`${BASE}/${mailId}/responder`, fd)).data;
+    },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: mailKeys.conversacion(mailId) });
       qc.invalidateQueries({ queryKey: mailKeys.hilo(mailId) });
-      qc.invalidateQueries({ queryKey: mailKeys.all });
+      qc.invalidateQueries({ queryKey: ["mails", "inbox"] });
     },
   });
 }

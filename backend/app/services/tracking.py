@@ -15,7 +15,7 @@ def nuevo_token() -> str:
     return secrets.token_urlsafe(24)
 
 
-def _pixel(token: str) -> str:
+def pixel_tag(token: str) -> str:
     """<img> 1x1 invisible con la URL de tracking. "" si no hay PUBLIC_BASE_URL
     (en dev el tracking queda desactivado)."""
     base = settings.PUBLIC_BASE_URL.strip().rstrip("/")
@@ -28,15 +28,26 @@ def _pixel(token: str) -> str:
     )
 
 
-def cuerpo_con_pixel(cuerpo: str, token: str) -> str | None:
-    """HTML del cuerpo (texto escapado, saltos→<br>) + pixel de tracking. Devuelve
-    None si el tracking está desactivado (no hay base URL) para no mandar HTML al
-    pedo."""
-    pixel = _pixel(token)
-    if not pixel:
-        return None
-    cuerpo_html = html_mod.escape(cuerpo or "").replace("\n", "<br>")
+def texto_a_html(texto: str) -> str:
+    """Convierte texto plano a HTML (escapado, saltos de línea -> <br>)."""
+    cuerpo = html_mod.escape(texto or "").replace("\n", "<br>")
     return (
         '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;'
-        f'color:#111827;line-height:1.5">{cuerpo_html}</div>{pixel}'
+        f'color:#111827;line-height:1.5">{cuerpo}</div>'
     )
+
+
+def componer_html(cuerpo_html: str | None, texto: str, token: str) -> tuple[str | None, bool]:
+    """Arma el HTML a enviar y dice si quedó rastreable (pixel embebido).
+
+    - Con cuerpo_html (editor rico): se envía SIEMPRE como HTML (+ pixel si hay).
+    - Sin HTML (texto plano): solo se manda como HTML si el tracking está activo
+      (para poder meter el pixel); si no, se devuelve None y se manda texto plano.
+    """
+    pixel = pixel_tag(token)
+    rastreable = bool(pixel)
+    if cuerpo_html:
+        return (cuerpo_html + pixel, rastreable)
+    if pixel:
+        return (texto_a_html(texto) + pixel, rastreable)
+    return (None, False)

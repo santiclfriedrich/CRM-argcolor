@@ -91,27 +91,32 @@ def _send_and_record(
     subject: str,
     body: str,
     remitente: str | None = None,
+    html_rico: str | None = None,
+    attachments: list[dict] | None = None,
 ) -> Mail:
     """Envía un mail al remitente del entrante y registra el saliente.
 
     ``remitente`` es el email que queda como "De" del saliente (el vendedor que
     responde). Si no se pasa, cae a la casilla global (``GMAIL_USER``).
+    ``html_rico`` es el cuerpo con formato del editor; ``attachments`` la lista de
+    adjuntos ([{filename, content, mime}]).
     """
     if not mail.de:
         raise ValueError("El mail entrante no tiene remitente; no se puede responder.")
 
-    from app.services.tracking import cuerpo_con_pixel, nuevo_token
+    from app.services.tracking import componer_html, nuevo_token
 
     in_reply_to = _rfc_message_id(db, gmail, mail)
     token = nuevo_token()
-    html = cuerpo_con_pixel(body, token)
+    html_out, rastreable = componer_html(html_rico, body, token)
     sent = gmail.send_message(
         to=mail.de,
         subject=subject,
         body=body,
         thread_id=mail.gmail_thread_id,
         in_reply_to=in_reply_to,
-        **({"html": html} if html else {}),
+        **({"html": html_out} if html_out else {}),
+        **({"attachments": attachments} if attachments else {}),
     )
     salida = Mail(
         gmail_message_id=sent.get("message_id"),
@@ -123,7 +128,7 @@ def _send_and_record(
         asunto=subject,
         cuerpo=body,
         fecha=datetime.now(timezone.utc),
-        track_token=token if html else None,
+        track_token=token if rastreable else None,
     )
     db.add(salida)
     db.commit()
@@ -157,12 +162,24 @@ def send_respuesta(
     cuerpo: str,
     remitente: str | None = None,
     asunto: str | None = None,
+    html: str | None = None,
+    attachments: list[dict] | None = None,
 ) -> Mail:
     """Envía una respuesta de texto libre al cliente, dentro del mismo hilo.
 
     La escribe el vendedor desde la bandeja (chat). Si no se pasa ``asunto``,
-    responde con ``Re: <asunto original>``."""
-    if not cuerpo or not cuerpo.strip():
+    responde con ``Re: <asunto original>``. ``html`` es el cuerpo con formato y
+    ``attachments`` los archivos adjuntos."""
+    if (not cuerpo or not cuerpo.strip()) and not (html and html.strip()):
         raise ValueError("La respuesta no puede estar vacía.")
     subject = asunto or (f"Re: {mail.asunto}" if mail.asunto else "Tu consulta — ARG COLOR")
-    return _send_and_record(db, gmail, mail, subject, cuerpo, remitente=remitente)
+    return _send_and_record(
+        db,
+        gmail,
+        mail,
+        subject,
+        cuerpo,
+        remitente=remitente,
+        html_rico=html,
+        attachments=attachments,
+    )
