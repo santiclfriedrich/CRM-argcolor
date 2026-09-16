@@ -13,9 +13,11 @@ Lo dispara el scheduler una vez al día.
 import logging
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
+from app.db.models.adjuntos import Adjunto
+from app.db.models.mails import Mail
 from app.db.models.mails_descartados import MailDescartado
 from app.db.models.oportunidades import Oportunidad
 from app.services.borrado import eliminar_oportunidades
@@ -24,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 DIAS_PROPUESTAS = 10
 DIAS_DESCARTADOS = 10
+DIAS_INBOX = 15
 
 
 def limpiar_propuestas_viejas(db: Session, dias: int = DIAS_PROPUESTAS) -> int:
@@ -58,8 +61,33 @@ def limpiar_descartados_viejos(db: Session, dias: int = DIAS_DESCARTADOS) -> int
     return len(filas)
 
 
+def limpiar_inbox_viejo(db: Session, dias: int = DIAS_INBOX) -> int:
+    """Borra mails del inbox que son las TRES cosas a la vez: más viejos que
+    `dias`, NO abiertos (leido=False) y NO vinculados a ninguna oportunidad.
+
+    Así lo asociado a una oportunidad o lo ya abierto queda siempre protegido; se
+    limpia solo el ruido viejo que nadie miró. No hace falta marcarlos como
+    'eliminado_manual' porque ya están fuera de la ventana del sync."""
+    corte = datetime.now(timezone.utc) - timedelta(days=dias)
+    cond = (
+        Mail.carpeta.is_not(None),  # es del inbox sincronizado
+        Mail.leido.is_(False),  # no abierto en el CRM
+        Mail.oportunidad_id.is_(None),  # no vinculado a oportunidad
+        func.coalesce(Mail.fecha, Mail.created_at) < corte,
+    )
+    ids = list(db.scalars(select(Mail.id).where(*cond)))
+    if not ids:
+        return 0
+    # Defensivo: los del inbox no suelen tener adjuntos guardados, pero por si acaso.
+    db.execute(delete(Adjunto).where(Adjunto.mail_id.in_(ids)))
+    db.execute(delete(Mail).where(Mail.id.in_(ids)))
+    db.commit()
+    return len(ids)
+
+
 def limpiar_bandeja(db: Session) -> dict[str, int]:
     """Corre toda la limpieza del día. Devuelve el conteo por tipo."""
     propuestas = limpiar_propuestas_viejas(db)
     descartados = limpiar_descartados_viejos(db)
-    return {"propuestas": propuestas, "descartados": descartados}
+    inbox = limpiar_inbox_viejo(db)
+    return {"propuestas": propuestas, "descartados": descartados, "inbox": inbox}

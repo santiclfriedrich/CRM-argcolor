@@ -462,7 +462,7 @@ def test_limpieza_borra_propuestas_y_descartados_viejos(client: TestClient) -> N
         ids = {"vieja": op_vieja.id, "nueva": op_nueva.id, "aceptada": op_aceptada.id}
 
     with TestingSessionLocal() as db:
-        assert limpiar_bandeja(db) == {"propuestas": 1, "descartados": 1}
+        assert limpiar_bandeja(db) == {"propuestas": 1, "descartados": 1, "inbox": 0}
 
     with TestingSessionLocal() as db:
         assert db.get(Oportunidad, ids["vieja"]) is None  # propuesta vieja: borrada

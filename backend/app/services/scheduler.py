@@ -89,11 +89,12 @@ def _run_limpieza() -> None:
     db = SessionLocal()
     try:
         r = limpiar_bandeja(db)
-        if r["propuestas"] or r["descartados"]:
+        if r["propuestas"] or r["descartados"] or r.get("inbox"):
             logger.info(
-                "Limpieza: %s propuesta(s) y %s descartado(s) viejos borrados",
+                "Limpieza: %s propuesta(s), %s descartado(s) y %s mail(s) de inbox viejos borrados",
                 r["propuestas"],
                 r["descartados"],
+                r.get("inbox", 0),
             )
     except Exception:  # noqa: BLE001 - el job no debe tirar el scheduler
         logger.exception("Falló la limpieza de la bandeja")
