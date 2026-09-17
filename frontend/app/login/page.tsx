@@ -76,15 +76,8 @@ export default function LoginPage() {
 
         {/* Tarjeta de acceso (superficie sólida, sin gradientes ni blur) */}
         <div className="mt-8 w-full rounded-2xl border border-line bg-surface p-8 shadow-xl">
-          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-3">
-            CRM Comercial
-          </p>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">
-            Ingresá a tu panel
-          </h1>
-          <p className="mt-1 text-sm text-ink-2">
-            Usá la cuenta de Google de tu trabajo.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Iniciar sesión</h1>
+          <p className="mt-1 text-sm text-ink-2">para acceder a CRM</p>
 
           {error && (
             <p className="mt-5 rounded-lg bg-danger/10 px-4 py-2.5 text-sm text-danger ring-1 ring-danger/25">
