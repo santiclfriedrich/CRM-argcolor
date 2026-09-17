@@ -37,6 +37,18 @@ function GoogleIcon() {
   );
 }
 
+// Ícono neutro de 4 cuadrantes (placeholder para el proveedor "próximamente").
+function CuadrantesIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="2" y="2" width="9" height="9" rx="1" fill="currentColor" opacity="0.35" />
+      <rect x="13" y="2" width="9" height="9" rx="1" fill="currentColor" opacity="0.6" />
+      <rect x="2" y="13" width="9" height="9" rx="1" fill="currentColor" opacity="0.6" />
+      <rect x="13" y="13" width="9" height="9" rx="1" fill="currentColor" opacity="0.35" />
+    </svg>
+  );
+}
+
 export default function LoginPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -51,39 +63,64 @@ export default function LoginPage() {
   const error = session?.authError;
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-navy px-6 text-center">
-      <div className="relative z-10 flex w-full max-w-sm flex-col items-center">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-navy px-6">
+      <div className="flex w-full max-w-md flex-col items-center">
         <Image
           src="/logo-largo.png"
           alt="Argentina Color"
           width={280}
           height={50}
           priority
-          className="h-12 w-auto brightness-0 invert sm:h-14"
+          className="h-11 w-auto brightness-0 invert sm:h-12"
         />
 
-        <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.2em] text-white/40">
-          CRM Comercial
-        </p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight text-white">
-          Ingresá a tu panel
-        </h1>
-
-        {error && (
-          <p className="mt-6 w-full rounded-lg bg-red-500/15 px-4 py-2.5 text-sm text-red-100 ring-1 ring-red-400/30">
-            {ERROR_MESSAGES[error] ?? "Error desconocido."}
+        {/* Tarjeta de acceso (superficie sólida, sin gradientes ni blur) */}
+        <div className="mt-8 w-full rounded-2xl border border-line bg-surface p-8 shadow-xl">
+          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-3">
+            CRM Comercial
           </p>
-        )}
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">
+            Ingresá a tu panel
+          </h1>
+          <p className="mt-1 text-sm text-ink-2">
+            Usá la cuenta de Google de tu trabajo.
+          </p>
 
-        <button
-          onClick={() => signIn("google", { callbackUrl: "/" })}
-          className="mt-10 flex w-full items-center justify-center gap-3 rounded-xl bg-white px-5 py-3.5 text-sm font-semibold text-[#3c4043] shadow-lg transition-all hover:-translate-y-0.5 hover:bg-[#f1f3f4] hover:shadow-xl active:translate-y-0"
-        >
-          <GoogleIcon />
-          Ingresar con Google
-        </button>
+          {error && (
+            <p className="mt-5 rounded-lg bg-danger/10 px-4 py-2.5 text-sm text-danger ring-1 ring-danger/25">
+              {ERROR_MESSAGES[error] ?? "Error desconocido."}
+            </p>
+          )}
 
-        <p className="mt-12 text-xs text-white/40">ARG COLOR © 2026</p>
+          <div className="mt-6 flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={() => signIn("google", { callbackUrl: "/" })}
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-line bg-surface px-5 py-3 text-sm font-semibold text-ink transition hover:bg-surface2"
+            >
+              <GoogleIcon />
+              Continuar con Google
+            </button>
+
+            <div className="relative">
+              <span className="absolute -right-2 -top-2 z-10 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-white shadow">
+                Próximamente
+              </span>
+              <button
+                type="button"
+                disabled
+                aria-disabled="true"
+                title="Disponible próximamente"
+                className="flex w-full cursor-not-allowed items-center justify-center gap-3 rounded-xl border border-line bg-surface px-5 py-3 text-sm font-semibold text-ink-3 opacity-70"
+              >
+                <CuadrantesIcon />
+                Continuar con Microsoft
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-8 text-xs text-white/40">ARG COLOR © 2026</p>
       </div>
     </div>
   );
