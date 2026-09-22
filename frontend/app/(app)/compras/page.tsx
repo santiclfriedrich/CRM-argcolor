@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Clock, Inbox, Paperclip } from "lucide-react";
+import { AlertTriangle, Clock, Inbox, Paperclip, Target } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -137,8 +137,15 @@ export default function ComprasPage() {
                     onClick={() => setAbierta(s.id)}
                     className="cursor-pointer border-b border-line transition last:border-0 hover:bg-surface2"
                   >
-                    <td className="px-4 py-3 font-medium text-ink">
-                      {s.oportunidad?.cliente?.razon_social ?? "—"}
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-ink">
+                        {s.oportunidad?.cliente?.razon_social ?? "—"}
+                      </span>
+                      {s.oportunidad?.asunto && (
+                        <span className="block max-w-[16rem] truncate text-xs text-ink-3">
+                          {s.oportunidad.asunto}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-ink-2">{s.solicitante?.nombre ?? "—"}</td>
                     <td className="max-w-xs truncate px-4 py-3 text-ink-2">{s.requerimiento}</td>
@@ -221,10 +228,10 @@ function SolicitudDetalleModal({ id, onClose }: { id: number; onClose: () => voi
 
           {s.oportunidad && (
             <Link
-              href={`/oportunidades?op=${s.oportunidad.id}`}
-              className="text-sm font-medium text-accent hover:underline"
+              href={`/oportunidades/${s.oportunidad.id}`}
+              className="inline-flex w-fit items-center gap-1.5 rounded-md border border-line px-3 py-1.5 text-sm font-medium text-accent transition hover:bg-surface2"
             >
-              Ver oportunidad #{s.oportunidad.id} →
+              <Target size={14} /> Ir a la oportunidad #{s.oportunidad.id}
             </Link>
           )}
 
