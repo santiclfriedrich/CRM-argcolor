@@ -6,11 +6,17 @@ import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
-import { useResponderCompras, useSolicitud, useSolicitudes } from "@/lib/solicitudes";
-import type { EstadoSolicitud, Solicitud } from "@/lib/types";
+import {
+  useResponderCompras,
+  useSolicitud,
+  useSolicitudes,
+  useUpdateSolicitud,
+} from "@/lib/solicitudes";
+import type { EstadoSolicitud, Solicitud, SolicitudDetail } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const ESTADO_LABEL: Record<EstadoSolicitud, { label: string; tone: "info" | "success" | "default" }> = {
@@ -246,6 +252,8 @@ function SolicitudDetalleModal({ id, onClose }: { id: number; onClose: () => voi
             </div>
           )}
 
+          <SeguimientoForm solicitud={s} />
+
           {(s.respuestas ?? []).length > 0 && (
             <div>
               <p className="mb-1 text-sm font-medium text-ink-2">Respuestas cargadas</p>
@@ -294,6 +302,51 @@ function SolicitudDetalleModal({ id, onClose }: { id: number; onClose: () => voi
         </div>
       )}
     </Modal>
+  );
+}
+
+function SeguimientoForm({ solicitud }: { solicitud: SolicitudDetail }) {
+  const update = useUpdateSolicitud(solicitud.id);
+  const toast = useToast();
+  const [eta, setEta] = useState(solicitud.eta ?? "");
+  const [proveedor, setProveedor] = useState(solicitud.proveedor ?? "");
+  const [notas, setNotas] = useState(solicitud.seguimiento_notas ?? "");
+
+  const guardar = () => {
+    update.mutate(
+      {
+        eta: eta || null,
+        proveedor: proveedor || null,
+        seguimiento_notas: notas || null,
+      },
+      {
+        onSuccess: () => toast.toast("Seguimiento guardado", "success"),
+        onError: () => toast.toast("No se pudo guardar el seguimiento", "error"),
+      }
+    );
+  };
+
+  return (
+    <div className="rounded-lg border border-line p-3">
+      <p className="mb-2 text-sm font-semibold text-ink">Seguimiento</p>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-xs text-ink-3">Entrega estimada</label>
+          <Input type="date" value={eta} onChange={(e) => setEta(e.target.value)} />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-ink-3">Proveedor</label>
+          <Input value={proveedor} onChange={(e) => setProveedor(e.target.value)} />
+        </div>
+      </div>
+      <label className="mb-1 mt-2 block text-xs text-ink-3">Notas</label>
+      <Textarea value={notas} onChange={(e) => setNotas(e.target.value)} rows={2} />
+      <div className="mt-2 flex justify-end">
+        <Button variant="outline" onClick={guardar} disabled={update.isPending}>
+          {update.isPending ? "Guardando…" : "Guardar seguimiento"}
+        </Button>
+      </div>
+    </div>
   );
 }
 

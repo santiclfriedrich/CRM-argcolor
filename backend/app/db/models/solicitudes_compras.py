@@ -52,6 +52,11 @@ class SolicitudCompras(Base, TimestampMixin):
     importe_aproximado: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     fecha_limite: Mapped[date | None] = mapped_column(Date)
     presupuesto_gbp_referencia: Mapped[str | None] = mapped_column(String(80))
+    # Seguimiento que carga Compras (lo ve el vendedor): entrega estimada,
+    # proveedor y notas.
+    eta: Mapped[date | None] = mapped_column(Date)
+    proveedor: Mapped[str | None] = mapped_column(String(255))
+    seguimiento_notas: Mapped[str | None] = mapped_column(Text)
     ccs_extra: Mapped[list[str] | None] = mapped_column(
         ARRAY(String).with_variant(JSON(), "sqlite")
     )

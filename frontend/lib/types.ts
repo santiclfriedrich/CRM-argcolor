@@ -308,6 +308,9 @@ export interface Solicitud {
   fecha_envio: string | null;
   fecha_respuesta: string | null;
   created_at: string;
+  eta: string | null;
+  proveedor: string | null;
+  seguimiento_notas: string | null;
   oportunidad: SolicitudOportunidadMini | null;
   solicitante: PersonaMini | null;
 }
@@ -385,6 +388,9 @@ export interface Propuesta {
 }
 export type SolicitudUpdate = Partial<Omit<SolicitudCreate, "oportunidad_id">> & {
   estado?: EstadoSolicitud;
+  eta?: string | null;
+  proveedor?: string | null;
+  seguimiento_notas?: string | null;
 };
 
 // ---- Bandeja / Mails ----

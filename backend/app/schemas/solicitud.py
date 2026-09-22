@@ -37,6 +37,10 @@ class SolicitudUpdate(BaseModel):
     presupuesto_gbp_referencia: str | None = None
     ccs_extra: list[EmailStr] | None = None
     estado: EstadoSolicitud | None = None
+    # Seguimiento cargado por Compras.
+    eta: date | None = None
+    proveedor: str | None = None
+    seguimiento_notas: str | None = None
 
 
 # Mini-objetos anidados para mostrar nombres en el listado.
@@ -84,6 +88,9 @@ class SolicitudRead(SolicitudBase):
     fecha_envio: datetime | None = None
     fecha_respuesta: datetime | None = None
     created_at: datetime
+    eta: date | None = None
+    proveedor: str | None = None
+    seguimiento_notas: str | None = None
     archivos_adjuntos: list[dict] | None = None
     oportunidad: OportunidadMini | None = None
     solicitante: SolicitanteMini | None = None
@@ -102,6 +109,9 @@ class SolicitudListItem(SolicitudBase):
     fecha_envio: datetime | None = None
     fecha_respuesta: datetime | None = None
     created_at: datetime
+    eta: date | None = None
+    proveedor: str | None = None
+    seguimiento_notas: str | None = None
     oportunidad: OportunidadMini | None = None
     solicitante: SolicitanteMini | None = None
 
