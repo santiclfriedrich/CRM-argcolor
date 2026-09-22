@@ -73,7 +73,7 @@ export default function ComprasPage() {
   const pendientes = (solicitudes ?? []).filter((s) => s.estado === "enviada").length;
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="w-full">
       <div className="mb-4">
         <h1 className="text-2xl font-bold tracking-tight text-ink">Cola de Compras</h1>
         <p className="mt-1 text-sm text-ink-2">
