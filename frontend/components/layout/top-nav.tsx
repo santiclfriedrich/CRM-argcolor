@@ -11,6 +11,7 @@ import {
   Menu,
   NotebookPen,
   Settings,
+  ShoppingCart,
   Target,
   UsersRound,
   X,
@@ -49,10 +50,15 @@ export function TopNav() {
   const gmailConectado = Boolean(
     (session?.usuario as { gmail_conectado?: boolean } | undefined)?.gmail_conectado
   );
-  const esAdmin = (session?.usuario as { rol?: string } | undefined)?.rol === "admin";
+  const rol = (session?.usuario as { rol?: string } | undefined)?.rol;
+  const esAdmin = rol === "admin";
+  const esCompras = rol === "compras";
+  const colaCompras = { href: "/compras", label: "Cola de Compras", icon: ShoppingCart };
   const nav = esAdmin
-    ? [...NAV, { href: "/usuarios", label: "Usuarios", icon: UsersRound }]
-    : NAV;
+    ? [...NAV, colaCompras, { href: "/usuarios", label: "Usuarios", icon: UsersRound }]
+    : esCompras
+      ? [...NAV, colaCompras]
+      : NAV;
 
   const activo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
   const iniciales = nombre.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
