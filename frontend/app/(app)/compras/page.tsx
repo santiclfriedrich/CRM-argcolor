@@ -5,8 +5,11 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import { useSolicitud, useSolicitudes } from "@/lib/solicitudes";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
+import { useResponderCompras, useSolicitud, useSolicitudes } from "@/lib/solicitudes";
 import type { EstadoSolicitud, Solicitud } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -170,6 +173,27 @@ export default function ComprasPage() {
 
 function SolicitudDetalleModal({ id, onClose }: { id: number; onClose: () => void }) {
   const { data: s, isLoading } = useSolicitud(id);
+  const responder = useResponderCompras(id);
+  const toast = useToast();
+  const [cuerpo, setCuerpo] = useState("");
+  const [enviarMail, setEnviarMail] = useState(true);
+
+  const enviar = () => {
+    if (!cuerpo.trim()) return;
+    responder.mutate(
+      { cuerpo, enviar_mail: enviarMail },
+      {
+        onSuccess: () => {
+          toast.toast(
+            enviarMail ? "Respuesta cargada y enviada al vendedor" : "Respuesta cargada",
+            "success"
+          );
+          setCuerpo("");
+        },
+        onError: () => toast.toast("No se pudo cargar la respuesta", "error"),
+      }
+    );
+  };
 
   return (
     <Modal open onClose={onClose} title="Solicitud de cotización" size="lg">
@@ -222,9 +246,51 @@ function SolicitudDetalleModal({ id, onClose }: { id: number; onClose: () => voi
             </div>
           )}
 
-          <p className="text-xs text-ink-3">
-            La respuesta de cotización se carga en la próxima etapa.
-          </p>
+          {(s.respuestas ?? []).length > 0 && (
+            <div>
+              <p className="mb-1 text-sm font-medium text-ink-2">Respuestas cargadas</p>
+              <ul className="flex flex-col gap-2">
+                {(s.respuestas ?? []).map((r) => (
+                  <li
+                    key={r.id}
+                    className="rounded-lg border border-line bg-surface2/40 p-3"
+                  >
+                    <p className="whitespace-pre-wrap text-sm text-ink">
+                      {r.contenido_raw}
+                    </p>
+                    <p className="mt-1 text-xs text-ink-3">
+                      {new Date(r.fecha_recepcion).toLocaleString("es-AR")}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Responder cotización (Compras, dentro del CRM) */}
+          <div className="rounded-lg border border-line p-3">
+            <p className="mb-2 text-sm font-semibold text-ink">Responder cotización</p>
+            <Textarea
+              value={cuerpo}
+              onChange={(e) => setCuerpo(e.target.value)}
+              placeholder="Precios, plazo de entrega, condiciones…"
+              rows={5}
+            />
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <label className="flex items-center gap-2 text-sm text-ink-2">
+                <input
+                  type="checkbox"
+                  checked={enviarMail}
+                  onChange={(e) => setEnviarMail(e.target.checked)}
+                  className="h-4 w-4 rounded border-line accent-accent"
+                />
+                Enviar también por mail al vendedor
+              </label>
+              <Button onClick={enviar} disabled={responder.isPending || !cuerpo.trim()}>
+                {responder.isPending ? "Enviando…" : "Cargar respuesta"}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </Modal>

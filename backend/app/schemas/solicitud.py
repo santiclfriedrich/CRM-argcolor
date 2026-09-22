@@ -122,6 +122,13 @@ class ParseRespuestaRequest(BaseModel):
     contenido: str
 
 
+class ResponderComprasBody(BaseModel):
+    """Respuesta de cotización cargada por Compras dentro del CRM (sin IA)."""
+
+    cuerpo: str
+    enviar_mail: bool = True
+
+
 class SugerenciaCompras(BaseModel):
     """Requerimiento pre-armado desde lo que la IA extrajo del mail del cliente."""
 

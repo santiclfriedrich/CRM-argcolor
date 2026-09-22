@@ -139,6 +139,20 @@ export function useEnviarSolicitud(id: number) {
 }
 
 // Pega el texto de la respuesta de Compras y la IA extrae los ítems.
+// Compras carga la cotización dentro del CRM (sin IA); opcionalmente la manda por mail.
+export function useResponderCompras(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { cuerpo: string; enviar_mail: boolean }) =>
+      (await api.post<RespuestaCompras>(`${BASE}/${id}/responder-compras`, body)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: solicitudKeys.all });
+      qc.invalidateQueries({ queryKey: solicitudKeys.detail(id) });
+      qc.invalidateQueries({ queryKey: oportunidadKeys.all });
+    },
+  });
+}
+
 export function useCargarRespuesta(id: number) {
   const qc = useQueryClient();
   return useMutation({

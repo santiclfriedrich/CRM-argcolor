@@ -1,5 +1,6 @@
 """CRUD endpoints for solicitudes a Compras (reemplazo del Google Form)."""
 
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -22,6 +23,7 @@ from app.db.session import get_db
 from app.integrations.ai.base import AIProvider
 from app.schemas.solicitud import (
     ParseRespuestaRequest,
+    ResponderComprasBody,
     RespuestaComprasRead,
     SolicitudCreate,
     SolicitudDetail,
@@ -30,12 +32,15 @@ from app.schemas.solicitud import (
     SolicitudUpdate,
 )
 from app.services.grupos_compras import resolver_destino
+from app.services.notificaciones import crear_notificacion
 from app.services.solicitudes import (
     build_email_preview,
     copiar_adjuntos_oportunidad,
     enviar_a_compras,
     guardar_adjuntos_solicitud,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/solicitudes", tags=["solicitudes"])
 
@@ -241,6 +246,89 @@ def cargar_respuesta(
         if op.estado in _PREVIOS_A_COTIZAR:
             op.estado = EstadoOportunidad.cotizado_compras
             op.fecha_ultimo_movimiento = ahora
+    db.commit()
+    db.refresh(respuesta)
+    return respuesta
+
+
+def _gmail_opcional(usuario: Usuario):  # noqa: ANN201 - GmailClient | None
+    """GmailClient del usuario si tiene Gmail conectado; None si no."""
+    from app.core.crypto import decrypt
+    from app.integrations.gmail.client import GmailClient
+
+    if not usuario.gmail_refresh_token:
+        return None
+    token = decrypt(usuario.gmail_refresh_token)
+    return GmailClient(refresh_token=token) if token else None
+
+
+@router.post(
+    "/{solicitud_id}/responder-compras",
+    response_model=RespuestaComprasRead,
+    status_code=201,
+)
+def responder_compras(
+    solicitud_id: int,
+    body: ResponderComprasBody,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> RespuestaCompras:
+    """Compras carga la cotización DENTRO del CRM (sin IA): registra la respuesta,
+    avanza la oportunidad, avisa al vendedor in-app y —si se pide— también le
+    manda la respuesta por mail (en el hilo de la solicitud)."""
+    cuerpo = body.cuerpo.strip()
+    if not cuerpo:
+        raise HTTPException(status_code=400, detail="La respuesta no puede estar vacía.")
+    solicitud = _get_loaded(db, solicitud_id)
+
+    respuesta = RespuestaCompras(
+        solicitud_compras_id=solicitud.id,
+        contenido_raw=cuerpo,
+        notas_compras=None,
+    )
+    db.add(respuesta)
+
+    ahora = datetime.now(timezone.utc)
+    solicitud.estado = EstadoSolicitud.respondida
+    if solicitud.fecha_respuesta is None:
+        solicitud.fecha_respuesta = ahora
+    op = solicitud.oportunidad
+    cliente = op.cliente.razon_social if op and op.cliente else "el cliente"
+    if op is not None:
+        if op.fecha_respuesta_compras is None:
+            op.fecha_respuesta_compras = ahora.date()
+        if op.estado in _PREVIOS_A_COTIZAR:
+            op.estado = EstadoOportunidad.cotizado_compras
+            op.fecha_ultimo_movimiento = ahora
+
+    # Aviso in-app al vendedor.
+    if solicitud.solicitante_id:
+        crear_notificacion(
+            db,
+            usuario_id=solicitud.solicitante_id,
+            mensaje=f"Compras respondió tu solicitud de {cliente}.",
+            link=f"/solicitudes?sol={solicitud.id}",
+        )
+
+    # Mail al vendedor (best-effort: si falla, la respuesta igual queda registrada).
+    if body.enviar_mail and solicitud.solicitante and solicitud.solicitante.email:
+        gmail = _gmail_opcional(current_user)
+        if gmail is not None:
+            asunto = f"Cotización — {cliente} (ID {solicitud.oportunidad_id})"
+            texto = (
+                f"Hola {solicitud.solicitante.nombre.split()[0]},\n\n"
+                f"Compras respondió la solicitud de {cliente}:\n\n{cuerpo}"
+            )
+            try:
+                gmail.send_message(
+                    to=solicitud.solicitante.email,
+                    subject=asunto,
+                    body=texto,
+                    thread_id=solicitud.gmail_thread_id,
+                )
+            except Exception:  # noqa: BLE001 - el mail no debe tumbar la respuesta
+                logger.exception("No se pudo enviar el mail de respuesta de Compras")
+
     db.commit()
     db.refresh(respuesta)
     return respuesta
