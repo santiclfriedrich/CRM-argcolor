@@ -59,9 +59,7 @@ import {
   useEliminarAdjuntoOportunidad,
   useOportunidad,
   useOportunidades,
-  usePropuestas,
   useResaltadas,
-  useResolverPropuesta,
   useSeguimientoMail,
   useResolverTransferencia,
   useSetIng,
@@ -82,7 +80,6 @@ import type {
   Oportunidad,
   OportunidadCreate,
   OportunidadFiltros,
-  Propuesta,
 } from "@/lib/types";
 import { cn, errorMessage } from "@/lib/utils";
 
@@ -816,7 +813,6 @@ export default function OportunidadesPage() {
           </span>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <PropuestasIndicator />
           <TransferenciasPendientes />
           <Button onClick={() => setCreating(true)}>
             <Plus size={16} /> Nueva oportunidad
@@ -1658,211 +1654,6 @@ function SeguimientoMailModal({
 }
 
 // Indicador (toolbar) de oportunidades que otro me transfirió: aceptar/rechazar.
-// Indicador (toolbar) de oportunidades PROPUESTAS por mail auto-ingestado, para
-// revisarlas (ver mail + requerimiento) y aceptar o descartar.
-function PropuestasIndicator() {
-  const { seccion } = useSeccion();
-  const { data } = usePropuestas(seccion);
-  const [abierto, setAbierto] = useState(false);
-  const propuestas = data ?? [];
-  if (propuestas.length === 0) return null;
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setAbierto(true)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface2 px-3 py-1 text-sm font-medium text-ink hover:bg-surface"
-      >
-        Propuestas
-        <span className="ml-0.5 rounded-full bg-navy px-1.5 text-xs font-semibold text-white">
-          {propuestas.length}
-        </span>
-      </button>
-      {abierto && <PropuestasModal onClose={() => setAbierto(false)} />}
-    </>
-  );
-}
-
-function PropuestasModal({ onClose }: { onClose: () => void }) {
-  const { seccion } = useSeccion();
-  const { data } = usePropuestas(seccion);
-  const resolver = useResolverPropuesta();
-  const { data: session } = useSession();
-  const currentUserId = Number(session?.usuario?.id) || null;
-  const [filtro, setFiltro] = useState<"mias" | "todos">("mias");
-
-  const todas = data ?? [];
-  const mias = todas.filter((p) => p.vendedor_id === currentUserId);
-  const propuestas = filtro === "mias" ? mias : todas;
-
-  return (
-    <Modal open onClose={onClose} title="Propuestas de oportunidad" size="6xl">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-ink-2">
-          Mails que entraron y proponen una oportunidad. Revisá y aceptá para sumarla a
-          Oportunidades, o descartala.
-        </p>
-        <div className="inline-flex shrink-0 rounded-full border border-line bg-surface2 p-0.5 text-sm">
-          {(["mias", "todos"] as const).map((f) => (
-            <button
-              key={f}
-              type="button"
-              onClick={() => setFiltro(f)}
-              className={cn(
-                "rounded-full px-3 py-1 font-medium transition-colors",
-                filtro === f ? "bg-navy text-white" : "text-ink-2 hover:bg-surface",
-              )}
-            >
-              {f === "mias" ? `Mías (${mias.length})` : `Todos (${todas.length})`}
-            </button>
-          ))}
-        </div>
-      </div>
-      {propuestas.length === 0 ? (
-        <p className="py-6 text-center text-sm text-ink-3">
-          {filtro === "mias"
-            ? "No tenés propuestas en tu casilla. Cambiá a “Todos” para ver las del equipo."
-            : "No hay propuestas pendientes."}
-        </p>
-      ) : (
-        <div className="space-y-4">
-          {propuestas.map((p) => (
-            <PropuestaCard key={p.id} p={p} resolver={resolver} />
-          ))}
-        </div>
-      )}
-    </Modal>
-  );
-}
-
-function PropuestaCard({
-  p,
-  resolver,
-}: {
-  p: Propuesta;
-  resolver: ReturnType<typeof useResolverPropuesta>;
-}) {
-  const [verMail, setVerMail] = useState(false);
-  const { toast, update } = useToast();
-
-  const accionar = (accion: "aceptar" | "rechazar") => {
-    const toastId = toast("Aguarde un momento…", "loading");
-    resolver.mutate(
-      { id: p.id, accion },
-      {
-        onSuccess: () =>
-          update(
-            toastId,
-            accion === "aceptar" ? "Propuesta aceptada" : "Propuesta descartada",
-            "success"
-          ),
-        onError: () =>
-          update(toastId, "No se pudo procesar la propuesta. Reintentá.", "error"),
-      }
-    );
-  };
-
-  return (
-    <Card className="p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="font-semibold text-ink">{p.cliente ?? "Cliente por identificar"}</p>
-          <p className="truncate text-sm text-ink-2">{p.asunto ?? "(sin asunto)"}</p>
-          <p className="mt-0.5 text-xs text-ink-3">De: {p.mail_de ?? "—"}</p>
-          {p.recibido_en && (
-            <p className="text-xs text-ink-3">
-              Recibido en <span className="text-ink-2">{p.recibido_en}</span>
-            </p>
-          )}
-          {p.mail_fecha && (
-            <p className="text-xs text-ink-3">
-              {new Date(p.mail_fecha).toLocaleString("es-AR", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
-          )}
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <Button
-            size="icon"
-            variant="outline"
-            title="Aceptar"
-            aria-label="Aceptar"
-            onClick={() => accionar("aceptar")}
-            disabled={resolver.isPending}
-            className="rounded-full border-success text-success hover:bg-success hover:text-white"
-          >
-            <Check size={16} />
-          </Button>
-          <Button
-            size="icon"
-            variant="outline"
-            title="Rechazar"
-            aria-label="Rechazar"
-            onClick={() => accionar("rechazar")}
-            disabled={resolver.isPending}
-            className="rounded-full border-danger text-danger hover:bg-danger hover:text-white"
-          >
-            <X size={16} />
-          </Button>
-        </div>
-      </div>
-      {p.requerimiento && (
-        <div className="mt-3">
-          <p className="mb-1 text-[11px] font-semibold text-ink-3">
-            Requerimiento
-          </p>
-          <p className="whitespace-pre-wrap rounded-md bg-surface2 p-2.5 text-sm text-ink">
-            {p.requerimiento}
-          </p>
-        </div>
-      )}
-      {p.mail_cuerpo && (
-        <div className="mt-3">
-          <button
-            type="button"
-            onClick={() => setVerMail((v) => !v)}
-            className="text-xs font-medium text-accent hover:underline"
-          >
-            {verMail ? "Ocultar mail original" : "Ver mail original"}
-          </button>
-          {verMail && (
-            <pre className="mt-1 max-h-56 overflow-auto whitespace-pre-wrap rounded-md bg-surface2 p-2.5 font-mono text-xs text-ink-2">
-              {p.mail_cuerpo}
-            </pre>
-          )}
-        </div>
-      )}
-      {p.adjuntos.length > 0 && (
-        <div className="mt-3">
-          <p className="mb-1 text-[11px] font-semibold text-ink-3">
-            Adjuntos
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {p.adjuntos.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => descargarAdjuntoMail(a.id, a.nombre)}
-                title={`Descargar ${a.nombre}`}
-                className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-line bg-surface2 px-2.5 py-1 text-xs text-ink hover:bg-surface3"
-              >
-                <Paperclip size={12} className="shrink-0 text-ink-3" />
-                <span className="truncate">{a.nombre}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </Card>
-  );
-}
-
 function TransferenciasPendientes() {
   const { data } = useTransferenciasPendientes();
   const resolver = useResolverTransferencia();

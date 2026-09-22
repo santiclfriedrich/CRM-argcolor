@@ -251,25 +251,16 @@ def _sync_inbox_seguro(db: Session, gmail: object, usuario: Usuario) -> None:
 def poll_all_mailboxes(
     db: Session, ai: AIProvider, default_vendedor_id: int | None = None
 ) -> dict[str, int | str | None]:
-    """Pollea todas las casillas configuradas.
+    """Sincroniza el INBOX de cada casilla conectada a la bandeja.
 
-    - Camino A: una sola casilla (la del refresh token); usa default_vendedor_id
-      (ej. el usuario que disparó el sync) como vendedor por defecto.
-    - Camino B: una casilla por cada usuario activo (impersonación); ahí el dueño
-      de la casilla manda y se ignora default_vendedor_id.
-    Devuelve el acumulado {"procesados", "errores", "ultimo_error"}.
-    Importado acá adentro para no acoplar el cliente real en los tests.
+    El pipeline comercial (auto-creación de oportunidades como "propuestas") fue
+    RETIRADO: ahora las oportunidades se crean a mano desde la bandeja (Fase 4).
+    Acá solo se trae el buzón; no se clasifica con IA ni se crean propuestas.
+    `ai` se mantiene en la firma por compatibilidad con el scheduler.
     """
     from app.integrations.gmail.client import GmailClient
 
-    query = build_poll_query(db)
     total: dict[str, int | str | None] = {"procesados": 0, "errores": 0, "ultimo_error": None}
-
-    def _merge(parcial: dict[str, int | str | None]) -> None:
-        total["procesados"] += parcial["procesados"]  # type: ignore[operator]
-        total["errores"] += parcial["errores"]  # type: ignore[operator]
-        if parcial["ultimo_error"]:
-            total["ultimo_error"] = parcial["ultimo_error"]
 
     if settings.GMAIL_SERVICE_ACCOUNT_FILE:
         # Camino B: impersonación de cada casilla activa vía service account.
@@ -282,12 +273,11 @@ def poll_all_mailboxes(
         )
         for usuario in usuarios:
             try:
-                gmail = GmailClient(usuario.email)
-                _merge(poll_once(db, ai, gmail, query=query, default_vendedor_id=usuario.id))
+                _sync_inbox_seguro(db, GmailClient(usuario.email), usuario)
             except Exception as exc:  # noqa: BLE001 - una casilla rota no corta el resto
                 total["errores"] += 1  # type: ignore[operator]
                 total["ultimo_error"] = _humanize_error(exc)
-                logger.exception("Error polleando la casilla de %s", usuario.email)
+                logger.exception("Error sincronizando la casilla de %s", usuario.email)
         return total
 
     # Camino C (por cuenta): cada vendedor conectó su Gmail (refresh token propio).
@@ -308,22 +298,11 @@ def poll_all_mailboxes(
                 token = decrypt(usuario.gmail_refresh_token)
                 if not token:
                     continue
-                gmail = GmailClient(refresh_token=token)
-                _merge(poll_once(db, ai, gmail, query=query, default_vendedor_id=usuario.id))
-                _sync_inbox_seguro(db, gmail, usuario)
+                _sync_inbox_seguro(db, GmailClient(refresh_token=token), usuario)
             except Exception as exc:  # noqa: BLE001 - una casilla rota no corta el resto
                 total["errores"] += 1  # type: ignore[operator]
                 total["ultimo_error"] = _humanize_error(exc)
-                logger.exception("Error polleando la casilla de %s", usuario.email)
-        return total
-
-    # Camino A (fallback): una sola casilla global (mientras nadie conectó la suya).
-    if settings.GMAIL_REFRESH_TOKEN:
-        _merge(
-            poll_once(
-                db, ai, GmailClient(), query=query, default_vendedor_id=default_vendedor_id
-            )
-        )
+                logger.exception("Error sincronizando la casilla de %s", usuario.email)
     return total
 
 
