@@ -202,7 +202,7 @@ function SolicitudDetalleModal({ id, onClose }: { id: number; onClose: () => voi
   };
 
   return (
-    <Modal open onClose={onClose} title="Solicitud de cotización" size="lg">
+    <Modal open onClose={onClose} title="Solicitud de cotización" size="5xl">
       {isLoading || !s ? (
         <p className="text-sm text-ink-2">Cargando…</p>
       ) : (
