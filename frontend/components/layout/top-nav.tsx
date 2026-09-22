@@ -2,6 +2,7 @@
 
 import {
   Building2,
+  ChevronDown,
   ClipboardList,
   FileText,
   Inbox,
@@ -28,13 +29,17 @@ import { SeccionSwitcher } from "@/components/ui/seccion";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
 
-const NAV = [
+// Los principales van siempre inline; el resto entra en el menú "Más" para que
+// la barra no se rompa al crecer los ítems (roles, secciones nuevas, etc.).
+const NAV_PRINCIPAL = [
   { href: "/", label: "Inicio", icon: LayoutDashboard },
   { href: "/bandeja", label: "Bandeja", icon: Inbox },
   { href: "/oportunidades", label: "Oportunidades", icon: Target },
   { href: "/clientes", label: "Cuentas", icon: Building2 },
   { href: "/solicitudes", label: "Compras", icon: ClipboardList },
   { href: "/presupuestos", label: "Presupuestos", icon: FileText },
+];
+const NAV_SECUNDARIO = [
   { href: "/tareas", label: "Tareas", icon: ListChecks },
   { href: "/notas", label: "Notas", icon: NotebookPen },
   { href: "/configuracion", label: "Configuración", icon: Settings },
@@ -45,6 +50,7 @@ export function TopNav() {
   const { data: session } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const [masOpen, setMasOpen] = useState(false);
 
   const nombre = (session?.usuario?.nombre as string) ?? session?.user?.name ?? "Usuario";
   const gmailConectado = Boolean(
@@ -54,13 +60,16 @@ export function TopNav() {
   const esAdmin = rol === "admin";
   const esCompras = rol === "compras";
   const colaCompras = { href: "/compras", label: "Cola de Compras", icon: ShoppingCart };
-  const nav = esAdmin
-    ? [...NAV, colaCompras, { href: "/usuarios", label: "Usuarios", icon: UsersRound }]
-    : esCompras
-      ? [...NAV, colaCompras]
-      : NAV;
+  const secundario = [
+    ...NAV_SECUNDARIO,
+    ...(esAdmin || esCompras ? [colaCompras] : []),
+    ...(esAdmin ? [{ href: "/usuarios", label: "Usuarios", icon: UsersRound }] : []),
+  ];
+  // Lista completa (para el menú mobile): principal + secundario.
+  const nav = [...NAV_PRINCIPAL, ...secundario];
 
   const activo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  const masActivo = secundario.some((i) => activo(i.href));
   const iniciales = nombre.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
   return (
@@ -87,15 +96,15 @@ export function TopNav() {
           />
         </Link>
 
-        {/* Nav horizontal (desktop): recién a xl, donde entran todos los ítems
-            sin desbordarse. Debajo se usa el menú hamburguesa. */}
-        <nav className="hidden min-w-0 flex-1 items-center gap-0.5 overflow-hidden xl:flex">
-          {nav.map(({ href, label }) => (
+        {/* Nav horizontal (desktop): principales inline + "Más" para el resto,
+            así la barra no se rompe. Debajo de xl se usa el hamburguesa. */}
+        <nav className="hidden min-w-0 flex-1 items-center gap-0.5 xl:flex">
+          {NAV_PRINCIPAL.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
               className={cn(
-                "flex h-14 items-center border-b-2 px-3 text-sm font-medium transition",
+                "flex h-14 shrink-0 items-center border-b-2 px-3 text-sm font-medium transition",
                 activo(href)
                   ? "border-white text-white"
                   : "border-transparent text-white/60 hover:text-white"
@@ -104,6 +113,46 @@ export function TopNav() {
               {label}
             </Link>
           ))}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMasOpen((v) => !v)}
+              className={cn(
+                "flex h-14 shrink-0 items-center gap-1 border-b-2 px-3 text-sm font-medium transition",
+                masActivo
+                  ? "border-white text-white"
+                  : "border-transparent text-white/60 hover:text-white"
+              )}
+            >
+              Más <ChevronDown size={14} />
+            </button>
+            {masOpen && (
+              <>
+                <button
+                  type="button"
+                  aria-hidden
+                  tabIndex={-1}
+                  className="fixed inset-0 z-40 cursor-default"
+                  onClick={() => setMasOpen(false)}
+                />
+                <div className="absolute left-0 top-12 z-50 w-52 rounded-lg border border-line bg-surface p-1 shadow-lg">
+                  {secundario.map(({ href, label, icon: Icon }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={() => setMasOpen(false)}
+                      className={cn(
+                        "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition",
+                        activo(href) ? "bg-accent/10 text-accent" : "text-ink-2 hover:bg-surface2"
+                      )}
+                    >
+                      <Icon size={16} /> {label}
+                    </Link>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </nav>
 
         <div className="ml-auto flex items-center gap-1.5">
