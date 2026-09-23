@@ -25,7 +25,7 @@ const ESTADO_LABEL: Record<EstadoSolicitud, { label: string; tone: "info" | "suc
   cerrada: { label: "Cerrada", tone: "default" },
 };
 
-type Filtro = "pendientes" | "respondidas" | "todas";
+type Filtro = "pendientes" | "vencidas" | "respondidas" | "todas";
 
 function fmtDia(d: string | null): string {
   return d ? d.split("-").reverse().join("/") : "—";
@@ -56,12 +56,12 @@ export default function ComprasPage() {
 
   const lista = useMemo(() => {
     const arr = solicitudes ?? [];
-    const filtradas =
-      filtro === "todas"
-        ? arr
-        : arr.filter((s) =>
-            filtro === "pendientes" ? s.estado === "enviada" : s.estado === "respondida"
-          );
+    const filtradas = arr.filter((s) => {
+      if (filtro === "todas") return true;
+      if (filtro === "pendientes") return s.estado === "enviada";
+      if (filtro === "respondidas") return s.estado === "respondida";
+      return estaVencida(s); // vencidas
+    });
     // Pendientes primero, y dentro más viejas arriba.
     return [...filtradas].sort((a, b) => {
       const va = a.fecha_envio ?? a.created_at ?? "";
@@ -70,22 +70,58 @@ export default function ComprasPage() {
     });
   }, [solicitudes, filtro]);
 
-  const pendientes = (solicitudes ?? []).filter((s) => s.estado === "enviada").length;
+  const stats = useMemo(() => {
+    const arr = solicitudes ?? [];
+    const respondidas = arr.filter((s) => s.estado === "respondida");
+    const conTiempo = respondidas.filter((s) => s.fecha_envio && s.fecha_respuesta);
+    const prom = conTiempo.length
+      ? conTiempo.reduce(
+          (acc, s) =>
+            acc +
+            (new Date(s.fecha_respuesta as string).getTime() -
+              new Date(s.fecha_envio as string).getTime()) /
+              86_400_000,
+          0
+        ) / conTiempo.length
+      : null;
+    return {
+      pendientes: arr.filter((s) => s.estado === "enviada").length,
+      vencidas: arr.filter(estaVencida).length,
+      respondidas: respondidas.length,
+      prom,
+    };
+  }, [solicitudes]);
 
   return (
     <div className="w-full">
       <div className="mb-4">
-        <h1 className="text-2xl font-bold tracking-tight text-ink">Cola de Compras</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Panel Compras</h1>
         <p className="mt-1 text-sm text-ink-2">
-          Solicitudes de cotización de todo el equipo. {pendientes} pendiente
-          {pendientes === 1 ? "" : "s"}.
+          Solicitudes de cotización de todo el equipo.
         </p>
+      </div>
+
+      {/* Dashboard: KPIs */}
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Kpi label="Pendientes" valor={stats.pendientes} onClick={() => setFiltro("pendientes")} />
+        <Kpi
+          label="Vencidas"
+          valor={stats.vencidas}
+          tono={stats.vencidas > 0 ? "danger" : "default"}
+          onClick={() => setFiltro("vencidas")}
+        />
+        <Kpi label="Respondidas" valor={stats.respondidas} onClick={() => setFiltro("respondidas")} />
+        <Kpi
+          label="Resp. promedio"
+          valor={stats.prom === null ? "—" : `${stats.prom.toFixed(1)} d`}
+        />
       </div>
 
       <div className="mb-4 flex gap-1 rounded-lg bg-surface2 p-1">
         {(
           [
             ["pendientes", "Pendientes"],
+            ["vencidas", "Vencidas"],
             ["respondidas", "Respondidas"],
             ["todas", "Todas"],
           ] as const
@@ -354,6 +390,43 @@ function SeguimientoForm({ solicitud }: { solicitud: SolicitudDetail }) {
         </Button>
       </div>
     </div>
+  );
+}
+
+function Kpi({
+  label,
+  valor,
+  tono = "default",
+  onClick,
+}: {
+  label: string;
+  valor: number | string;
+  tono?: "default" | "danger";
+  onClick?: () => void;
+}) {
+  const cls = cn(
+    "rounded-xl border border-line bg-surface p-4 text-left transition",
+    onClick && "cursor-pointer hover:bg-surface2"
+  );
+  const contenido = (
+    <>
+      <p className="text-xs text-ink-3">{label}</p>
+      <p
+        className={cn(
+          "mt-1 text-2xl font-bold tracking-tight",
+          tono === "danger" ? "text-danger" : "text-ink"
+        )}
+      >
+        {valor}
+      </p>
+    </>
+  );
+  return onClick ? (
+    <button type="button" onClick={onClick} className={cls}>
+      {contenido}
+    </button>
+  ) : (
+    <div className={cls}>{contenido}</div>
   );
 }
 

@@ -59,7 +59,7 @@ export function TopNav() {
   const rol = (session?.usuario as { rol?: string } | undefined)?.rol;
   const esAdmin = rol === "admin";
   const esCompras = rol === "compras";
-  const colaCompras = { href: "/compras", label: "Cola de Compras", icon: ShoppingCart };
+  const colaCompras = { href: "/compras", label: "Panel Compras", icon: ShoppingCart };
   const secundario = [
     ...NAV_SECUNDARIO,
     ...(esAdmin || esCompras ? [colaCompras] : []),
