@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Clock, Inbox, Paperclip, Target } from "lucide-react";
+import { AlertTriangle, ArrowUpDown, Clock, Inbox, Paperclip, Target } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -52,6 +52,7 @@ function estaVencida(s: Solicitud): boolean {
 export default function ComprasPage() {
   const { data: solicitudes, isLoading } = useSolicitudes();
   const [filtro, setFiltro] = useState<Filtro>("pendientes");
+  const [orden, setOrden] = useState<"recientes" | "antiguas">("recientes");
   const [abierta, setAbierta] = useState<number | null>(null);
 
   const lista = useMemo(() => {
@@ -62,13 +63,13 @@ export default function ComprasPage() {
       if (filtro === "respondidas") return s.estado === "respondida";
       return estaVencida(s); // vencidas
     });
-    // Pendientes primero, y dentro más viejas arriba.
+    const factor = orden === "recientes" ? -1 : 1;
     return [...filtradas].sort((a, b) => {
       const va = a.fecha_envio ?? a.created_at ?? "";
       const vb = b.fecha_envio ?? b.created_at ?? "";
-      return va < vb ? -1 : va > vb ? 1 : 0;
+      return (va < vb ? -1 : va > vb ? 1 : 0) * factor;
     });
-  }, [solicitudes, filtro]);
+  }, [solicitudes, filtro, orden]);
 
   const stats = useMemo(() => {
     const arr = solicitudes ?? [];
@@ -100,27 +101,38 @@ export default function ComprasPage() {
         <Kpi label="Respondidas" valor={stats.respondidas} onClick={() => setFiltro("respondidas")} />
       </div>
 
-      <div className="mb-4 flex gap-1 rounded-lg bg-surface2 p-1">
-        {(
-          [
-            ["pendientes", "Pendientes"],
-            ["vencidas", "Vencidas"],
-            ["respondidas", "Respondidas"],
-            ["todas", "Todas"],
-          ] as const
-        ).map(([k, txt]) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => setFiltro(k)}
-            className={cn(
-              "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition sm:flex-none sm:px-4",
-              filtro === k ? "bg-surface text-ink shadow-sm" : "text-ink-2"
-            )}
-          >
-            {txt}
-          </button>
-        ))}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-1 rounded-lg bg-surface2 p-1">
+          {(
+            [
+              ["pendientes", "Pendientes"],
+              ["vencidas", "Vencidas"],
+              ["respondidas", "Respondidas"],
+              ["todas", "Todas"],
+            ] as const
+          ).map(([k, txt]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setFiltro(k)}
+              className={cn(
+                "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition sm:flex-none sm:px-4",
+                filtro === k ? "bg-surface text-ink shadow-sm" : "text-ink-2"
+              )}
+            >
+              {txt}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => setOrden((o) => (o === "recientes" ? "antiguas" : "recientes"))}
+          className="flex items-center gap-1.5 rounded-md border border-line px-3 py-1.5 text-sm font-medium text-ink-2 transition hover:bg-surface2"
+          title="Cambiar el orden"
+        >
+          <ArrowUpDown size={14} />
+          {orden === "recientes" ? "Más recientes" : "Más antiguas"}
+        </button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-line bg-surface">
