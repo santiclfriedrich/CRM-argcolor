@@ -72,23 +72,10 @@ export default function ComprasPage() {
 
   const stats = useMemo(() => {
     const arr = solicitudes ?? [];
-    const respondidas = arr.filter((s) => s.estado === "respondida");
-    const conTiempo = respondidas.filter((s) => s.fecha_envio && s.fecha_respuesta);
-    const prom = conTiempo.length
-      ? conTiempo.reduce(
-          (acc, s) =>
-            acc +
-            (new Date(s.fecha_respuesta as string).getTime() -
-              new Date(s.fecha_envio as string).getTime()) /
-              86_400_000,
-          0
-        ) / conTiempo.length
-      : null;
     return {
       pendientes: arr.filter((s) => s.estado === "enviada").length,
       vencidas: arr.filter(estaVencida).length,
-      respondidas: respondidas.length,
-      prom,
+      respondidas: arr.filter((s) => s.estado === "respondida").length,
     };
   }, [solicitudes]);
 
@@ -102,7 +89,7 @@ export default function ComprasPage() {
       </div>
 
       {/* Dashboard: KPIs */}
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-4 grid grid-cols-3 gap-3">
         <Kpi label="Pendientes" valor={stats.pendientes} onClick={() => setFiltro("pendientes")} />
         <Kpi
           label="Vencidas"
@@ -111,10 +98,6 @@ export default function ComprasPage() {
           onClick={() => setFiltro("vencidas")}
         />
         <Kpi label="Respondidas" valor={stats.respondidas} onClick={() => setFiltro("respondidas")} />
-        <Kpi
-          label="Resp. promedio"
-          valor={stats.prom === null ? "—" : `${stats.prom.toFixed(1)} d`}
-        />
       </div>
 
       <div className="mb-4 flex gap-1 rounded-lg bg-surface2 p-1">
