@@ -37,18 +37,6 @@ function GoogleIcon() {
   );
 }
 
-// Ícono neutro de 4 cuadrantes (placeholder para el proveedor "próximamente").
-function CuadrantesIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="2" y="2" width="9" height="9" rx="1" fill="currentColor" opacity="0.35" />
-      <rect x="13" y="2" width="9" height="9" rx="1" fill="currentColor" opacity="0.6" />
-      <rect x="2" y="13" width="9" height="9" rx="1" fill="currentColor" opacity="0.6" />
-      <rect x="13" y="13" width="9" height="9" rx="1" fill="currentColor" opacity="0.35" />
-    </svg>
-  );
-}
-
 export default function LoginPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -94,22 +82,6 @@ export default function LoginPage() {
               <GoogleIcon />
               Continuar con Google
             </button>
-
-            <div className="relative">
-              <span className="absolute -right-2 -top-2 z-10 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-white shadow">
-                Próximamente
-              </span>
-              <button
-                type="button"
-                disabled
-                aria-disabled="true"
-                title="Disponible próximamente"
-                className="flex w-full cursor-not-allowed items-center justify-center gap-3 rounded-xl border border-line bg-surface px-5 py-3 text-sm font-semibold text-ink-3 opacity-70"
-              >
-                <CuadrantesIcon />
-                Continuar con Microsoft
-              </button>
-            </div>
           </div>
         </div>
 
