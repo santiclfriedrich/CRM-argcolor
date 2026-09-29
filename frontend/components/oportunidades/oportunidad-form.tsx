@@ -207,6 +207,18 @@ type Snapshot = {
   fechaRespCompras: string;
   fechaCliente: string;
   fechaLimite: string;
+  fechaEntrega: string;
+  proceso: string;
+  expediente: string;
+  portal: string;
+  apertura: string;
+  hrPliego: string;
+  hrApertura: string;
+  moneda: string;
+  pliego: string;
+  empresa: string;
+  dias: string;
+  presupuestoUrl: string;
 };
 
 // Convierte el value ("" = sin seleccionar) a number | null.
@@ -274,20 +286,31 @@ export function OportunidadForm({
   const [fechaLimite, setFechaLimite] = useState(
     draft?.fechaLimite ?? initial?.fecha_limite ?? ""
   );
-  const [fechaEntrega, setFechaEntrega] = useState(initial?.fecha_entrega ?? "");
+  const [fechaEntrega, setFechaEntrega] = useState(
+    draft?.fechaEntrega ?? initial?.fecha_entrega ?? ""
+  );
   // Campos de la sección Gubernamental (licitaciones). Las horas vienen del
   // backend como "HH:MM:SS"; el input type="time" usa "HH:MM" (slice 0,5).
-  const [proceso, setProceso] = useState(initial?.proceso ?? "");
-  const [expediente, setExpediente] = useState(initial?.expediente ?? "");
-  const [portal, setPortal] = useState(initial?.portal ?? "");
-  const [apertura, setApertura] = useState(initial?.apertura ?? "");
-  const [hrPliego, setHrPliego] = useState((initial?.hr_pliego ?? "").slice(0, 5));
-  const [hrApertura, setHrApertura] = useState((initial?.hr_apertura ?? "").slice(0, 5));
-  const [moneda, setMoneda] = useState(initial?.moneda ?? "");
-  const [pliego, setPliego] = useState(initial?.pliego ?? "");
-  const [empresa, setEmpresa] = useState(initial?.empresa ?? "");
-  const [dias, setDias] = useState(initial?.dias != null ? String(initial.dias) : "");
-  const [presupuestoUrl, setPresupuestoUrl] = useState(initial?.presupuesto_url ?? "");
+  // Se restauran del borrador (si no, se perdían al reabrir el form tras un error).
+  const [proceso, setProceso] = useState(draft?.proceso ?? initial?.proceso ?? "");
+  const [expediente, setExpediente] = useState(draft?.expediente ?? initial?.expediente ?? "");
+  const [portal, setPortal] = useState(draft?.portal ?? initial?.portal ?? "");
+  const [apertura, setApertura] = useState(draft?.apertura ?? initial?.apertura ?? "");
+  const [hrPliego, setHrPliego] = useState(
+    draft?.hrPliego ?? (initial?.hr_pliego ?? "").slice(0, 5)
+  );
+  const [hrApertura, setHrApertura] = useState(
+    draft?.hrApertura ?? (initial?.hr_apertura ?? "").slice(0, 5)
+  );
+  const [moneda, setMoneda] = useState(draft?.moneda ?? initial?.moneda ?? "");
+  const [pliego, setPliego] = useState(draft?.pliego ?? initial?.pliego ?? "");
+  const [empresa, setEmpresa] = useState(draft?.empresa ?? initial?.empresa ?? "");
+  const [dias, setDias] = useState(
+    draft?.dias ?? (initial?.dias != null ? String(initial.dias) : "")
+  );
+  const [presupuestoUrl, setPresupuestoUrl] = useState(
+    draft?.presupuestoUrl ?? initial?.presupuesto_url ?? ""
+  );
   const [files, setFiles] = useState<File[]>([]);
   // Imágenes pegadas en el requerimiento (nuevas, aún sin subir).
   const [imagenesReq, setImagenesReq] = useState<File[]>([]);
@@ -320,6 +343,19 @@ export function OportunidadForm({
       fechaRespCompras,
       fechaCliente,
       fechaLimite,
+      fechaEntrega,
+      // Campos gubernamentales (si no, se perdían al reabrir el form tras un error).
+      proceso,
+      expediente,
+      portal,
+      apertura,
+      hrPliego,
+      hrApertura,
+      moneda,
+      pliego,
+      empresa,
+      dias,
+      presupuestoUrl,
     });
   }, [
     initial,
@@ -342,6 +378,18 @@ export function OportunidadForm({
     fechaRespCompras,
     fechaCliente,
     fechaLimite,
+    fechaEntrega,
+    proceso,
+    expediente,
+    portal,
+    apertura,
+    hrPliego,
+    hrApertura,
+    moneda,
+    pliego,
+    empresa,
+    dias,
+    presupuestoUrl,
   ]);
 
   const { data: clientes } = useClientes();
