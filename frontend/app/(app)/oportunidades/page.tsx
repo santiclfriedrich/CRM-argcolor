@@ -837,7 +837,7 @@ export default function OportunidadesPage() {
                 className={cn(
                   "rounded-full px-3 py-1 text-sm font-medium transition-colors",
                   Boolean(filtros.solo_mias) === opt.value
-                    ? "bg-navy text-white"
+                    ? "bg-accent text-white"
                     : "text-ink-2 hover:bg-surface",
                 )}
               >
@@ -866,7 +866,7 @@ export default function OportunidadesPage() {
                 className={cn(
                   "rounded-full px-3 py-1 text-sm font-medium transition-colors",
                   periodoModo === opt.value
-                    ? "bg-navy text-white"
+                    ? "bg-accent text-white"
                     : "text-ink-2 hover:bg-surface",
                 )}
               >
@@ -878,16 +878,16 @@ export default function OportunidadesPage() {
 
         {/* Detalle del período según el modo */}
         {periodoModo === "mes" && (
-          <div className="inline-flex items-center rounded-full border border-line bg-surface2 p-0.5">
+          <div className="inline-flex items-center rounded-full border border-accent/30 bg-accent-dim p-0.5">
             <button
               type="button"
               onClick={() => cambiarMes(-1)}
               aria-label="Mes anterior"
-              className="rounded-md p-1.5 text-ink-2 transition-colors hover:bg-surface hover:text-ink"
+              className="rounded-md p-1.5 text-accent/70 transition-colors hover:bg-accent/10 hover:text-accent"
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="min-w-[130px] px-1 text-center text-sm font-semibold capitalize text-ink">
+            <span className="min-w-[130px] px-1 text-center text-sm font-semibold capitalize text-accent">
               {labelMes}
             </span>
             <button
@@ -895,7 +895,7 @@ export default function OportunidadesPage() {
               onClick={() => cambiarMes(1)}
               disabled={esMesActual}
               aria-label="Mes siguiente"
-              className="rounded-md p-1.5 text-ink-2 transition-colors hover:bg-surface hover:text-ink disabled:pointer-events-none disabled:opacity-40"
+              className="rounded-md p-1.5 text-accent/70 transition-colors hover:bg-accent/10 hover:text-accent disabled:pointer-events-none disabled:opacity-40"
             >
               <ChevronRight size={16} />
             </button>
