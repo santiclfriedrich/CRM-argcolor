@@ -53,10 +53,10 @@ const config: Config = {
       // —tablas, cards, campos, separadores— se siente más firme sin tocar las
       // ~167 clases `border-line`/`divide-line` de la app.
       borderWidth: {
-        DEFAULT: "1.5px",
+        DEFAULT: "2px",
       },
       divideWidth: {
-        DEFAULT: "1.5px",
+        DEFAULT: "2px",
       },
       boxShadow: {
         // Sombras suaves para dar profundidad a cards y modales.
