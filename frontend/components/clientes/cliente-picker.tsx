@@ -141,7 +141,6 @@ export function ClientePicker({ clientes, value, onChange }: Props) {
           }}
           placeholder="N° cliente"
           className={cn(
-            "font-mono",
             notFound && "border-danger focus:border-danger focus:ring-danger/30",
           )}
           aria-label="Número de cliente"
