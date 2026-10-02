@@ -174,6 +174,8 @@ export default function BandejaPage() {
   const [busqueda, setBusqueda] = useState("");
   const [filtro, setFiltro] = useState<"todos" | "no_leidos" | "adjuntos">("todos");
   const [menuAbierto, setMenuAbierto] = useState<string | null>(null);
+  // Conversación cuyo mini-modal de etiquetas está abierto (acceso rápido en hover).
+  const [etqRow, setEtqRow] = useState<string | null>(null);
 
   const toast = useToast();
   const syncMut = useSyncGmail();
@@ -511,6 +513,30 @@ export default function BandejaPage() {
                               ))}
                             </div>
                           )}
+                          {/* Etiquetar rápido: ícono que aparece al pasar el mouse. */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEtqRow((k) => (k === conv.key ? null : conv.key));
+                              }}
+                              className={cn(
+                                "items-center rounded-md border border-line bg-surface p-1.5 text-ink-2 transition hover:bg-surface2",
+                                etqRow === conv.key ? "flex" : "hidden group-hover:flex"
+                              )}
+                              title="Etiquetar"
+                              aria-label="Etiquetar"
+                            >
+                              <Tag size={13} />
+                            </button>
+                            {etqRow === conv.key && (
+                              <EtiquetasMenu
+                                conversacionesSel={[conv]}
+                                onClose={() => setEtqRow(null)}
+                              />
+                            )}
+                          </div>
                           {/* Vincular a oportunidad: aparece solo al pasar el mouse. */}
                           <button
                             type="button"
