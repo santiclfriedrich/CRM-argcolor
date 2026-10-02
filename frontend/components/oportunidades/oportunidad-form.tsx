@@ -504,7 +504,6 @@ export function OportunidadForm({
           id="o-asunto"
           value={asunto}
           onChange={(e) => setAsunto(e.target.value)}
-          placeholder="Ej: Cotización 100kg pigmento rojo"
         />
       </div>
 
@@ -516,11 +515,7 @@ export function OportunidadForm({
           value={requerimiento}
           onChange={(e) => setRequerimiento(e.target.value)}
           onPaste={onPasteReq}
-          placeholder="Qué pidió el cliente: producto, cantidad, detalle, plazo…"
         />
-        <p className="mt-1 text-xs text-ink-3">
-          Pegá una imagen (Ctrl/Cmd+V) para sumarla al requerimiento; se envía a Compras junto con el texto.
-        </p>
         {(savedReq.length > 0 || imagenesReq.length > 0) && (
           <div className="mt-2 flex flex-wrap gap-2">
             {savedReq.map((a) => (
