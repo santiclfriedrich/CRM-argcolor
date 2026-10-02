@@ -602,6 +602,7 @@ function ReadingPane({
   const [etqOpen, setEtqOpen] = useState(false);
   const [tareaOpen, setTareaOpen] = useState(false);
   const [speechPendiente, setSpeechPendiente] = useState<string | null>(null);
+  const [spSidebar, setSpSidebar] = useState(false);
   const { data: firma } = useFirma();
   const eliminar = useEliminarMail();
   const marcarLeido = useMarcarLeido();
@@ -870,19 +871,48 @@ function ReadingPane({
               <p className="mb-3 mt-0.5 text-xs text-ink-3">
                 Insertá una plantilla en la respuesta.
               </p>
-              <div className="flex flex-col gap-1.5">
-                {speeches.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => usarSpeech(s.texto)}
-                    title={s.titulo}
-                    className="flex items-center gap-2 rounded-md border border-line bg-surface px-2.5 py-2 text-left text-sm text-ink transition hover:bg-surface2"
-                  >
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setSpSidebar((v) => !v)}
+                  className="flex w-full items-center justify-between gap-2 rounded-md border border-line bg-surface px-2.5 py-2 text-sm text-ink transition hover:bg-surface2"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
                     <MessageSquareText size={14} className="shrink-0 text-ink-3" />
-                    <span className="truncate">{s.titulo}</span>
-                  </button>
-                ))}
+                    <span className="truncate">Insertar speech…</span>
+                  </span>
+                  <ChevronDown
+                    size={14}
+                    className={cn("shrink-0 text-ink-3 transition", spSidebar && "rotate-180")}
+                  />
+                </button>
+                {spSidebar && (
+                  <>
+                    <button
+                      type="button"
+                      aria-hidden
+                      tabIndex={-1}
+                      className="fixed inset-0 z-40 cursor-default"
+                      onClick={() => setSpSidebar(false)}
+                    />
+                    <div className="absolute inset-x-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-lg border border-line bg-surface p-1 shadow-lg">
+                      {speeches.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => {
+                            usarSpeech(s.texto);
+                            setSpSidebar(false);
+                          }}
+                          title={s.titulo}
+                          className="block w-full truncate rounded-md px-2.5 py-2 text-left text-sm text-ink transition hover:bg-surface2"
+                        >
+                          {s.titulo}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}
