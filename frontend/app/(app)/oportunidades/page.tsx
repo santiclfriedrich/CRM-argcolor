@@ -20,9 +20,7 @@ import {
   Pencil,
   Plus,
   Search,
-  Target,
   Trash2,
-  TrendingUp,
   User,
   X,
 } from "lucide-react";
@@ -802,14 +800,12 @@ export default function OportunidadesPage() {
         </h1>
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-dim px-3 py-1 text-xs font-medium text-ink-2">
-            <Target size={13} className="shrink-0 text-accent" />
             <span className="font-mono font-semibold tabular-nums text-accent">
               {oportunidadesDelMes.length}
             </span>
             {oportunidadesDelMes.length === 1 ? "oportunidad" : "oportunidades"}
           </span>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-medium text-ink-2">
-            <TrendingUp size={13} className="shrink-0 text-success" />
             <span className="font-mono font-semibold tabular-nums text-success">
               {montoCompacto(valorTotal)}
             </span>
