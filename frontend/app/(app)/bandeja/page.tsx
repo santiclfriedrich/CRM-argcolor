@@ -867,10 +867,7 @@ function ReadingPane({
 
           {speeches && speeches.length > 0 && (
             <div className="mt-6 border-t border-line pt-4">
-              <p className="text-sm font-semibold text-ink">Speeches</p>
-              <p className="mb-3 mt-0.5 text-xs text-ink-3">
-                Insertá una plantilla en la respuesta.
-              </p>
+              <p className="mb-3 text-sm font-semibold text-ink">Speech</p>
               <div className="relative">
                 <button
                   type="button"
@@ -918,10 +915,7 @@ function ReadingPane({
           )}
 
           <div className="mt-6 border-t border-line pt-4">
-            <p className="text-sm font-semibold text-ink">Oportunidad</p>
-            <p className="mb-3 mt-0.5 text-xs text-ink-3">
-              Asociá este mail a una oportunidad existente o creá una nueva.
-            </p>
+            <p className="mb-3 text-sm font-semibold text-ink">Oportunidad</p>
             <div className="flex flex-col gap-2">
               <Button
                 variant="outline"
