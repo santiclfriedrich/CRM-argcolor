@@ -56,9 +56,11 @@ const RECIENTE_ICONO: Record<
   TipoRegistro,
   { icon: typeof Target; bg: string }
 > = {
-  Cuenta: { icon: Building2, bg: "bg-blue-500" },
-  Oportunidad: { icon: Target, bg: "bg-amber-500" },
-  Presupuesto: { icon: FileText, bg: "bg-violet-500" },
+  // Marcadores de tipo monocromos (el glifo distingue el tipo): chip neutro que
+  // se lee igual en claro y oscuro. Antes eran azul/ámbar/violeta.
+  Cuenta: { icon: Building2, bg: "bg-surface3" },
+  Oportunidad: { icon: Target, bg: "bg-surface3" },
+  Presupuesto: { icon: FileText, bg: "bg-surface3" },
 };
 
 function saludo(): string {
@@ -586,13 +588,13 @@ function PendientesCierre({
     {
       titulo: "Pagos pendientes",
       icon: <Wallet size={15} />,
-      tono: "text-green-700 dark:text-green-400",
+      tono: "text-success",
       items: pagos,
     },
     {
       titulo: "Entregas pendientes",
       icon: <Truck size={15} />,
-      tono: "text-green-700 dark:text-green-400",
+      tono: "text-success",
       items: entregas,
     },
   ];
@@ -660,7 +662,7 @@ function RegistrosRecientes() {
                 >
                   <span className="flex min-w-0 items-center gap-2.5">
                     <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white ${bg}`}
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-2 ${bg}`}
                     >
                       <Icon size={14} />
                     </span>

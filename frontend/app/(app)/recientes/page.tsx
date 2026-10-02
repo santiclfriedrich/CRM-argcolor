@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import { type TipoRegistro, useRegistrosRecientes } from "@/lib/recientes";
 
 const ICONO: Record<TipoRegistro, { icon: typeof Target; bg: string }> = {
-  Cuenta: { icon: Building2, bg: "bg-blue-500" },
-  Oportunidad: { icon: Target, bg: "bg-orange-500" },
-  Presupuesto: { icon: FileText, bg: "bg-violet-500" },
+  // Marcadores de tipo monocromos (el glifo distingue el tipo): chip neutro que
+  // se lee igual en claro y oscuro. Antes eran azul/naranja/violeta.
+  Cuenta: { icon: Building2, bg: "bg-surface3" },
+  Oportunidad: { icon: Target, bg: "bg-surface3" },
+  Presupuesto: { icon: FileText, bg: "bg-surface3" },
 };
 
 export default function RecientesPage() {
@@ -43,7 +45,7 @@ export default function RecientesPage() {
                 >
                   <td className="px-3 py-2">
                     <span className="flex items-center gap-3">
-                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white ${bg}`}>
+                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink-2 ${bg}`}>
                         <Icon size={16} />
                       </span>
                       <span className="font-medium text-accent">{r.nombre}</span>
