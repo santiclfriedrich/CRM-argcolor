@@ -536,12 +536,15 @@ function SeguimientoHoy({ buckets }: { buckets: BucketsSeguimiento }) {
                       key={o.id}
                       type="button"
                       onClick={() => router.push(`/oportunidades?op=${o.id}`)}
-                      className="flex w-full flex-col items-start gap-0.5 rounded-md px-2 py-1.5 text-left hover:bg-surface2"
+                      className="flex w-full min-w-0 flex-col items-start gap-0.5 rounded-md px-2 py-1.5 text-left hover:bg-surface"
                     >
-                      <span className="truncate text-sm font-medium text-ink">
+                      <span
+                        className="w-full truncate text-sm font-medium text-ink"
+                        title={o.cliente?.razon_social ?? o.asunto ?? `#${o.id}`}
+                      >
                         {o.cliente?.razon_social ?? o.asunto ?? `#${o.id}`}
                       </span>
-                      <span className="truncate text-xs text-muted">
+                      <span className="w-full truncate text-xs text-muted">
                         {c.key === "sin_avance"
                           ? `${diasSinMovimiento(o, new Date())} días sin avance`
                           : `Validez: ${o.fecha_limite ? o.fecha_limite.split("-").reverse().join("/") : "—"}`}
