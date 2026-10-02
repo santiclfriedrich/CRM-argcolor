@@ -140,7 +140,7 @@
       "bg": {
         "role": "neutral",
         "displayName": "Niebla",
-        "canonical": "#eef2f7",
+        "canonical": "#ffffff",
         "darkValue": "#09090f",
         "tonalRamp": [
           "#0f172a",
@@ -172,19 +172,19 @@
       "surface-2": {
         "role": "neutral",
         "displayName": "Papel Tenue",
-        "canonical": "#f8fafc",
+        "canonical": "#f4f6fa",
         "darkValue": "#171826"
       },
       "surface-3": {
         "role": "neutral",
         "displayName": "Papel Hundido",
-        "canonical": "#f1f5f9",
+        "canonical": "#eef1f6",
         "darkValue": "#1e2030"
       },
       "line": {
         "role": "neutral",
         "displayName": "Trazo",
-        "canonical": "#b4bece",
+        "canonical": "#64748b",
         "darkValue": "rgba(255, 255, 255, 0.17)"
       },
       "ink": {

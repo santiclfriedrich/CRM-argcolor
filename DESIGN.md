@@ -2,11 +2,11 @@
 name: CRM Comercial ARG COLOR
 description: Instrumento comercial interno — cromo violeta, dato calibrado, acción en verde.
 colors:
-  bg: "#eef2f7"
+  bg: "#ffffff"
   surface: "#ffffff"
-  surface-2: "#f8fafc"
-  surface-3: "#f1f5f9"
-  line: "#b4bece"
+  surface-2: "#f4f6fa"
+  surface-3: "#eef1f6"
+  line: "#64748b"
   ink: "#0f172a"
   ink-2: "#64748b"
   ink-3: "#94a3b8"
@@ -184,9 +184,9 @@ El semáforo comercial: **Verde Al Día** (`{colors.success}`), **Ámbar Esperan
 
 ### Neutral
 
-- **Niebla** (`{colors.bg}`): el fondo de la app. Nunca blanco puro — las superficies necesitan tener contra qué recortarse.
+- **Niebla** (`{colors.bg}`): el fondo de la app. **Blanco** — el recorte de las superficies lo arman el borde (`line`) y la sombra, no un fondo teñido. En oscuro pasa a casi-negro.
 - **Papel** (`{colors.surface}`), **Papel Tenue** (`{colors.surface-2}`), **Papel Hundido** (`{colors.surface-3}`): las tres capas de superficie. Cards y campos en Papel; encabezados de tabla y hovers en Papel Tenue; pistas de switch y estados presionados en Papel Hundido.
-- **Trazo** (`{colors.line}`): el borde de todo. Un gris azulado con peso real (no un `slate-200` fantasma), porque es el que arma la retícula. En oscuro pasa a `rgba(255,255,255,0.17)`.
+- **Trazo** (`{colors.line}`): el borde de todo. Un slate con **contraste real sobre blanco** (~3.4:1, no un `slate-200` fantasma), porque es el que arma la retícula: tablas, cards, campos y separadores se delimitan con nitidez. En oscuro pasa a `rgba(255,255,255,0.17)`.
 - **Tinta** (`{colors.ink}`), **Tinta Media** (`{colors.ink-2}`), **Tinta Tenue** (`{colors.ink-3}`): la escala de texto. Dato / etiqueta y prosa secundaria / placeholders y metadatos.
 - **Neutro Frío** (`{colors.muted}`): estados dormidos y metadatos. Fijo en ambos temas.
 

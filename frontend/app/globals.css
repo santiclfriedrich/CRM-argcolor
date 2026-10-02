@@ -3,16 +3,18 @@
 @tailwind utilities;
 
 :root {
-  --background: #eef2f7;
+  --background: #ffffff;
   --foreground: #0f172a;
   --tint: rgba(113, 24, 247, 0.06);
 
   /* Tokens semánticos (modo claro). Los usan los componentes migrados. */
-  --c-bg: #eef2f7;
+  --c-bg: #ffffff;
   --c-surface: #ffffff;
-  --c-surface-2: #f8fafc;
-  --c-surface-3: #f1f5f9;
-  --c-line: #b4bece;
+  --c-surface-2: #f4f6fa;
+  --c-surface-3: #eef1f6;
+  /* Borde con contraste real sobre blanco (~3.4:1): las tablas y los contenedores
+     se delimitan con nitidez, no con un gris lavado. */
+  --c-line: #64748b;
   /* Tinta con más presencia: el secundario/terciario no son grises lavados, para
      que el texto y los iconos no se vean apagados (predomina la tinta oscura). */
   --c-ink: #0f172a;
