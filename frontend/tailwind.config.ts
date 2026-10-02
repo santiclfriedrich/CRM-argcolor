@@ -2,10 +2,7 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   darkMode: "class",
-  content: [
-    "./app/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-  ],
+  content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
       fontFamily: {
@@ -53,10 +50,10 @@ const config: Config = {
       // —tablas, cards, campos, separadores— se siente más firme sin tocar las
       // ~167 clases `border-line`/`divide-line` de la app.
       borderWidth: {
-        DEFAULT: "2px",
+        DEFAULT: "1.7px",
       },
       divideWidth: {
-        DEFAULT: "2px",
+        DEFAULT: "1.7px",
       },
       boxShadow: {
         // Sombras suaves para dar profundidad a cards y modales.
