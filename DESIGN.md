@@ -2,7 +2,7 @@
 name: CRM Comercial ARG COLOR
 description: Instrumento comercial interno — cromo violeta, dato calibrado, acción en verde.
 colors:
-  bg: "#ffffff"
+  bg: "#f4f4f6"
   surface: "#ffffff"
   surface-2: "#f4f6fa"
   surface-3: "#eef1f6"
@@ -184,7 +184,7 @@ El semáforo comercial: **Verde Al Día** (`{colors.success}`), **Ámbar Esperan
 
 ### Neutral
 
-- **Niebla** (`{colors.bg}`): el fondo de la app. **Blanco** — el recorte de las superficies lo arman el borde (`line`) y la sombra, no un fondo teñido. En oscuro pasa a casi-negro.
+- **Niebla** (`{colors.bg}`): el fondo de la app. Un gris **muy sutil y neutro** (no teñido de azul/violeta) para que las cards blancas se recorten y la pantalla se vea profesional; el recorte lo refuerzan el borde (`line`) y la sombra. En oscuro pasa a casi-negro.
 - **Papel** (`{colors.surface}`), **Papel Tenue** (`{colors.surface-2}`), **Papel Hundido** (`{colors.surface-3}`): las tres capas de superficie. Cards y campos en Papel; encabezados de tabla y hovers en Papel Tenue; pistas de switch y estados presionados en Papel Hundido.
 - **Trazo** (`{colors.line}`): el borde de todo. Un slate con **contraste real sobre blanco** (~3.4:1, no un `slate-200` fantasma), porque es el que arma la retícula: tablas, cards, campos y separadores se delimitan con nitidez. Ancho por defecto **2px** (no 1px) vía `borderWidth.DEFAULT` en `tailwind.config.ts`, para una retícula más firme. En oscuro pasa a `rgba(255,255,255,0.17)`.
 - **Tinta** (`{colors.ink}`), **Tinta Media** (`{colors.ink-2}`), **Tinta Tenue** (`{colors.ink-3}`): la escala de texto. Dato / etiqueta y prosa secundaria / placeholders y metadatos.

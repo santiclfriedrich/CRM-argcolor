@@ -140,7 +140,7 @@
       "bg": {
         "role": "neutral",
         "displayName": "Niebla",
-        "canonical": "#ffffff",
+        "canonical": "#f4f4f6",
         "darkValue": "#09090f",
         "tonalRamp": [
           "#0f172a",

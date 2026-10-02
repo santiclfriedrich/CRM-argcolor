@@ -3,12 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
+  /* Lienzo gris muy sutil y NEUTRO (sin tinte azul/violeta): las cards son
+     blancas y se recortan contra él sin que el fondo se sienta de color. */
+  --background: #f4f4f6;
   --foreground: #0f172a;
   --tint: rgba(113, 24, 247, 0.06);
 
   /* Tokens semánticos (modo claro). Los usan los componentes migrados. */
-  --c-bg: #ffffff;
+  --c-bg: #f4f4f6;
   --c-surface: #ffffff;
   --c-surface-2: #f4f6fa;
   --c-surface-3: #eef1f6;
