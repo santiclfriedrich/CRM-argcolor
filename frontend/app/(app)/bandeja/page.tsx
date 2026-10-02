@@ -3,6 +3,7 @@
 import {
   Archive,
   Bold,
+  Check,
   ChevronDown,
   ChevronLeft,
   Clock,
@@ -18,6 +19,7 @@ import {
   Lock,
   Mail as MailIcon,
   Paperclip,
+  Pencil,
   Plus,
   RefreshCw,
   RemoveFormatting,
@@ -48,9 +50,14 @@ import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import {
   descargarGmailAdjunto,
+  useActualizarEtiqueta,
+  useAplicarEtiqueta,
   useCancelarProgramado,
   useConversacion,
+  useCrearEtiqueta,
+  useEliminarEtiqueta,
   useEliminarMail,
+  useEtiquetas,
   useFirma,
   useInbox,
   useMarcarLeido,
@@ -62,7 +69,7 @@ import {
   useVincularOportunidad,
 } from "@/lib/mails";
 import { useOportunidades } from "@/lib/oportunidades";
-import type { AdjuntoGmail, CarpetaInbox, InboxMail } from "@/lib/types";
+import type { AdjuntoGmail, CarpetaInbox, EtiquetaMail, InboxMail } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type FolderKey = CarpetaInbox | "programados";
@@ -74,6 +81,19 @@ const FOLDERS: { key: FolderKey; label: string; icon: typeof InboxIcon }[] = [
   { key: "archivo", label: "Archivo", icon: Archive },
 ];
 
+// Paleta de colores para las etiquetas (sólidos, legibles con texto blanco).
+const COLORES_ETIQUETA = [
+  "#dc2626",
+  "#ea580c",
+  "#d97706",
+  "#16a34a",
+  "#0d9488",
+  "#2563eb",
+  "#7c3aed",
+  "#db2777",
+  "#64748b",
+];
+
 // Conversación = mails agrupados por hilo de Gmail.
 type Conversacion = {
   key: string;
@@ -83,6 +103,7 @@ type Conversacion = {
   unreadIds: number[];
   remitentes: string;
   tieneAdjuntos: boolean;
+  etiquetas: EtiquetaMail[];
 };
 
 function nombreEmail(raw: string | null): string {
@@ -122,6 +143,9 @@ function agrupar(mails: InboxMail[]): Conversacion[] {
       const n = m.direccion === "saliente" ? "Tú" : nombreEmail(m.de);
       if (!nombres.includes(n)) nombres.push(n);
     }
+    // Etiquetas de la conversación = unión de las de todos sus mails.
+    const etqMap = new Map<number, EtiquetaMail>();
+    for (const m of grp) for (const e of m.etiquetas ?? []) if (!etqMap.has(e.id)) etqMap.set(e.id, e);
     convs.push({
       key,
       latest: orden[0],
@@ -130,6 +154,7 @@ function agrupar(mails: InboxMail[]): Conversacion[] {
       unreadIds: grp.filter((m) => !m.leido).map((m) => m.id),
       remitentes: nombres.slice(0, 3).reverse().join(", "),
       tieneAdjuntos: grp.some((m) => m.tiene_adjuntos),
+      etiquetas: [...etqMap.values()].sort((a, b) => a.nombre.localeCompare(b.nombre)),
     });
   }
   return convs.sort(
@@ -319,11 +344,23 @@ export default function BandejaPage() {
                   label="Estado de seguimiento"
                   onClick={() => toast.toast("Estado de seguimiento: próximamente", "info")}
                 />
-                <ToolbarButton
-                  icon={Tag}
-                  label="Etiquetas"
-                  onClick={() => toast.toast("Etiquetas: próximamente", "info")}
-                />
+                <div className="relative">
+                  <ToolbarButton
+                    icon={Tag}
+                    label="Etiquetas"
+                    onClick={() =>
+                      setMenuAbierto((m) => (m === "etiquetas" ? null : "etiquetas"))
+                    }
+                  />
+                  {menuAbierto === "etiquetas" && (
+                    <EtiquetasMenu
+                      conversacionesSel={conversaciones.filter((c) =>
+                        seleccion.has(c.key)
+                      )}
+                      onClose={() => setMenuAbierto(null)}
+                    />
+                  )}
+                </div>
 
                 <div className="relative">
                   <ToolbarButton
@@ -458,6 +495,20 @@ export default function BandejaPage() {
                           </span>
                         </button>
                         <div className="flex shrink-0 items-center gap-3">
+                          {conv.etiquetas.length > 0 && (
+                            <div className="hidden items-center gap-1 sm:flex">
+                              {conv.etiquetas.slice(0, 3).map((e) => (
+                                <span
+                                  key={e.id}
+                                  className="max-w-[120px] truncate rounded px-1.5 py-0.5 text-[11px] font-semibold text-white"
+                                  style={{ backgroundColor: e.color }}
+                                  title={e.nombre}
+                                >
+                                  {e.nombre}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           {/* Vincular a oportunidad: aparece solo al pasar el mouse. */}
                           <button
                             type="button"
@@ -1423,6 +1474,282 @@ function ToolbarButton({
       <span className="hidden lg:inline">{label}</span>
       <ChevronDown size={13} className="text-ink-3" />
     </button>
+  );
+}
+
+// Mini-modal de etiquetas (tipo Gmail/Pipedrive): buscar, aplicar a las
+// conversaciones seleccionadas, crear nuevas y editar/borrar las existentes.
+function EtiquetasMenu({
+  conversacionesSel,
+  onClose,
+}: {
+  conversacionesSel: Conversacion[];
+  onClose: () => void;
+}) {
+  const { data: etiquetas } = useEtiquetas();
+  const crear = useCrearEtiqueta();
+  const aplicar = useAplicarEtiqueta();
+  const eliminar = useEliminarEtiqueta();
+  const toast = useToast();
+
+  const [q, setQ] = useState("");
+  const [creando, setCreando] = useState(false);
+  const [nuevoNombre, setNuevoNombre] = useState("");
+  const [nuevoColor, setNuevoColor] = useState(COLORES_ETIQUETA[0]);
+  const [editId, setEditId] = useState<number | null>(null);
+
+  const mailIds = conversacionesSel.flatMap((c) => c.ids);
+  const haySeleccion = conversacionesSel.length > 0;
+
+  const lista = (etiquetas ?? []).filter((e) =>
+    e.nombre.toLowerCase().includes(q.trim().toLowerCase())
+  );
+
+  const estaAplicada = (id: number) =>
+    haySeleccion && conversacionesSel.every((c) => c.etiquetas.some((e) => e.id === id));
+
+  const toggle = (e: EtiquetaMail) => {
+    if (!haySeleccion) {
+      toast.toast("Seleccioná una o más conversaciones para etiquetar", "info");
+      return;
+    }
+    aplicar.mutate({
+      etiqueta_id: e.id,
+      mail_ids: mailIds,
+      aplicar: !estaAplicada(e.id),
+    });
+  };
+
+  const guardarNueva = () => {
+    const nombre = nuevoNombre.trim();
+    if (!nombre) return;
+    crear.mutate(
+      { nombre, color: nuevoColor },
+      {
+        onSuccess: (e) => {
+          setNuevoNombre("");
+          setCreando(false);
+          if (haySeleccion)
+            aplicar.mutate({ etiqueta_id: e.id, mail_ids: mailIds, aplicar: true });
+        },
+        onError: () =>
+          toast.toast("No se pudo crear la etiqueta (¿nombre repetido?)", "error"),
+      }
+    );
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-hidden
+        tabIndex={-1}
+        className="fixed inset-0 z-40 cursor-default"
+        onClick={onClose}
+      />
+      <div className="absolute right-0 top-full z-50 mt-1 w-72 rounded-lg border border-line bg-surface p-2 shadow-lg">
+        <div className="relative">
+          <Search
+            size={14}
+            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3"
+          />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar etiquetas"
+            autoFocus
+            className="w-full rounded-md border border-line bg-surface py-1.5 pl-8 pr-2 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+        </div>
+
+        {haySeleccion && (
+          <p className="mt-2 px-1 text-xs text-ink-3">
+            Aplicar a {conversacionesSel.length} conversación
+            {conversacionesSel.length === 1 ? "" : "es"}
+          </p>
+        )}
+
+        <div className="mt-1 max-h-60 overflow-y-auto">
+          {lista.length === 0 ? (
+            <p className="px-2 py-3 text-sm text-ink-3">
+              {q ? "Sin coincidencias." : "Todavía no hay etiquetas."}
+            </p>
+          ) : (
+            lista.map((e) =>
+              editId === e.id ? (
+                <EtiquetaEditor
+                  key={e.id}
+                  etiqueta={e}
+                  onDone={() => setEditId(null)}
+                />
+              ) : (
+                <div
+                  key={e.id}
+                  className="group flex items-center gap-2 rounded-md px-1 py-1 hover:bg-surface2"
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggle(e)}
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  >
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+                      {estaAplicada(e.id) ? (
+                        <Check size={15} className="text-accent" />
+                      ) : (
+                        <span
+                          className="h-3.5 w-3.5 rounded-sm"
+                          style={{ backgroundColor: e.color }}
+                        />
+                      )}
+                    </span>
+                    <span
+                      className="max-w-[150px] truncate rounded px-2 py-0.5 text-xs font-semibold text-white"
+                      style={{ backgroundColor: e.color }}
+                    >
+                      {e.nombre}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditId(e.id)}
+                    className="hidden rounded p-1 text-ink-3 transition hover:text-ink group-hover:block"
+                    aria-label="Editar etiqueta"
+                  >
+                    <Pencil size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`¿Eliminar la etiqueta "${e.nombre}"?`))
+                        eliminar.mutate(e.id);
+                    }}
+                    className="hidden rounded p-1 text-ink-3 transition hover:text-danger group-hover:block"
+                    aria-label="Eliminar etiqueta"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              )
+            )
+          )}
+        </div>
+
+        <div className="mt-1 border-t border-line pt-1">
+          {creando ? (
+            <div className="p-1">
+              <input
+                value={nuevoNombre}
+                onChange={(e) => setNuevoNombre(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") guardarNueva();
+                }}
+                placeholder="Nombre de la etiqueta"
+                autoFocus
+                className="w-full rounded-md border border-line bg-surface px-2 py-1.5 text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {COLORES_ETIQUETA.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setNuevoColor(c)}
+                    className={cn(
+                      "h-5 w-5 rounded-full transition",
+                      nuevoColor === c && "ring-2 ring-ink ring-offset-1 ring-offset-surface"
+                    )}
+                    style={{ backgroundColor: c }}
+                    aria-label={`Color ${c}`}
+                  />
+                ))}
+              </div>
+              <div className="mt-2 flex justify-end gap-1.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCreando(false);
+                    setNuevoNombre("");
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={guardarNueva}
+                  disabled={!nuevoNombre.trim() || crear.isPending}
+                >
+                  Crear
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCreando(true)}
+              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-accent transition hover:bg-surface2"
+            >
+              <Plus size={15} /> Añadir etiqueta
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Edición inline de una etiqueta (nombre + color), dentro del mini-modal.
+function EtiquetaEditor({
+  etiqueta,
+  onDone,
+}: {
+  etiqueta: EtiquetaMail;
+  onDone: () => void;
+}) {
+  const actualizar = useActualizarEtiqueta();
+  const [nombre, setNombre] = useState(etiqueta.nombre);
+  const [color, setColor] = useState(etiqueta.color);
+
+  const guardar = () =>
+    actualizar.mutate(
+      { id: etiqueta.id, nombre: nombre.trim() || etiqueta.nombre, color },
+      { onSuccess: onDone }
+    );
+
+  return (
+    <div className="rounded-md bg-surface2/60 p-2">
+      <input
+        value={nombre}
+        onChange={(e) => setNombre(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") guardar();
+        }}
+        autoFocus
+        className="w-full rounded-md border border-line bg-surface px-2 py-1.5 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-accent"
+      />
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {COLORES_ETIQUETA.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => setColor(c)}
+            className={cn(
+              "h-5 w-5 rounded-full transition",
+              color === c && "ring-2 ring-ink ring-offset-1 ring-offset-surface"
+            )}
+            style={{ backgroundColor: c }}
+            aria-label={`Color ${c}`}
+          />
+        ))}
+      </div>
+      <div className="mt-2 flex justify-end gap-1.5">
+        <Button variant="ghost" size="sm" onClick={onDone}>
+          Cancelar
+        </Button>
+        <Button size="sm" onClick={guardar} disabled={actualizar.isPending}>
+          Guardar
+        </Button>
+      </div>
+    </div>
   );
 }
 

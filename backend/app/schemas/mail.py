@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.db.models.mails import DireccionMail
 from app.integrations.ai.base import EmailData
@@ -108,6 +108,39 @@ class MailListItem(BaseModel):
     archivos: list[AdjuntoRead] = []
 
 
+class EtiquetaRead(BaseModel):
+    """Una etiqueta de la bandeja (label tipo Gmail): nombre + color."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nombre: str
+    color: str
+
+
+class EtiquetaCreate(BaseModel):
+    """Alta de una etiqueta nueva."""
+
+    nombre: str = Field(min_length=1, max_length=60)
+    color: str = Field(default="#64748b", max_length=20)
+
+
+class EtiquetaUpdate(BaseModel):
+    """Renombrar o recolorear una etiqueta."""
+
+    nombre: str | None = Field(default=None, min_length=1, max_length=60)
+    color: str | None = Field(default=None, max_length=20)
+
+
+class AplicarEtiquetaBody(BaseModel):
+    """Aplica o quita una etiqueta a un conjunto de mails (una conversación son
+    varios mails, por eso va una lista de ids)."""
+
+    etiqueta_id: int
+    mail_ids: list[int] = Field(min_length=1)
+    aplicar: bool = True
+
+
 class InboxMailListItem(BaseModel):
     """Fila del inbox del CRM (bandeja tipo Gmail): remitente/asunto/preview/estado.
 
@@ -128,6 +161,7 @@ class InboxMailListItem(BaseModel):
     tiene_cuerpo: bool = False
     tiene_adjuntos: bool = False
     preview: str | None = None
+    etiquetas: list[EtiquetaRead] = []
 
 
 class AdjuntoGmail(BaseModel):

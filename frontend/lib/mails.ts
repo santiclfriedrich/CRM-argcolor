@@ -7,6 +7,7 @@ import type {
   AdjuntoGmail,
   CarpetaInbox,
   ConversacionMensaje,
+  EtiquetaMail,
   IngestEmailRequest,
   IngestResult,
   InboxMail,
@@ -116,6 +117,70 @@ export function useVincularOportunidad(mailId: number) {
       qc.invalidateQueries({ queryKey: ["mails", "inbox"] });
       qc.invalidateQueries({ queryKey: oportunidadKeys.all });
     },
+  });
+}
+
+// --- Etiquetas de la bandeja (labels tipo Gmail) ---
+export function useEtiquetas() {
+  return useQuery({
+    queryKey: ["mails", "etiquetas"],
+    queryFn: async () => (await api.get<EtiquetaMail[]>(`${BASE}/etiquetas`)).data,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useCrearEtiqueta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { nombre: string; color: string }) =>
+      (await api.post<EtiquetaMail>(`${BASE}/etiquetas`, data)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mails", "etiquetas"] }),
+  });
+}
+
+export function useActualizarEtiqueta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...data
+    }: {
+      id: number;
+      nombre?: string;
+      color?: string;
+    }) => (await api.patch<EtiquetaMail>(`${BASE}/etiquetas/${id}`, data)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mails", "etiquetas"] });
+      qc.invalidateQueries({ queryKey: ["mails", "inbox"] });
+    },
+  });
+}
+
+export function useEliminarEtiqueta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`${BASE}/etiquetas/${id}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["mails", "etiquetas"] });
+      qc.invalidateQueries({ queryKey: ["mails", "inbox"] });
+    },
+  });
+}
+
+// Aplica o quita una etiqueta a varios mails (una conversación son varios mails).
+export function useAplicarEtiqueta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      etiqueta_id: number;
+      mail_ids: number[];
+      aplicar: boolean;
+    }) => {
+      await api.post(`${BASE}/etiquetas/aplicar`, data);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mails", "inbox"] }),
   });
 }
 

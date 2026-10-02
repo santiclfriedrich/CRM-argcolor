@@ -480,6 +480,13 @@ export interface ConversacionMensaje {
   abierto_en: string | null;
 }
 
+// Etiqueta de la bandeja (label tipo Gmail/Pipedrive): nombre + color, por usuario.
+export interface EtiquetaMail {
+  id: number;
+  nombre: string;
+  color: string;
+}
+
 // Fila del inbox del CRM (bandeja tipo Gmail). Sin cuerpo completo: solo preview.
 export interface InboxMail {
   id: number;
@@ -494,6 +501,7 @@ export interface InboxMail {
   tiene_cuerpo: boolean;
   tiene_adjuntos: boolean;
   preview: string | null;
+  etiquetas: EtiquetaMail[];
 }
 
 export type IngestEmailRequest = {

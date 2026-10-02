@@ -5,6 +5,7 @@ from app.db.models.clientes import Cliente
 from app.db.models.configuracion import Configuracion
 from app.db.models.contactos_cliente import ContactoCliente, RolCompra
 from app.db.models.dominios_cliente import DominioCliente
+from app.db.models.etiquetas_mail import EtiquetaMail, mail_etiquetas
 from app.db.models.grupos_compras import GrupoCompras
 from app.db.models.mails import DireccionMail, Mail
 from app.db.models.mails_descartados import MailDescartado
@@ -32,6 +33,8 @@ __all__ = [
     "ContactoCliente",
     "RolCompra",
     "DominioCliente",
+    "EtiquetaMail",
+    "mail_etiquetas",
     "GrupoCompras",
     "DireccionMail",
     "Mail",

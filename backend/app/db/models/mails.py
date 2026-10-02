@@ -82,3 +82,9 @@ class Mail(Base, TimestampMixin):
     oportunidad = relationship("Oportunidad", back_populates="mails")
     archivos = relationship("Adjunto", back_populates="mail")
     usuario = relationship("Usuario")
+    etiquetas = relationship(
+        "EtiquetaMail",
+        secondary="mail_etiquetas",
+        back_populates="mails",
+        order_by="EtiquetaMail.nombre",
+    )

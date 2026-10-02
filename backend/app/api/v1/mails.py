@@ -27,6 +27,7 @@ from app.api.deps import (
 from app.core.exceptions import NotFoundError
 from app.db.models.adjuntos import Adjunto
 from app.db.models.clientes import Cliente
+from app.db.models.etiquetas_mail import EtiquetaMail, mail_etiquetas
 from app.db.models.mails import DireccionMail, Mail
 from app.db.models.mails_descartados import MailDescartado
 from app.db.models.mails_programados import MailProgramado
@@ -41,8 +42,12 @@ from app.db.session import get_db
 from app.integrations.ai.base import AIProvider
 from app.schemas.mail import (
     AclaracionBody,
+    AplicarEtiquetaBody,
     ConversacionMensaje,
     DescartadoRead,
+    EtiquetaCreate,
+    EtiquetaRead,
+    EtiquetaUpdate,
     InboxMailListItem,
     IngestEmailRequest,
     IngestResult,
@@ -258,7 +263,128 @@ def list_inbox(
     )
     if carpeta in _CARPETAS_INBOX:
         query = query.where(Mail.carpeta == carpeta)
-    return [InboxMailListItem.model_validate(dict(r._mapping)) for r in db.execute(query)]
+    items = [
+        InboxMailListItem.model_validate(dict(r._mapping)) for r in db.execute(query)
+    ]
+    # Etiquetas de cada fila en una sola query (evita N+1): mail_id -> [etiquetas].
+    if items:
+        ids = [it.id for it in items]
+        filas = db.execute(
+            select(mail_etiquetas.c.mail_id, EtiquetaMail)
+            .join(EtiquetaMail, EtiquetaMail.id == mail_etiquetas.c.etiqueta_id)
+            .where(mail_etiquetas.c.mail_id.in_(ids))
+            .order_by(EtiquetaMail.nombre)
+        )
+        por_mail: dict[int, list[EtiquetaRead]] = {}
+        for mail_id, etq in filas:
+            por_mail.setdefault(mail_id, []).append(EtiquetaRead.model_validate(etq))
+        for it in items:
+            it.etiquetas = por_mail.get(it.id, [])
+    return items
+
+
+@router.get("/etiquetas", response_model=list[EtiquetaRead])
+def listar_etiquetas(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> list[EtiquetaMail]:
+    """Etiquetas de la bandeja del usuario logueado (cada uno arma las suyas)."""
+    return list(
+        db.scalars(
+            select(EtiquetaMail)
+            .where(EtiquetaMail.usuario_id == current_user.id)
+            .order_by(EtiquetaMail.nombre)
+        )
+    )
+
+
+@router.post("/etiquetas", response_model=EtiquetaRead, status_code=201)
+def crear_etiqueta(
+    body: EtiquetaCreate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> EtiquetaMail:
+    """Crea una etiqueta nueva para el usuario. El nombre es único por usuario."""
+    nombre = body.nombre.strip()
+    existe = db.scalar(
+        select(EtiquetaMail.id).where(
+            EtiquetaMail.usuario_id == current_user.id,
+            func.lower(EtiquetaMail.nombre) == nombre.lower(),
+        )
+    )
+    if existe:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Ya existe una etiqueta con ese nombre"
+        )
+    etq = EtiquetaMail(usuario_id=current_user.id, nombre=nombre, color=body.color)
+    db.add(etq)
+    db.commit()
+    db.refresh(etq)
+    return etq
+
+
+def _get_etiqueta(db: Session, etiqueta_id: int, current_user: Usuario) -> EtiquetaMail:
+    etq = db.get(EtiquetaMail, etiqueta_id)
+    if etq is None or etq.usuario_id != current_user.id:
+        raise NotFoundError("Etiqueta no encontrada")
+    return etq
+
+
+@router.patch("/etiquetas/{etiqueta_id}", response_model=EtiquetaRead)
+def actualizar_etiqueta(
+    etiqueta_id: int,
+    body: EtiquetaUpdate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> EtiquetaMail:
+    """Renombra o recolorea una etiqueta del usuario."""
+    etq = _get_etiqueta(db, etiqueta_id, current_user)
+    if body.nombre is not None:
+        etq.nombre = body.nombre.strip()
+    if body.color is not None:
+        etq.color = body.color
+    db.commit()
+    db.refresh(etq)
+    return etq
+
+
+@router.delete("/etiquetas/{etiqueta_id}", status_code=204)
+def eliminar_etiqueta(
+    etiqueta_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> Response:
+    """Borra una etiqueta (y la desvincula de todos los mails, por el cascade)."""
+    etq = _get_etiqueta(db, etiqueta_id, current_user)
+    db.delete(etq)
+    db.commit()
+    return Response(status_code=204)
+
+
+@router.post("/etiquetas/aplicar", status_code=204)
+def aplicar_etiqueta(
+    body: AplicarEtiquetaBody,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> Response:
+    """Aplica o quita una etiqueta a un conjunto de mails del usuario (una
+    conversación son varios mails)."""
+    etq = _get_etiqueta(db, body.etiqueta_id, current_user)
+    mails = list(
+        db.scalars(
+            select(Mail)
+            .options(selectinload(Mail.etiquetas))
+            .where(Mail.id.in_(body.mail_ids), Mail.usuario_id == current_user.id)
+        )
+    )
+    for mail in mails:
+        tiene = any(e.id == etq.id for e in mail.etiquetas)
+        if body.aplicar and not tiene:
+            mail.etiquetas.append(etq)
+        elif not body.aplicar and tiene:
+            mail.etiquetas = [e for e in mail.etiquetas if e.id != etq.id]
+    db.commit()
+    return Response(status_code=204)
 
 
 @router.post("/redactar", response_model=MailRead, status_code=201)
