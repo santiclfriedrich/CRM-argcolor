@@ -3,82 +3,79 @@
 @tailwind utilities;
 
 :root {
-  /* Lienzo gris muy sutil y NEUTRO (sin tinte azul/violeta): las cards son
-     blancas y se recortan contra él sin que el fondo se sienta de color. */
-  --background: #f4f4f6;
-  --foreground: #0f172a;
-  --tint: rgba(113, 24, 247, 0.06);
+  /* === Minimalismo ejecutivo (premium): antracita + azul acero, alto contraste ===
+     Tema CLARO: lienzo gris neutro muy sutil, cards blancas, tinta casi-negra. */
+  --background: #f3f4f5;
+  --foreground: #0e1316;
+  --tint: rgba(43, 92, 130, 0.05);
 
   /* Tokens semánticos (modo claro). Los usan los componentes migrados. */
-  --c-bg: #f4f4f6;
+  --c-bg: #f3f4f5;
   --c-surface: #ffffff;
-  --c-surface-2: #f4f6fa;
-  --c-surface-3: #eef1f6;
-  /* Borde con contraste real sobre blanco (~3.4:1): las tablas y los contenedores
-     se delimitan con nitidez, no con un gris lavado. */
-  --c-line: #64748b;
-  /* Tinta con más presencia: el secundario/terciario no son grises lavados, para
-     que el texto y los iconos no se vean apagados (predomina la tinta oscura). */
-  --c-ink: #0f172a;
-  --c-ink-2: #1e293b;
-  --c-ink-3: #475569;
-  /* Acento violeta de marca, oscurecido (#5813c1). RGB triplet para modificadores de opacidad. */
-  --c-accent: 88 19 193;
-  --c-accent-dim: rgba(88, 19, 193, 0.1);
-  --c-accent-hover: 70 15 155;
+  --c-surface-2: #f1f2f3;
+  --c-surface-3: #e7e9eb;
+  /* Borde con contraste real sobre blanco, NEUTRO (antracita-gris, sin tinte azul):
+     arma la retícula de tablas/cards/campos con nitidez. */
+  --c-line: #6b747b;
+  /* Tinta antracita casi-negra (máximo contraste) + grises neutros para 2/3. */
+  --c-ink: #0e1316;
+  --c-ink-2: #384249;
+  --c-ink-3: #697178;
+  /* Acento premium = AZUL ACERO (#2b5c82). Links, foco, estados activos, CTA.
+     RGB triplet para modificadores de opacidad. */
+  --c-accent: 43 92 130;
+  --c-accent-dim: rgba(43, 92, 130, 0.1);
+  --c-accent-hover: 35 74 105;
 
-  /* Violeta oscuro de marca (violet-950): chrome estructural (navbar, To-Do bar,
-     tooltips, fondo del login) y estados seleccionados. Valor fijo en ambos modos.
-     Mantiene el nombre "navy" por compatibilidad; los botones de acción usan el
-     violeta brillante (brand). */
-  --c-navy: #250c50;
-  --c-navy-hover: #4c1d95;
-
-  /* Chrome del nav / To-Do bar. En claro = violeta de marca; en oscuro se
-     reemplaza por una superficie muy oscura (ver .dark) para un dark real. */
-  --c-nav: #250c50;
+  /* Cromo estructural = ANTRACITA #1E272C (navbar, To-Do bar, tooltips, fondo del
+     login, estados seleccionados). Reemplaza al violeta de marca. Mantiene el
+     nombre "navy" por compatibilidad. */
+  --c-navy: #1e272c;
+  --c-navy-hover: #2b363d;
+  --c-nav: #1e272c;
 
   /* Neutro frío: estados dormidos/neutros y metadatos (no es un acento). */
-  --c-muted: #6d7495;
+  --c-muted: #697178;
 
-  /* Colores semánticos de estado (semáforo comercial). RGB triplet para poder
-     usar modificadores de opacidad (bg-success/12). Afinados para contraste
-     de TEXTO sobre superficie clara — los rellenos de gráficos usan la paleta
-     vívida de STATUS_CHART en lib/status.ts. */
+  /* Colores semánticos de estado (semáforo comercial). Se MANTIENEN por función
+     (vencidas/ganadas/esperando/etc.); son los únicos colores "vivos" del sistema.
+     RGB triplet para modificadores de opacidad; afinados para contraste de TEXTO
+     sobre superficie clara. Rellenos de gráficos: STATUS_CHART en lib/status.ts. */
   --c-success: 21 128 87;   /* verde   */
   --c-warning: 176 111 8;   /* ámbar   */
   --c-danger: 199 62 42;    /* rojo    */
   --c-info: 42 108 190;     /* azul    */
   --c-neutral: 90 96 122;   /* gris    */
 
-  /* Verde de acción de los botones primarios (CTA). Triplet RGB para opacidad. */
-  --c-brand: 78 141 99;      /* #4e8d63 */
-  --c-brand-hover: #3f7452;
+  /* Botón primario (CTA) = azul acero (acento), no verde: look ejecutivo coherente. */
+  --c-brand: 43 92 130;      /* #2b5c82 */
+  --c-brand-hover: #234a69;
 }
 
 .dark {
-  /* Paleta oscura "neo": negros neutros en capas + acento índigo. */
-  --background: #09090f;
-  --foreground: #eef0ff;
-  --tint: rgba(163, 124, 255, 0.12);
+  /* Tema OSCURO: antracita nativo. Fondo carbón, cards antracita #1E272C,
+     texto casi-blanco de alto contraste, acento azul acero luminoso. */
+  --background: #15191c;
+  --foreground: #eef1f3;
+  --tint: rgba(110, 162, 207, 0.1);
 
-  --c-bg: #09090f;
-  --c-surface: #101120;
-  --c-surface-2: #171826;
-  --c-surface-3: #1e2030;
-  --c-line: rgba(255, 255, 255, 0.17);
-  --c-ink: #f4f5ff;
-  --c-ink-2: #dcdef0;
-  --c-ink-3: #adb0c8;
-  /* Violeta más luminoso para leer sobre el fondo casi negro. */
-  --c-accent: 163 124 255;
-  --c-accent-dim: rgba(163, 124, 255, 0.15);
-  --c-accent-hover: 185 156 255;
+  --c-bg: #15191c;
+  --c-surface: #1e272c;
+  --c-surface-2: #232e34;
+  --c-surface-3: #2b373e;
+  --c-line: rgba(255, 255, 255, 0.16);
+  --c-ink: #eef1f3;
+  --c-ink-2: #c3c9cd;
+  --c-ink-3: #8a9299;
+  /* Azul acero más luminoso para leer sobre el antracita. */
+  --c-accent: 110 162 207;   /* #6ea2cf */
+  --c-accent-dim: rgba(110, 162, 207, 0.15);
+  --c-accent-hover: 138 183 219;
 
-  --c-navy: #250c50;
-  --c-navy-hover: #4c1d95;
+  --c-navy: #1e272c;
+  --c-navy-hover: #2b363d;
 
-  --c-muted: #6d7495;
+  --c-muted: #8a9299;
 
   /* Versiones más luminosas para leer sobre superficies oscuras. */
   --c-success: 74 200 140;
@@ -87,13 +84,12 @@
   --c-info: 96 160 230;
   --c-neutral: 140 146 170;
 
-  /* Verde un poco más luminoso para que resalte sobre el fondo casi negro. */
-  --c-brand: 90 163 118;     /* #5aa376 */
-  --c-brand-hover: #4e8d63;
+  /* Azul acero para el CTA en oscuro (un poco más claro para contraste con blanco). */
+  --c-brand: 61 109 150;     /* #3d6d96 */
+  --c-brand-hover: #4a80ad;
 
-  /* Chrome del nav / To-Do bar en oscuro: superficie muy oscura con un dejo
-     violeta (en claro el nav usa el violeta de marca, ver bg-nav). */
-  --c-nav: #14111e;
+  /* Chrome del nav / To-Do bar en oscuro: un punto más oscuro que las cards. */
+  --c-nav: #12171a;
 }
 
 /* Placeholder del editor de texto rico (contenteditable vacío). */

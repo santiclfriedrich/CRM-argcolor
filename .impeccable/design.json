@@ -6,9 +6,9 @@
     "colorMeta": {
       "accent": {
         "role": "primary",
-        "displayName": "Violeta Instrumento",
-        "canonical": "#5813c1",
-        "darkValue": "#a37cff",
+        "displayName": "Azul Acero",
+        "canonical": "#2b5c82",
+        "darkValue": "#6ea2cf",
         "tonalRamp": [
           "oklch(15% 0.09 292)",
           "oklch(25% 0.16 292)",
@@ -22,9 +22,9 @@
       },
       "chrome": {
         "role": "primary",
-        "displayName": "Violeta Carcasa",
-        "canonical": "#250c50",
-        "darkValue": "#250c50",
+        "displayName": "Antracita",
+        "canonical": "#1e272c",
+        "darkValue": "#1e272c",
         "tonalRamp": [
           "oklch(15% 0.08 292)",
           "oklch(21% 0.11 292)",
@@ -38,9 +38,9 @@
       },
       "brand": {
         "role": "secondary",
-        "displayName": "Verde Acción",
-        "canonical": "#4e8d63",
-        "darkValue": "#5aa376",
+        "displayName": "Azul Acero (CTA)",
+        "canonical": "#2b5c82",
+        "darkValue": "#3d6d96",
         "tonalRamp": [
           "oklch(15% 0.04 152)",
           "oklch(25% 0.06 152)",
@@ -140,8 +140,8 @@
       "bg": {
         "role": "neutral",
         "displayName": "Niebla",
-        "canonical": "#f4f4f6",
-        "darkValue": "#09090f",
+        "canonical": "#f3f4f5",
+        "darkValue": "#15191c",
         "tonalRamp": [
           "#0f172a",
           "#1e293b",
@@ -157,7 +157,7 @@
         "role": "neutral",
         "displayName": "Papel",
         "canonical": "#ffffff",
-        "darkValue": "#101120",
+        "darkValue": "#1e272c",
         "tonalRamp": [
           "#0f172a",
           "#1e293b",
@@ -172,38 +172,38 @@
       "surface-2": {
         "role": "neutral",
         "displayName": "Papel Tenue",
-        "canonical": "#f4f6fa",
-        "darkValue": "#171826"
+        "canonical": "#f1f2f3",
+        "darkValue": "#232e34"
       },
       "surface-3": {
         "role": "neutral",
         "displayName": "Papel Hundido",
-        "canonical": "#eef1f6",
-        "darkValue": "#1e2030"
+        "canonical": "#e7e9eb",
+        "darkValue": "#2b373e"
       },
       "line": {
         "role": "neutral",
         "displayName": "Trazo",
-        "canonical": "#64748b",
-        "darkValue": "rgba(255, 255, 255, 0.17)"
+        "canonical": "#6b747b",
+        "darkValue": "rgba(255, 255, 255, 0.16)"
       },
       "ink": {
         "role": "neutral",
         "displayName": "Tinta",
-        "canonical": "#0f172a",
-        "darkValue": "#f4f5ff"
+        "canonical": "#0e1316",
+        "darkValue": "#eef1f3"
       },
       "ink-2": {
         "role": "neutral",
         "displayName": "Tinta Media",
-        "canonical": "#64748b",
-        "darkValue": "#a6aac2"
+        "canonical": "#384249",
+        "darkValue": "#c3c9cd"
       },
       "ink-3": {
         "role": "neutral",
         "displayName": "Tinta Tenue",
-        "canonical": "#94a3b8",
-        "darkValue": "#71748c"
+        "canonical": "#697178",
+        "darkValue": "#8a9299"
       },
       "muted": {
         "role": "neutral",

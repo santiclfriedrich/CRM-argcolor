@@ -1,23 +1,23 @@
 ---
 name: CRM Comercial ARG COLOR
-description: Instrumento comercial interno — cromo violeta, dato calibrado, acción en verde.
+description: Instrumento comercial interno — minimalismo ejecutivo, cromo antracita, acento azul acero, dato calibrado.
 colors:
-  bg: "#f4f4f6"
+  bg: "#f3f4f5"
   surface: "#ffffff"
-  surface-2: "#f4f6fa"
-  surface-3: "#eef1f6"
-  line: "#64748b"
-  ink: "#0f172a"
-  ink-2: "#64748b"
-  ink-3: "#94a3b8"
-  accent: "#5813c1"
-  accent-hover: "#460f9b"
-  accent-dim: "rgba(88, 19, 193, 0.1)"
-  chrome: "#250c50"
-  chrome-hover: "#4c1d95"
-  brand: "#4e8d63"
-  brand-hover: "#3f7452"
-  muted: "#6d7495"
+  surface-2: "#f1f2f3"
+  surface-3: "#e7e9eb"
+  line: "#6b747b"
+  ink: "#0e1316"
+  ink-2: "#384249"
+  ink-3: "#697178"
+  accent: "#2b5c82"
+  accent-hover: "#234a69"
+  accent-dim: "rgba(43, 92, 130, 0.1)"
+  chrome: "#1e272c"
+  chrome-hover: "#2b363d"
+  brand: "#2b5c82"
+  brand-hover: "#234a69"
+  muted: "#697178"
   success: "#158057"
   warning: "#b06f08"
   danger: "#c73e2a"
@@ -152,31 +152,31 @@ components:
 
 **Creative North Star: "El instrumento comercial"**
 
-Un instrumento de medición industrial, no un producto de software. La carcasa es violeta profundo y no cambia nunca; adentro, la lectura está calibrada: rótulos en mono con versalitas, cifras alineadas por dígito, campos que dicen exactamente lo que contienen. La metáfora ya vivía en el código antes de escribirse — el comentario del `Kicker` en `card.tsx` la nombra literalmente — y este documento la formaliza.
+Un instrumento de medición industrial, no un producto de software. La carcasa es antracita profundo y no cambia nunca; adentro, la lectura está calibrada: rótulos en mono con versalitas, cifras alineadas por dígito, campos que dicen exactamente lo que contienen. La metáfora ya vivía en el código antes de escribirse — el comentario del `Kicker` en `card.tsx` la nombra literalmente — y este documento la formaliza.
 
-El sistema es sólido y confiable con algo de calidez. Sólido porque hay gente trabajando ocho horas por día acá y la herramienta tiene que sentirse seria: bordes definidos, jerarquía explícita, superficies con peso. Cálido porque no quiere ser el ERP que vino a reemplazar: radios de 16px en las cards, sombras suaves teñidas de azul, chips redondeados en vez de celdas cuadradas. La tensión entre esas dos cosas es el sistema.
+El sistema es sólido y confiable con algo de calidez. Sólido porque hay gente trabajando ocho horas por día acá y la herramienta tiene que sentirse seria: bordes definidos, jerarquía explícita, superficies con peso. Cálido porque no quiere ser el ERP que vino a reemplazar: radios de 16px en las cards, sombras suaves teñidas de antracita, chips redondeados en vez de celdas cuadradas. La tensión entre esas dos cosas es el sistema.
 
-Dos anti-referencias confirmadas. **No es un ERP viejo**: nada de grillas grises apretadas, bordes duros en todas las direcciones ni iconografía de los 2000 — es precisamente lo que GBP hace y lo que el CRM existe para reemplazar. **No es una app de consumo**: sin ilustraciones, sin gradientes decorativos, sin emojis, sin tono publicitario. Nadie tiene que ser convencido de usar esto; ya es su trabajo. El único gesto atmosférico permitido es el que ya existe: un radial-gradient de tinte de marca en la esquina superior derecha del `body`, casi imperceptible, para que el fondo no se sienta muerto.
+Dos anti-referencias confirmadas. **No es un ERP viejo**: nada de grillas grises apretadas, bordes duros en todas las direcciones ni iconografía de los 2000 — es precisamente lo que GBP hace y lo que el CRM existe para reemplazar. **No es una app de consumo**: sin ilustraciones, sin gradientes decorativos, sin emojis, sin tono publicitario. Nadie tiene que ser convencido de usar esto; ya es su trabajo. El fondo es plano y neutro, sin gradientes: el recorte de las superficies lo arman el borde y la sombra, no el color del lienzo.
 
 **Key Characteristics:**
 - Dos temas de primera clase (claro y oscuro), resueltos por tokens semánticos, no por overrides
-- El violeta identifica, el verde acciona — nunca al revés
+- Minimalismo ejecutivo: antracita + un único acento (azul acero); color vivo solo en el semáforo de estado
 - El borde estructura; la sombra apenas separa
 - Rótulos en mono con versalitas como firma tipográfica
 - Densidad de tabla real: miles de filas, virtualizadas, con columnas ajustables
 
 ## Colors
 
-Una paleta fría de grises azulados sobre la que se apoyan exactamente dos colores fuertes con trabajos distintos, más un semáforo de estado de cinco tonos. Todo se define como custom properties en `app/globals.css` y se expone a Tailwind por nombre semántico; el modo oscuro redefine los mismos tokens en `.dark`, así que ningún componente conoce el tema.
+Una paleta neutra de grises antracita sobre la que se apoya **un único acento** (azul acero, que a la vez identifica y acciona), más un semáforo de estado de cinco tonos para la función. Todo se define como custom properties en `app/globals.css` y se expone a Tailwind por nombre semántico; el modo oscuro redefine los mismos tokens en `.dark`, así que ningún componente conoce el tema.
 
 ### Primary
 
-- **Violeta Instrumento** (`{colors.accent}`): el acento de identidad. Links, valores clicables en tablas, foco de campos, switches activos, el CTA de pie de card. En oscuro sube a `#a37cff` para leer sobre el fondo casi negro. Su versión al 10% (`accent-dim`) es el único relleno tintado que usa el acento.
-- **Violeta Carcasa** (`{colors.chrome}`): violet-950, el cromo estructural. Navbar, To-Do bar, tooltips, fondo del login, checkboxes. **Valor fijo en ambos temas** — es la única constante cromática del sistema. El token se llama `--c-navy` por historia; ya no es navy y el nombre miente.
+- **Azul Acero** (`{colors.accent}`): el único acento del sistema. Links, valores clicables en tablas, foco de campos, switches activos, estados activos, el CTA de pie de card **y los botones primarios** (`brand` = el mismo azul acero). En oscuro sube a `#6ea2cf` para leer sobre el antracita. Su versión al 10% (`accent-dim`) es el único relleno tintado.
+- **Antracita** (`{colors.chrome}`): `#1E272C`, el cromo estructural. Navbar, To-Do bar, tooltips, fondo del login, checkboxes, estados seleccionados. **Valor fijo en ambos temas** — la constante del sistema. El token se llama `--c-navy` por historia; ya no es navy ni violeta, el nombre miente.
 
 ### Secondary
 
-- **Verde Acción** (`{colors.brand}`): exclusivamente botones primarios. Guardar, confirmar, enviar. En oscuro sube a `#5aa376`. No es un color de identidad ni de estado: es la respuesta a "¿qué hago acá?".
+- **CTA = Azul Acero** (`{colors.brand}`): los botones primarios usan el mismo azul acero que el acento (ya no verde), para un look ejecutivo y coherente. Guardar, confirmar, enviar. En oscuro sube a `#3d6d96`. El verde sobrevive solo como estado `success` del semáforo.
 
 ### Tertiary
 
@@ -192,7 +192,7 @@ El semáforo comercial: **Verde Al Día** (`{colors.success}`), **Ámbar Esperan
 
 ### Named Rules
 
-**La Regla de los Dos Trabajos.** El violeta dice *dónde estás*; el verde dice *qué hacés*. Un botón que guarda es verde aunque esté dentro de un panel violeta. Un link es violeta aunque sea la acción más importante de la pantalla. Nunca se intercambian y nunca aparecen juntos en el mismo control.
+**La Regla del Acento Único.** El azul acero es el único color de marca: identifica (links, valores clicables, foco) y acciona (botones primarios). El antracita es la carcasa (navbar, tooltips, selección), nunca un acento. El color "vivo" queda reservado al semáforo de estado. La contención es el estilo: en una pantalla, el acento aparece poco y siempre con intención.
 
 **La Regla del Semáforo Cerrado.** Los cinco colores de estado se usan **solo** para estado. Un ámbar nunca decora un encabezado, un rojo nunca marca un botón de borrar (para eso está `button-danger` en rojo-600, que es otro color a propósito). Si un color de estado aparece fuera de un badge, un punto o un relleno de gráfico, está mal.
 
@@ -252,13 +252,13 @@ Hay una excepción y es correcta: los modales suman `ring-1 ring-line` sobre un 
 
 ### Shadow Vocabulary
 
-- **soft** (`box-shadow: 0 1px 2px rgba(3,35,77,0.04), 0 10px 24px -14px rgba(3,35,77,0.22)`): la sombra por defecto de cards y modales. Teñida de azul profundo, no de negro — una sombra negra sobre un fondo azulado se ve sucia.
-- **pop** (`box-shadow: 0 1px 2px rgba(113,24,247,0.15), 0 8px 20px -8px rgba(113,24,247,0.35)`): teñida de violeta, para elementos que deben sentirse energizados. Uso deliberadamente escaso.
+- **soft** (`box-shadow: 0 1px 2px rgba(14,19,22,0.05), 0 10px 24px -14px rgba(14,19,22,0.25)`): la sombra por defecto de cards y modales. Teñida de antracita, no de negro puro — ambiental, no jerárquica.
+- **pop** (`box-shadow: 0 1px 2px rgba(43,92,130,0.14), 0 8px 20px -8px rgba(43,92,130,0.30)`): teñida de azul acero, para elementos que deben sentirse energizados. Uso deliberadamente escaso.
 - **To-Do bar** (`box-shadow: 0 -4px 12px rgba(0,0,0,0.08)`): sombra hacia arriba, la única del sistema con dirección invertida, porque el panel crece desde el borde inferior.
 
 ### Named Rules
 
-**La Regla de la Sombra Teñida.** Ninguna sombra usa negro puro. Toda sombra toma el tono de la superficie sobre la que cae — azul para el chrome general, violeta para lo energizado.
+**La Regla de la Sombra Teñida.** Ninguna sombra usa negro puro. Toda sombra toma el tono del sistema — antracita para lo ambiental (`soft`), azul acero para lo energizado (`pop`).
 
 **La Regla del Borde Primero.** Si dudás entre agregar una sombra o un borde para separar dos superficies, es un borde. La sombra ya está saturada de trabajo.
 
@@ -286,7 +286,7 @@ Generosos y táctiles. Cinco variantes, tres tamaños.
 
 - **Shape:** 12px (`rounded-xl`). Los de solo icono son círculos de 36×36px.
 - **Tamaños:** `sm` 32px de alto / texto 12px · `md` 40px / 14px (default) · `icon` 36×36px.
-- **Primary:** verde acción sobre blanco, con `shadow-sm`. Es el único control verde del sistema.
+- **Primary:** azul acero (el acento) con texto blanco y `shadow-sm`. Es la acción principal; ya no es verde.
 - **Secondary:** `surface-2` con tinta plena; hover a `surface-3`.
 - **Outline:** superficie con borde `line` y tinta media; el botón de acción neutra por defecto en barras de herramientas.
 - **Ghost:** solo tinta media, hover a `surface-2`. Para acciones terciarias e iconos.
@@ -313,7 +313,7 @@ Desplegable propio, no el `<select>` nativo del sistema operativo — para que e
 - **Corner Style:** 16px.
 - **Background:** `surface`, borde `line`, sombra `soft`.
 - **Kicker:** micro-etiqueta en mono/versalitas (11px, tracking 0.14em, `ink-3`) — la firma del instrumento.
-- **CardCta:** píldora de pie de card con borde `ink-3` y texto violeta; en hover el borde pasa a `accent` y el fondo a `accent-dim`.
+- **CardCta:** píldora de pie de card con borde `ink-3` y texto en azul acero (el acento); en hover el borde pasa a `accent` y el fondo a `accent-dim`.
 
 ### Badges
 
@@ -329,7 +329,7 @@ Barra superior de 56px sobre `chrome`, `sticky` con `z-30`. El logo va monocromo
 
 ### To-Do bar
 
-Barra fija al pie, sobre `chrome`, colapsable. Es la firma estructural del producto: la única superficie persistente que no es navegación. Cerrada muestra el título y un contador en píldora violeta; abierta despliega hasta `55vh` de superficie con la lista de tareas separada por `divide-line`, cada ítem con un punto de prioridad de 10px y checkbox con `accent-navy`.
+Barra fija al pie, sobre `chrome`, colapsable. Es la firma estructural del producto: la única superficie persistente que no es navegación. Cerrada muestra el título y un contador en píldora de acento (azul acero); abierta despliega hasta `55vh` de superficie con la lista de tareas separada por `divide-line`, cada ítem con un punto de prioridad de 10px y checkbox con `accent-navy`.
 
 ### Modal
 
@@ -347,7 +347,7 @@ El componente más importante del producto y el que más disciplina exige.
 - **Gridlines:** borde derecho en cada `td`/`th` menos el último, borde superior en cada fila. La retícula completa se dibuja, como en una planilla.
 - **Encabezado:** `sticky top-0` sobre `surface-2`, 12px semibold en tinta plena, con la línea inferior hecha con `inset` box-shadow.
 - **Filas:** 8px × 12px de padding, hover a `surface-2`, cursor pointer cuando son navegables.
-- **Celdas:** truncadas siempre. Los números con `tabular-nums`. La columna que identifica el registro va en violeta (es el link); el resto en tinta plena.
+- **Celdas:** truncadas siempre. Los números con `tabular-nums`. La columna que identifica el registro va en azul acero (es el link); el resto en tinta plena.
 - **Columnas ajustables:** arrastre con línea guía vía `useResizableColumns`.
 
 ## Do's and Don'ts
@@ -357,15 +357,15 @@ El componente más importante del producto y el que más disciplina exige.
 - **Do** usar los tokens semánticos (`bg-surface`, `text-ink-2`, `border-line`) en vez de colores de Tailwind. Es lo que hace que el modo oscuro funcione sin que ningún componente sepa que existe.
 - **Do** poner `tabular-nums` en toda cifra que se compare en vertical.
 - **Do** truncar toda celda de tabla y dejar que el usuario ajuste el ancho de la columna.
-- **Do** teñir las sombras con el tono de la superficie (azul `rgba(3,35,77,…)`, violeta `rgba(113,24,247,…)`).
+- **Do** teñir las sombras con el tono del sistema (antracita `rgba(14,19,22,…)`, azul acero `rgba(43,92,130,…)`).
 - **Do** renderizar modales y dropdowns recortados por portal a `document.body` — un ancestro con `transform` atrapa al `position: fixed`.
 - **Do** usar `Kicker` en mono/versalitas para rotular secciones en vez de agregar otro nivel de peso tipográfico.
-- **Do** mantener `chrome` (`#250c50`) idéntico en ambos temas.
+- **Do** mantener `chrome` (`#1E272C` antracita) idéntico en ambos temas.
 - **Do** dar `ring-offset-2` a los anillos de foco de botón, para que no se lean como borde.
 
 ### Don't:
 
-- **Don't** usar el verde de acción para nada que no sea un botón primario, ni el violeta para el control que ejecuta la acción. Los dos colores tienen trabajos separados.
+- **Don't** usar el antracita del cromo como acento ni meter color de marca extra: el único acento es el azul acero, y aparece poco.
 - **Don't** usar un color del semáforo fuera de un badge, un punto de estado o un relleno de gráfico. Para acción destructiva está `button-danger` en rojo-600, que es otro color a propósito.
 - **Don't** rellenar un badge con color pleno. Tinte al 12% y texto del mismo color, siempre.
 - **Don't** componer texto corrido en JetBrains Mono. Solo rotula.
@@ -373,5 +373,5 @@ El componente más importante del producto y el que más disciplina exige.
 - **Don't** agregar un `max-w` al contenedor de las páginas de listado. El ancho completo es una decisión, no un olvido.
 - **Don't** usar sombra negra pura ni bordes de más de 1px.
 - **Don't** poner radio completo a un contenedor. La píldora significa "valor discreto"; las cards son 16px y los controles 12px.
-- **Don't** meter ilustraciones, gradientes decorativos, emojis ni tono publicitario. El único gesto atmosférico es el radial-gradient de tinte del `body`.
+- **Don't** meter ilustraciones, gradientes decorativos, emojis ni tono publicitario. El fondo es plano; nada de gradientes.
 - **Don't** apretar la retícula a bordes duros grises tipo ERP. Es exactamente lo que este producto vino a reemplazar.

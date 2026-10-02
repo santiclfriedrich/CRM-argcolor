@@ -56,9 +56,10 @@ const config: Config = {
         DEFAULT: "1.5px",
       },
       boxShadow: {
-        // Sombras suaves para dar profundidad a cards y modales.
-        soft: "0 1px 2px rgba(3,35,77,0.04), 0 10px 24px -14px rgba(3,35,77,0.22)",
-        pop: "0 1px 2px rgba(113,24,247,0.15), 0 8px 20px -8px rgba(113,24,247,0.35)",
+        // Sombras suaves, teñidas de antracita (no de negro ni violeta) para el
+        // look premium: ambientales, no jerárquicas.
+        soft: "0 1px 2px rgba(14,19,22,0.05), 0 10px 24px -14px rgba(14,19,22,0.25)",
+        pop: "0 1px 2px rgba(43,92,130,0.14), 0 8px 20px -8px rgba(43,92,130,0.30)",
       },
     },
   },
