@@ -275,6 +275,7 @@ export default function BandejaPage() {
         {selectedId !== null ? (
           <ReadingPane
             mailId={selectedId}
+            conv={todas.find((c) => c.ids.includes(selectedId)) ?? null}
             onBack={() => setSelectedId(null)}
             onDeleted={() => setSelectedId(null)}
           />
@@ -549,14 +550,17 @@ export default function BandejaPage() {
 
 function ReadingPane({
   mailId,
+  conv,
   onBack,
   onDeleted,
 }: {
   mailId: number;
+  conv: Conversacion | null;
   onBack: () => void;
   onDeleted: () => void;
 }) {
   const { data: hilo, isLoading } = useConversacion(mailId, true);
+  const [etqOpen, setEtqOpen] = useState(false);
   const { data: firma } = useFirma();
   const eliminar = useEliminarMail();
   const marcarLeido = useMarcarLeido();
@@ -637,13 +641,44 @@ function ReadingPane({
         >
           <Trash2 size={15} className="mr-1.5" /> Eliminar
         </Button>
+        {conv && (
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setEtqOpen((v) => !v)}
+              title="Etiquetar este correo"
+            >
+              <Tag size={15} className="mr-1.5" /> Etiquetar
+            </Button>
+            {etqOpen && (
+              <EtiquetasMenu
+                conversacionesSel={[conv]}
+                onClose={() => setEtqOpen(false)}
+              />
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex min-h-0 flex-1">
         {/* Conversación */}
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex-1 overflow-y-auto p-4 lg:p-6">
-            <h2 className="mb-4 text-xl font-bold tracking-tight text-ink">{asunto}</h2>
+            <h2 className="mb-2 text-xl font-bold tracking-tight text-ink">{asunto}</h2>
+            {conv && conv.etiquetas.length > 0 && (
+              <div className="mb-4 flex flex-wrap gap-1.5">
+                {conv.etiquetas.map((e) => (
+                  <span
+                    key={e.id}
+                    className="rounded px-2 py-0.5 text-xs font-semibold text-white"
+                    style={{ backgroundColor: e.color }}
+                  >
+                    {e.nombre}
+                  </span>
+                ))}
+              </div>
+            )}
             {isLoading ? (
               <p className="text-sm text-ink-2">Cargando conversación…</p>
             ) : (
