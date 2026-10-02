@@ -45,6 +45,7 @@ import {
 } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
@@ -1491,6 +1492,7 @@ function EtiquetasMenu({
   const aplicar = useAplicarEtiqueta();
   const eliminar = useEliminarEtiqueta();
   const toast = useToast();
+  const confirm = useConfirm();
 
   const [q, setQ] = useState("");
   const [creando, setCreando] = useState(false);
@@ -1619,8 +1621,15 @@ function EtiquetasMenu({
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (window.confirm(`¿Eliminar la etiqueta "${e.nombre}"?`))
+                    onClick={async () => {
+                      if (
+                        await confirm({
+                          title: "Eliminar etiqueta",
+                          message: `¿Eliminar la etiqueta "${e.nombre}"? Se quitará de todos los correos que la tengan.`,
+                          danger: true,
+                          confirmLabel: "Eliminar",
+                        })
+                      )
                         eliminar.mutate(e.id);
                     }}
                     className="hidden rounded p-1 text-ink-3 transition hover:text-danger group-hover:block"
