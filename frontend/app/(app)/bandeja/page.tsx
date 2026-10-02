@@ -130,6 +130,14 @@ function fmtFecha(fecha: string | null): string {
     : d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
 }
 
+// Pasa el texto plano de un speech a HTML simple (respeta saltos de línea).
+function speechToHtml(texto: string): string {
+  return texto
+    .split("\n")
+    .map((l) => l.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"))
+    .join("<br>");
+}
+
 function agrupar(mails: InboxMail[]): Conversacion[] {
   const map = new Map<string, InboxMail[]>();
   for (const m of mails) {
@@ -590,8 +598,10 @@ function ReadingPane({
   onDeleted: () => void;
 }) {
   const { data: hilo, isLoading } = useConversacion(mailId, true);
+  const { data: speeches } = useSpeeches();
   const [etqOpen, setEtqOpen] = useState(false);
   const [tareaOpen, setTareaOpen] = useState(false);
+  const [speechPendiente, setSpeechPendiente] = useState<string | null>(null);
   const { data: firma } = useFirma();
   const eliminar = useEliminarMail();
   const marcarLeido = useMarcarLeido();
@@ -625,6 +635,23 @@ function ReadingPane({
     }
     return [...map.entries()].map(([email, nombre]) => ({ email, nombre }));
   }, [hilo]);
+
+  // Inserta un speech en la respuesta; abre el editor de respuesta si está cerrado
+  // (el speech pendiente se inserta al montar el editor, vía el efecto de abajo).
+  const usarSpeech = (texto: string) => {
+    if (respondiendo) {
+      replyRef.current?.insertSpeech(texto);
+    } else {
+      setSpeechPendiente(texto);
+      setRespondiendo(true);
+    }
+  };
+  useEffect(() => {
+    if (respondiendo && speechPendiente && replyRef.current) {
+      replyRef.current.insertSpeech(speechPendiente);
+      setSpeechPendiente(null);
+    }
+  }, [respondiendo, speechPendiente]);
 
   const enviarRespuesta = () => {
     if (replyRef.current?.isEmpty() && adjReply.length === 0) return;
@@ -837,6 +864,29 @@ function ReadingPane({
             ))}
           </ul>
 
+          {speeches && speeches.length > 0 && (
+            <div className="mt-6 border-t border-line pt-4">
+              <p className="text-sm font-semibold text-ink">Speeches</p>
+              <p className="mb-3 mt-0.5 text-xs text-ink-3">
+                Insertá una plantilla en la respuesta.
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {speeches.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => usarSpeech(s.texto)}
+                    title={s.titulo}
+                    className="flex items-center gap-2 rounded-md border border-line bg-surface px-2.5 py-2 text-left text-sm text-ink transition hover:bg-surface2"
+                  >
+                    <MessageSquareText size={14} className="shrink-0 text-ink-3" />
+                    <span className="truncate">{s.titulo}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="mt-6 border-t border-line pt-4">
             <p className="text-sm font-semibold text-ink">Oportunidad</p>
             <p className="mb-3 mt-0.5 text-xs text-ink-3">
@@ -887,6 +937,7 @@ type RichEditorHandle = {
   getText: () => string;
   clear: () => void;
   isEmpty: () => boolean;
+  insertSpeech: (texto: string) => void;
 };
 
 // Editor de texto con formato (negrita, listas, links, imágenes inline). Sale
@@ -930,6 +981,20 @@ const RichEditor = forwardRef<
         onInput?.(true);
       },
       isEmpty: vacio,
+      // Inserta el speech al PRINCIPIO del editor (arriba de la firma/cita).
+      insertSpeech: (texto: string) => {
+        const el = elRef.current;
+        if (!el) return;
+        el.focus();
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.setStart(el, 0);
+        range.collapse(true);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+        document.execCommand("insertHTML", false, `${speechToHtml(texto)}<br>`);
+        onInput?.(vacio());
+      },
     }),
     [onInput]
   );
@@ -951,11 +1016,7 @@ const RichEditor = forwardRef<
   // Inserta un speech (texto plano) como HTML en la posición del cursor.
   const insertarSpeech = (texto: string) => {
     elRef.current?.focus();
-    const html = texto
-      .split("\n")
-      .map((l) => l.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"))
-      .join("<br>");
-    document.execCommand("insertHTML", false, `${html}<br>`);
+    document.execCommand("insertHTML", false, `${speechToHtml(texto)}<br>`);
     onInput?.(vacio());
     setSpOpen(false);
   };
