@@ -15,9 +15,11 @@ import {
   Italic,
   Link2,
   List,
+  ListChecks,
   ListOrdered,
   Lock,
   Mail as MailIcon,
+  MessageSquareText,
   Paperclip,
   Pencil,
   Plus,
@@ -44,6 +46,7 @@ import {
   useState,
 } from "react";
 
+import { TareaModal } from "@/components/tareas/tarea-modal";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
@@ -69,6 +72,7 @@ import {
   useSyncGmail,
   useVincularOportunidad,
 } from "@/lib/mails";
+import { useSpeeches } from "@/lib/config";
 import { useOportunidades } from "@/lib/oportunidades";
 import type { AdjuntoGmail, CarpetaInbox, EtiquetaMail, InboxMail } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -587,6 +591,7 @@ function ReadingPane({
 }) {
   const { data: hilo, isLoading } = useConversacion(mailId, true);
   const [etqOpen, setEtqOpen] = useState(false);
+  const [tareaOpen, setTareaOpen] = useState(false);
   const { data: firma } = useFirma();
   const eliminar = useEliminarMail();
   const marcarLeido = useMarcarLeido();
@@ -685,6 +690,14 @@ function ReadingPane({
             )}
           </div>
         )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setTareaOpen(true)}
+          title="Crear una tarea de seguimiento a partir de este correo"
+        >
+          <ListChecks size={15} className="mr-1.5" /> Crear tarea
+        </Button>
       </div>
 
       <div className="flex min-h-0 flex-1">
@@ -855,6 +868,16 @@ function ReadingPane({
           onClose={() => setVincularTab(null)}
         />
       )}
+      {tareaOpen && (
+        <TareaModal
+          open
+          onClose={() => setTareaOpen(false)}
+          tituloInicial={`Seguimiento: ${asunto}`}
+          descripcionInicial={
+            conv?.remitentes ? `Correo de ${conv.remitentes}.` : undefined
+          }
+        />
+      )}
     </div>
   );
 }
@@ -882,6 +905,8 @@ const RichEditor = forwardRef<
 ) {
   const elRef = useRef<HTMLDivElement>(null);
   const imgInput = useRef<HTMLInputElement>(null);
+  const { data: speeches } = useSpeeches();
+  const [spOpen, setSpOpen] = useState(false);
 
   // Contenido inicial (ej. la firma de Gmail). Se setea una sola vez al montar.
   useEffect(() => {
@@ -922,6 +947,17 @@ const RichEditor = forwardRef<
   const enlazar = () => {
     const url = window.prompt("URL del enlace:");
     if (url) cmd("createLink", url);
+  };
+  // Inserta un speech (texto plano) como HTML en la posición del cursor.
+  const insertarSpeech = (texto: string) => {
+    elRef.current?.focus();
+    const html = texto
+      .split("\n")
+      .map((l) => l.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"))
+      .join("<br>");
+    document.execCommand("insertHTML", false, `${html}<br>`);
+    onInput?.(vacio());
+    setSpOpen(false);
   };
 
   const Btn = ({
@@ -976,6 +1012,48 @@ const RichEditor = forwardRef<
         <Btn onClick={() => cmd("removeFormat")} title="Quitar formato">
           <RemoveFormatting size={15} />
         </Btn>
+        {speeches && speeches.length > 0 && (
+          <>
+            <span className="mx-1 h-4 w-px bg-line" />
+            <div className="relative">
+              <button
+                type="button"
+                title="Insertar speech"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setSpOpen((v) => !v)}
+                className="flex items-center gap-1 rounded p-1.5 text-ink-2 transition hover:bg-surface2"
+              >
+                <MessageSquareText size={15} />
+                <ChevronDown size={12} />
+              </button>
+              {spOpen && (
+                <>
+                  <button
+                    type="button"
+                    aria-hidden
+                    tabIndex={-1}
+                    className="fixed inset-0 z-40 cursor-default"
+                    onClick={() => setSpOpen(false)}
+                  />
+                  <div className="absolute left-0 top-full z-50 mt-1 max-h-64 w-64 overflow-y-auto rounded-lg border border-line bg-surface p-1 shadow-lg">
+                    {speeches.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => insertarSpeech(s.texto)}
+                        title={s.titulo}
+                        className="block w-full truncate rounded-md px-2.5 py-2 text-left text-sm text-ink transition hover:bg-surface2"
+                      >
+                        {s.titulo}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </>
+        )}
         <input
           ref={imgInput}
           type="file"

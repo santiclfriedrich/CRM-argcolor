@@ -147,6 +147,11 @@ interface Props {
   onClose: () => void;
   tarea?: Tarea | null; // si viene, es edición
   fechaPorDefecto?: string; // para alta rápida "de hoy"
+  // Prefill para alta nueva (ej. crear una tarea desde un correo).
+  tituloInicial?: string;
+  descripcionInicial?: string;
+  oportunidadIdInicial?: number | null;
+  clienteIdInicial?: number | null;
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -161,7 +166,16 @@ const fmtDateTime = (iso: string) =>
     minute: "2-digit",
   });
 
-export function TareaModal({ open, onClose, tarea, fechaPorDefecto }: Props) {
+export function TareaModal({
+  open,
+  onClose,
+  tarea,
+  fechaPorDefecto,
+  tituloInicial,
+  descripcionInicial,
+  oportunidadIdInicial,
+  clienteIdInicial,
+}: Props) {
   const crear = useCreateTarea();
   const actualizar = useUpdateTarea();
   const borrar = useDeleteTarea();
@@ -170,14 +184,18 @@ export function TareaModal({ open, onClose, tarea, fechaPorDefecto }: Props) {
   const { data: clientes } = useClientes();
   const { data: oportunidades } = useOportunidades();
 
-  const [titulo, setTitulo] = useState(tarea?.titulo ?? "");
+  const [titulo, setTitulo] = useState(tarea?.titulo ?? tituloInicial ?? "");
   const [subtipo, setSubtipo] = useState(tarea?.subtipo ?? "");
   const [fecha, setFecha] = useState(tarea?.fecha_vencimiento ?? fechaPorDefecto ?? "");
   const [prioridad, setPrioridad] = useState<PrioridadTarea>(tarea?.prioridad ?? "media");
   const [completada, setCompletada] = useState(tarea?.completada ?? false);
-  const [comentarios, setComentarios] = useState(tarea?.descripcion ?? "");
-  const [clienteId, setClienteId] = useState<number | null>(tarea?.cliente_id ?? null);
-  const [oportunidadId, setOportunidadId] = useState<number | null>(tarea?.oportunidad_id ?? null);
+  const [comentarios, setComentarios] = useState(tarea?.descripcion ?? descripcionInicial ?? "");
+  const [clienteId, setClienteId] = useState<number | null>(
+    tarea?.cliente_id ?? clienteIdInicial ?? null
+  );
+  const [oportunidadId, setOportunidadId] = useState<number | null>(
+    tarea?.oportunidad_id ?? oportunidadIdInicial ?? null
+  );
 
   const recInicial = tarea?.recordatorio ? new Date(tarea.recordatorio) : null;
   const [recordatorioOn, setRecordatorioOn] = useState(Boolean(recInicial));
