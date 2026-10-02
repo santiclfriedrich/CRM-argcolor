@@ -49,6 +49,15 @@ const config: Config = {
         info: "rgb(var(--c-info) / <alpha-value>)",
         neutral: "rgb(var(--c-neutral) / <alpha-value>)",
       },
+      // Borde por defecto un poco más grueso (1.5px en vez de 1px): la retícula
+      // —tablas, cards, campos, separadores— se siente más firme sin tocar las
+      // ~167 clases `border-line`/`divide-line` de la app.
+      borderWidth: {
+        DEFAULT: "1.5px",
+      },
+      divideWidth: {
+        DEFAULT: "1.5px",
+      },
       boxShadow: {
         // Sombras suaves para dar profundidad a cards y modales.
         soft: "0 1px 2px rgba(3,35,77,0.04), 0 10px 24px -14px rgba(3,35,77,0.22)",
