@@ -115,8 +115,11 @@ def sync_inbox_for_user(
 
         existente = existentes.get(mid)
         if existente is not None:
-            # Ya lo tenía el pipeline comercial: solo reflejamos estado/dueño.
-            existente.leido = leido
+            # El "leído" es local al CRM (abrir un mail acá NO saca el label UNREAD
+            # en Gmail). Por eso el sync NUNCA vuelve un mail a NO leído: una vez
+            # leído (acá o en Gmail) queda leído; si no, reflejamos la lectura que
+            # se haya hecho en Gmail. Evita que el mail reaparezca como no leído.
+            existente.leido = existente.leido or leido
             existente.carpeta = carpeta
             existente.tiene_adjuntos = bool(msg.get("tiene_adjuntos"))
             if existente.usuario_id is None:

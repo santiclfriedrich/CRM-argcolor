@@ -113,6 +113,26 @@ def test_sync_es_idempotente_y_refresca_estado(db: Session, usuario: Usuario) ->
     assert mails[0].leido is True
 
 
+def test_sync_no_revierte_leido_local(db: Session, usuario: Usuario) -> None:
+    # El mail llega no leído.
+    gmail = FakeGmail(
+        {"m1": _msg("m1", labels=["INBOX", "UNREAD"], de="cliente@x.com", asunto="Hola")}
+    )
+    sync_inbox_for_user(db, gmail, usuario)
+
+    # El usuario lo abre en el CRM: marca leído LOCAL (no se saca UNREAD en Gmail).
+    mail = db.scalar(select(Mail))
+    assert mail is not None
+    mail.leido = True
+    db.commit()
+
+    # Nueva sincronización: Gmail SIGUE con UNREAD, pero el sync no debe revertirlo.
+    sync_inbox_for_user(db, gmail, usuario)
+    mail = db.scalar(select(Mail))
+    assert mail is not None
+    assert mail.leido is True
+
+
 def test_dias_ventana_default_y_tope(db: Session) -> None:
     def u(dias: int | None) -> Usuario:
         prefs = {"inbox_sync_dias": dias} if dias is not None else None
