@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from app.db.models.adjuntos import Adjunto
 from app.db.models.configuracion import Configuracion
 from app.db.models.mails import DireccionMail, Mail
-from app.db.models.oportunidades import Oportunidad
+from app.db.models.oportunidades import AmbitoOportunidad, Oportunidad
 from app.db.models.solicitudes_compras import EstadoSolicitud, SolicitudCompras
 from app.services.storage import get_storage
 
@@ -229,7 +229,15 @@ def build_email_preview(solicitud: SolicitudCompras, db: Session) -> dict:
     vendedor = solicitud.solicitante.nombre if solicitud.solicitante else "—"
 
     # Patrón de asunto que luego usa la IA para linkear la respuesta de Compras.
-    subject = f"Solicitud {vendedor}: {cliente} - ID {solicitud.oportunidad_id}"
+    # En Gubernamental sumamos el N° de proceso adelante: los usuarios buscan el
+    # mail por ese número. (El link de la respuesta es por thread, no por asunto.)
+    es_gubernamental = bool(op) and op.ambito == AmbitoOportunidad.gubernamental.value
+    proceso = op.proceso.strip() if es_gubernamental and op.proceso else ""
+    prefijo_proceso = f"Proceso {proceso} - " if proceso else ""
+    subject = (
+        f"{prefijo_proceso}Solicitud {vendedor}: {cliente} "
+        f"- ID {solicitud.oportunidad_id}"
+    )
 
     importe = (
         f"USD {solicitud.importe_aproximado:,.2f}"

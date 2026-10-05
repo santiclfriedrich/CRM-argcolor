@@ -161,6 +161,29 @@ def test_email_preview_arma_asunto_y_cc(client: TestClient) -> None:
     assert "Cotizar tambores" in preview["body"]
 
 
+def test_email_preview_gubernamental_suma_proceso_al_asunto(client: TestClient) -> None:
+    # Oportunidad gubernamental con N° de proceso cargado.
+    with TestingSessionLocal() as db:
+        db.add(
+            Oportunidad(
+                id=2,
+                cliente_id=1,
+                vendedor_id=1,
+                ambito="gubernamental",
+                proceso="73040",
+            )
+        )
+        db.commit()
+
+    sid = client.post(
+        "/api/v1/solicitudes",
+        json={"oportunidad_id": 2, "requerimiento": "Cotizar insumos"},
+    ).json()["id"]
+
+    preview = client.get(f"/api/v1/solicitudes/{sid}").json()["email_preview"]
+    assert preview["subject"] == "Proceso 73040 - Solicitud Vendedor Uno: BENCEN S.A. - ID 2"
+
+
 def test_patch_respondida_setea_fecha_respuesta(client: TestClient) -> None:
     sid = client.post(
         "/api/v1/solicitudes",
