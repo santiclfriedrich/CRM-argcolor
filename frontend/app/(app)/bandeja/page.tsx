@@ -64,6 +64,7 @@ import {
   useEtiquetas,
   useFirma,
   useInbox,
+  useInboxEtiqueta,
   useMarcarLeido,
   useProgramados,
   useProgramar,
@@ -188,16 +189,29 @@ export default function BandejaPage() {
   const [menuAbierto, setMenuAbierto] = useState<string | null>(null);
   // Conversación cuyo mini-modal de etiquetas está abierto (acceso rápido en hover).
   const [etqRow, setEtqRow] = useState<string | null>(null);
+  // Etiqueta seleccionada en el sidebar (vista "por etiqueta"); null = ver carpeta.
+  const [etiquetaSel, setEtiquetaSel] = useState<number | null>(null);
 
   const toast = useToast();
   const syncMut = useSyncGmail();
   const marcarLeido = useMarcarLeido();
   const eliminar = useEliminarMail();
 
+  const { data: etiquetas } = useEtiquetas();
   const carpeta: CarpetaInbox = folder === "programados" ? "entrada" : folder;
-  const { data: mails, isLoading } = useInbox(carpeta);
+  const { data: mailsFolder, isLoading: loadingFolder } = useInbox(carpeta);
+  const { data: mailsEtiqueta, isLoading: loadingEtq } = useInboxEtiqueta(etiquetaSel);
+  const mails = etiquetaSel !== null ? mailsEtiqueta : mailsFolder;
+  const isLoading = etiquetaSel !== null ? loadingEtq : loadingFolder;
   const { data: entrada } = useInbox("entrada");
   const noLeidos = (entrada ?? []).filter((m) => !m.leido).length;
+
+  // Si la etiqueta seleccionada se borra, volver a la carpeta.
+  useEffect(() => {
+    if (etiquetaSel !== null && etiquetas && !etiquetas.some((e) => e.id === etiquetaSel)) {
+      setEtiquetaSel(null);
+    }
+  }, [etiquetas, etiquetaSel]);
 
   const todas = useMemo(() => agrupar(mails ?? []), [mails]);
   const conversaciones = useMemo(() => {
@@ -251,7 +265,15 @@ export default function BandejaPage() {
 
   const seleccionar = (k: FolderKey) => {
     setFolder(k);
+    setEtiquetaSel(null);
     setSelectedId(null);
+    setSeleccion(new Set());
+  };
+
+  const seleccionarEtiqueta = (id: number) => {
+    setEtiquetaSel(id);
+    setSelectedId(null);
+    setSeleccion(new Set());
   };
 
   return (
@@ -269,7 +291,9 @@ export default function BandejaPage() {
               onClick={() => seleccionar(key)}
               className={cn(
                 "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition",
-                folder === key ? "bg-accent/10 text-accent" : "text-ink-2 hover:bg-surface2"
+                folder === key && etiquetaSel === null
+                  ? "bg-accent/10 text-accent"
+                  : "text-ink-2 hover:bg-surface2"
               )}
             >
               <Icon size={17} className="shrink-0" />
@@ -282,6 +306,33 @@ export default function BandejaPage() {
             </button>
           ))}
         </nav>
+
+        {/* Etiquetas: filtran los mails con esa etiqueta a través de todas las carpetas. */}
+        {etiquetas && etiquetas.length > 0 && (
+          <nav className="mt-4 flex flex-col gap-0.5 border-t border-line pt-3">
+            <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-ink-3">
+              Etiquetas
+            </p>
+            {etiquetas.map((e) => (
+              <button
+                key={e.id}
+                type="button"
+                onClick={() => seleccionarEtiqueta(e.id)}
+                title={e.nombre}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition",
+                  etiquetaSel === e.id ? "bg-accent/10 text-accent" : "text-ink-2 hover:bg-surface2"
+                )}
+              >
+                <span
+                  className="h-3 w-3 shrink-0 rounded-sm"
+                  style={{ backgroundColor: e.color }}
+                />
+                <span className="flex-1 truncate text-left">{e.nombre}</span>
+              </button>
+            ))}
+          </nav>
+        )}
       </aside>
 
       {/* Área principal: lista o detalle */}
@@ -436,7 +487,7 @@ export default function BandejaPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto">
-              {folder === "programados" ? (
+              {etiquetaSel === null && folder === "programados" ? (
                 <ProgramadosList />
               ) : isLoading ? (
                 <p className="p-4 text-sm text-ink-2">Cargando…</p>

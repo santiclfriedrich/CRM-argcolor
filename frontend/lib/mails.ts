@@ -83,6 +83,20 @@ export function useInbox(carpeta: CarpetaInbox) {
   });
 }
 
+// Inbox filtrado por una etiqueta (a través de todas las carpetas).
+export function useInboxEtiqueta(etiquetaId: number | null) {
+  return useQuery({
+    queryKey: ["mails", "inbox", "etiqueta", etiquetaId],
+    queryFn: async () =>
+      (
+        await api.get<InboxMail[]>(`${BASE}/inbox`, {
+          params: { etiqueta_id: etiquetaId },
+        })
+      ).data,
+    enabled: etiquetaId !== null,
+  });
+}
+
 export function useMarcarLeido() {
   const qc = useQueryClient();
   return useMutation({

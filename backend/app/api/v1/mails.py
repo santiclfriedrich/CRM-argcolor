@@ -234,12 +234,14 @@ _CARPETAS_INBOX = ("entrada", "enviados", "archivo")
 @router.get("/inbox", response_model=list[InboxMailListItem])
 def list_inbox(
     carpeta: str | None = Query(default=None),
+    etiqueta_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> list[InboxMailListItem]:
     """Inbox del CRM (bandeja tipo Gmail): los mails de la casilla del usuario
     logueado, por carpeta (entrada/enviados/archivo). No trae el cuerpo entero,
-    solo un preview recortado en SQL."""
+    solo un preview recortado en SQL. Con `etiqueta_id` filtra por esa etiqueta a
+    través de TODAS las carpetas (la etiqueta manda, no la carpeta)."""
     preview = func.substr(func.coalesce(Mail.cuerpo, ""), 1, 160)
     tiene = func.length(func.coalesce(Mail.cuerpo, "")) > 0
     query = (
@@ -261,7 +263,16 @@ def list_inbox(
         .order_by(Mail.fecha.desc().nullslast(), Mail.id.desc())
         .limit(_BANDEJA_LIMIT)
     )
-    if carpeta in _CARPETAS_INBOX:
+    if etiqueta_id is not None:
+        # Vista por etiqueta: todos los mails con esa etiqueta, de cualquier carpeta.
+        query = query.where(
+            Mail.id.in_(
+                select(mail_etiquetas.c.mail_id).where(
+                    mail_etiquetas.c.etiqueta_id == etiqueta_id
+                )
+            )
+        )
+    elif carpeta in _CARPETAS_INBOX:
         query = query.where(Mail.carpeta == carpeta)
     items = [
         InboxMailListItem.model_validate(dict(r._mapping)) for r in db.execute(query)

@@ -107,6 +107,10 @@ def test_aplicar_y_quitar_etiqueta_aparece_en_inbox(client: TestClient) -> None:
     fila = next(m for m in client.get("/api/v1/mails/inbox").json() if m["id"] == 10)
     assert [e["nombre"] for e in fila["etiquetas"]] == ["Pendiente"]
 
+    # Filtro por etiqueta (across carpetas): devuelve el mail etiquetado.
+    porEtiqueta = client.get(f"/api/v1/mails/inbox?etiqueta_id={etq_id}").json()
+    assert [m["id"] for m in porEtiqueta] == [10]
+
     # Quitar.
     client.post(
         "/api/v1/mails/etiquetas/aplicar",
