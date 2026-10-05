@@ -174,6 +174,27 @@ def _fmt(value: object | None) -> str:
     return str(value) if value not in (None, "") else "—"
 
 
+def _datos_licitacion(op: Oportunidad) -> list[tuple[str, str]]:
+    """Filas (label, valor) de los campos de licitación (sección Gubernamental),
+    para sumar al cuerpo del mail a Compras."""
+    apertura = op.apertura.strftime("%d/%m/%Y") if op.apertura else "—"
+    hr_pliego = op.hr_pliego.strftime("%H:%M") if op.hr_pliego else "—"
+    hr_apertura = op.hr_apertura.strftime("%H:%M") if op.hr_apertura else "—"
+    return [
+        ("Proceso", _fmt(op.proceso)),
+        ("Expediente", _fmt(op.expediente)),
+        ("Portal", _fmt(op.portal)),
+        ("Fecha de apertura", apertura),
+        ("Hora de pliego", hr_pliego),
+        ("Hora de apertura", hr_apertura),
+        ("Moneda", _fmt(op.moneda)),
+        ("Pliego", _fmt(op.pliego)),
+        ("Empresa", _fmt(op.empresa)),
+        ("Plazo (días)", _fmt(op.dias)),
+        ("Link presupuesto", _fmt(op.presupuesto_url)),
+    ]
+
+
 def sugerir_requerimiento(db: Session, oportunidad_id: int) -> str:
     """Requerimiento pre-armado para el pedido a Compras.
 
@@ -250,6 +271,16 @@ def build_email_preview(solicitud: SolicitudCompras, db: Session) -> dict:
     fecha_limite = _fmt(solicitud.fecha_limite)
     ref_gbp = _fmt(solicitud.presupuesto_gbp_referencia)
 
+    # Datos de la licitación (solo Gubernamental): se suman al cuerpo y a la tabla.
+    licitacion_rows: list[tuple[str, str]] = (
+        _datos_licitacion(op) if es_gubernamental else []
+    )
+    licitacion_txt = (
+        ["Datos de la licitación:", *(f"- {k}: {v}" for k, v in licitacion_rows), ""]
+        if licitacion_rows
+        else []
+    )
+
     body = "\n".join(
         [
             "Hola,",
@@ -261,6 +292,7 @@ def build_email_preview(solicitud: SolicitudCompras, db: Session) -> dict:
             "",
             f"Número de cliente: {numero_cliente}",
             "",
+            *licitacion_txt,
             "Requerimiento:",
             solicitud.requerimiento,
             "",
@@ -282,6 +314,7 @@ def build_email_preview(solicitud: SolicitudCompras, db: Session) -> dict:
         importe=importe,
         fecha_limite=fecha_limite,
         ref_gbp=ref_gbp,
+        licitacion_rows=licitacion_rows,
     )
 
     return {"to": to, "cc": cc, "subject": subject, "body": body, "html": html}
@@ -297,6 +330,7 @@ def _build_email_html(
     importe: str,
     fecha_limite: str,
     ref_gbp: str,
+    licitacion_rows: list[tuple[str, str]] | None = None,
 ) -> str:
     """Versión HTML del mail a Compras (espejo del cuerpo de texto)."""
     e = html_mod.escape
@@ -312,6 +346,16 @@ def _build_email_html(
             '</tr>'
         )
 
+    # Bloque de licitación (solo Gubernamental): tabla con su propio encabezado.
+    licitacion_html = ""
+    if licitacion_rows:
+        filas_lic = "".join(fila(k, v) for k, v in licitacion_rows)
+        licitacion_html = (
+            '<p style="margin:0 0 4px;color:#6b7280">Datos de la licitación:</p>'
+            '<table style="border-collapse:collapse;font-size:14px;'
+            f'margin-bottom:14px">{filas_lic}</table>'
+        )
+
     return (
         '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;'
         'color:#111827;line-height:1.5">'
@@ -323,6 +367,7 @@ def _build_email_html(
         f'{fila("Cliente", cliente, fuerte=True)}'
         f'{fila("Número de cliente", numero_cliente)}'
         '</table>'
+        f'{licitacion_html}'
         '<p style="margin:0 0 4px;color:#6b7280">Requerimiento:</p>'
         '<div style="border-left:3px solid #e5e7eb;padding:2px 0 2px 12px;'
         f'margin-bottom:14px;white-space:pre-wrap">{req_html}</div>'

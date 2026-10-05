@@ -159,6 +159,8 @@ def test_email_preview_arma_asunto_y_cc(client: TestClient) -> None:
     assert "extra@cliente.com" in preview["cc"]
     assert preview["subject"] == "Solicitud Vendedor Uno: BENCEN S.A. - ID 1"
     assert "Cotizar tambores" in preview["body"]
+    # Corporativo: no se suma el bloque de licitación.
+    assert "Datos de la licitación" not in preview["body"]
 
 
 def test_email_preview_gubernamental_suma_proceso_al_asunto(client: TestClient) -> None:
@@ -171,6 +173,8 @@ def test_email_preview_gubernamental_suma_proceso_al_asunto(client: TestClient) 
                 vendedor_id=1,
                 ambito="gubernamental",
                 proceso="73040",
+                expediente="EXP-123",
+                portal="COMPRAR",
             )
         )
         db.commit()
@@ -182,6 +186,13 @@ def test_email_preview_gubernamental_suma_proceso_al_asunto(client: TestClient) 
 
     preview = client.get(f"/api/v1/solicitudes/{sid}").json()["email_preview"]
     assert preview["subject"] == "Proceso 73040 - Solicitud Vendedor Uno: BENCEN S.A. - ID 2"
+    # Los datos de licitación se suman al cuerpo (texto y HTML).
+    assert "Datos de la licitación:" in preview["body"]
+    assert "Proceso: 73040" in preview["body"]
+    assert "Expediente: EXP-123" in preview["body"]
+    assert "Portal: COMPRAR" in preview["body"]
+    assert "Datos de la licitación" in preview["html"]
+    assert "EXP-123" in preview["html"]
 
 
 def test_patch_respondida_setea_fecha_respuesta(client: TestClient) -> None:
