@@ -70,6 +70,7 @@ def list_oportunidades(
     hasta: date | None = None,
     solo_mias: bool = False,
     usuario_id: int | None = None,
+    con_pedido: bool = False,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> list[Oportunidad]:
@@ -97,6 +98,11 @@ def list_oportunidades(
         query = query.where(Oportunidad.estado == estado)
     if cliente_id is not None:
         query = query.where(Oportunidad.cliente_id == cliente_id)
+    if con_pedido:
+        # Seguimiento de Pedidos: solo las que ya tienen N° de pedido cargado.
+        query = query.where(
+            Oportunidad.numero_pedido.is_not(None), Oportunidad.numero_pedido != ""
+        )
     if desde is not None:
         query = query.where(Oportunidad.fecha_ultimo_movimiento >= desde)
     if hasta is not None:

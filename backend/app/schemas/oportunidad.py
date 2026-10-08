@@ -22,6 +22,11 @@ class OportunidadBase(BaseModel):
     requerimiento: str | None = None
     producto: str | None = None
     numero_pedido: str | None = None
+    pedido_oc: str | None = None
+    pedido_remito: str | None = None
+    pedido_estado: str | None = None
+    pedido_estado_color: str | None = None
+    pedido_fecha_inicio: date | None = None
     ing: str | None = None
     observacion: str | None = None
     cargada_en_gbp: bool = False
@@ -63,6 +68,11 @@ class OportunidadUpdate(BaseModel):
     requerimiento: str | None = None
     producto: str | None = None
     numero_pedido: str | None = None
+    pedido_oc: str | None = None
+    pedido_remito: str | None = None
+    pedido_estado: str | None = None
+    pedido_estado_color: str | None = None
+    pedido_fecha_inicio: date | None = None
     ing: str | None = None
     observacion: str | None = None
     cargada_en_gbp: bool | None = None
@@ -160,6 +170,11 @@ class OportunidadListItem(BaseModel):
     asunto: str | None = None
     producto: str | None = None
     numero_pedido: str | None = None
+    pedido_oc: str | None = None
+    pedido_remito: str | None = None
+    pedido_estado: str | None = None
+    pedido_estado_color: str | None = None
+    pedido_fecha_inicio: date | None = None
     ing: str | None = None
     observacion: str | None = None
     cargada_en_gbp: bool = False

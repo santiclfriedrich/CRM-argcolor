@@ -130,6 +130,13 @@ class Oportunidad(Base, TimestampMixin):
     requerimiento: Mapped[str | None] = mapped_column(Text)
     producto: Mapped[str | None] = mapped_column(String(120))  # rubro/producto (Insumos, Tablets…)
     numero_pedido: Mapped[str | None] = mapped_column(String(60))  # "PEDIDO" (ej. 1-594059)
+    # --- Seguimiento de Pedidos (logística). Se usan cuando la oportunidad ya
+    # tiene numero_pedido; replican la planilla de logística. ---
+    pedido_oc: Mapped[str | None] = mapped_column(String(60))  # OC del cliente (nº o "EMAIL")
+    pedido_remito: Mapped[str | None] = mapped_column(String(60))  # nº de remito
+    pedido_estado: Mapped[str | None] = mapped_column(Text)  # nota libre de estado logístico
+    pedido_estado_color: Mapped[str | None] = mapped_column(String(10))  # amarillo/naranja/verde
+    pedido_fecha_inicio: Mapped[date | None] = mapped_column(Date)  # "Fecha Inicio" del pedido
     ing: Mapped[str | None] = mapped_column(String(10))  # iniciales del "Ing." asignado (ej. C.S)
     observacion: Mapped[str | None] = mapped_column(Text)  # nota corta de seguimiento
     # Se cargó el pedido en GBP (ex-estado, ahora un flag marcable a mano).

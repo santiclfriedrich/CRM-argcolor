@@ -175,6 +175,11 @@ export interface Oportunidad {
   requerimiento: string | null;
   producto: string | null;
   numero_pedido: string | null;
+  pedido_oc: string | null;
+  pedido_remito: string | null;
+  pedido_estado: string | null;
+  pedido_estado_color: string | null;
+  pedido_fecha_inicio: string | null;
   ing: string | null;
   observacion: string | null;
   cargada_en_gbp: boolean;
@@ -219,6 +224,11 @@ export type OportunidadCreate = {
   requerimiento?: string | null;
   producto?: string | null;
   numero_pedido?: string | null;
+  pedido_oc?: string | null;
+  pedido_remito?: string | null;
+  pedido_estado?: string | null;
+  pedido_estado_color?: string | null;
+  pedido_fecha_inicio?: string | null;
   ing?: string | null;
   observacion?: string | null;
   cargada_en_gbp?: boolean;
@@ -255,6 +265,7 @@ export type OportunidadFiltros = {
   hasta?: string;
   solo_mias?: boolean;
   usuario_id?: number;
+  con_pedido?: boolean;
 };
 
 // --- Búsqueda global ---

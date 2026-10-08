@@ -171,6 +171,7 @@ export function useOportunidades(filtros?: OportunidadFiltros) {
   if (filtros?.hasta) params.hasta = filtros.hasta;
   if (filtros?.solo_mias) params.solo_mias = true;
   if (filtros?.usuario_id) params.usuario_id = filtros.usuario_id;
+  if (filtros?.con_pedido) params.con_pedido = true;
 
   return useQuery({
     queryKey: [...oportunidadKeys.all, params],
@@ -234,6 +235,17 @@ export function useOportunidad(id: number) {
     queryKey: oportunidadKeys.detail(id),
     queryFn: async () => (await api.get<Oportunidad>(`${BASE}/${id}`)).data,
     enabled: id > 0,
+  });
+}
+
+// Patch de una oportunidad por id (para editar filas de un listado, ej. el
+// tablero de Seguimiento de Pedidos, sin un hook por fila).
+export function usePatchOportunidad() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, body }: { id: number; body: OportunidadUpdate }) =>
+      (await api.patch<Oportunidad>(`${BASE}/${id}`, body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: oportunidadKeys.all }),
   });
 }
 

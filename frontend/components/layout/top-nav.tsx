@@ -11,6 +11,7 @@ import {
   LogOut,
   Menu,
   NotebookPen,
+  Package,
   Settings,
   ShoppingCart,
   Target,
@@ -40,6 +41,7 @@ const NAV_PRINCIPAL = [
   { href: "/presupuestos", label: "Presupuestos", icon: FileText },
 ];
 const NAV_SECUNDARIO = [
+  { href: "/pedidos", label: "Seguimiento de Pedidos", icon: Package },
   { href: "/tareas", label: "Tareas", icon: ListChecks },
   { href: "/notas", label: "Notas", icon: NotebookPen },
   { href: "/configuracion", label: "Configuración", icon: Settings },
