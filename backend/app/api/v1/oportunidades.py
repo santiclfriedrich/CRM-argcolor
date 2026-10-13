@@ -3,6 +3,7 @@
 from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, defer, selectinload
@@ -29,6 +30,7 @@ from app.schemas.oportunidad import (
 )
 from app.schemas.solicitud import SugerenciaCompras
 from app.services.borrado import eliminar_oportunidades
+from app.services.export_oportunidades import XLSX_MIME, oportunidades_a_xlsx
 from app.services.notificaciones import crear_notificacion
 from app.services.oportunidades import (
     buscar_adjunto,
@@ -112,6 +114,61 @@ def list_oportunidades(
     # fecha_ultimo_movimiento porque editar una fila la actualizaría y la fila
     # "saltaría" hacia arriba en la lista.
     return scalars_capped(db, query.order_by(Oportunidad.id.desc()), "oportunidades")
+
+
+@router.get("/export.xlsx")
+def export_oportunidades(
+    estado: EstadoOportunidad | None = None,
+    cliente_id: int | None = None,
+    ambito: AmbitoOportunidad | None = None,
+    desde: date | None = None,
+    hasta: date | None = None,
+    solo_mias: bool = False,
+    usuario_id: int | None = None,
+    con_pedido: bool = False,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> StreamingResponse:
+    """Descarga un Excel (.xlsx) de las oportunidades, con los mismos filtros que
+    el listado. En Gubernamental suma las columnas de licitación."""
+    query = (
+        select(Oportunidad)
+        .options(*_LIST_RELATIONS)
+        .where(Oportunidad.pendiente_revision.is_(False))
+    )
+    if ambito is not None:
+        query = query.where(Oportunidad.ambito == ambito.value)
+    if usuario_id is not None:
+        query = query.where(Oportunidad.vendedor_id == usuario_id)
+    elif solo_mias:
+        query = query.where(
+            Oportunidad.vendedor_id == current_user.id,
+            Oportunidad.transferencia_para_id.is_(None),
+        )
+    if estado is not None:
+        query = query.where(Oportunidad.estado == estado)
+    if cliente_id is not None:
+        query = query.where(Oportunidad.cliente_id == cliente_id)
+    if desde is not None:
+        query = query.where(Oportunidad.fecha_ultimo_movimiento >= desde)
+    if hasta is not None:
+        query = query.where(Oportunidad.fecha_ultimo_movimiento < hasta + timedelta(days=1))
+    if con_pedido:
+        query = query.where(
+            Oportunidad.numero_pedido.is_not(None), Oportunidad.numero_pedido != ""
+        )
+
+    filas = list(db.scalars(query.order_by(Oportunidad.id.desc())))
+    incluir_gub = ambito == AmbitoOportunidad.gubernamental
+    data = oportunidades_a_xlsx(filas, incluir_gub=incluir_gub)
+
+    seccion = ambito.value if ambito is not None else "todas"
+    nombre = f"oportunidades_{seccion}_{date.today():%Y%m%d}.xlsx"
+    return StreamingResponse(
+        iter([data]),
+        media_type=XLSX_MIME,
+        headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
+    )
 
 
 @router.post("", response_model=OportunidadRead, status_code=201)

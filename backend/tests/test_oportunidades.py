@@ -590,3 +590,43 @@ def test_seguimiento_mail_a_vendedor(client: TestClient) -> None:
         notis = list(db.scalars(select(Notificacion).where(Notificacion.usuario_id == 5)))
         assert len(notis) == 1
         assert notis[0].link == f"/oportunidades/{op_id}"
+
+
+def test_export_xlsx_oportunidades(client: TestClient) -> None:
+    import io
+
+    from openpyxl import load_workbook
+
+    client.post(
+        "/api/v1/oportunidades",
+        json={"cliente_id": 1, "vendedor_id": 1, "numero_pedido": "1-999"},
+    )
+
+    r = client.get("/api/v1/oportunidades/export.xlsx")
+    assert r.status_code == 200, r.text
+    assert "spreadsheetml" in r.headers["content-type"]
+    assert ".xlsx" in r.headers["content-disposition"]
+
+    wb = load_workbook(io.BytesIO(r.content))
+    ws = wb.active
+    encabezados = [c.value for c in ws[1]]
+    assert "Cliente" in encabezados
+    assert "N° pedido" in encabezados
+    # Sin ambito gubernamental no van las columnas de licitación.
+    assert "Proceso" not in encabezados
+    # El cliente sembrado aparece en alguna fila.
+    valores = [c.value for fila in ws.iter_rows(min_row=2) for c in fila]
+    assert "BENCEN S.A." in valores
+
+
+def test_export_xlsx_gubernamental_incluye_licitacion(client: TestClient) -> None:
+    import io
+
+    from openpyxl import load_workbook
+
+    r = client.get("/api/v1/oportunidades/export.xlsx?ambito=gubernamental")
+    assert r.status_code == 200, r.text
+    wb = load_workbook(io.BytesIO(r.content))
+    encabezados = [c.value for c in wb.active[1]]
+    assert "Proceso" in encabezados
+    assert "Apertura" in encabezados

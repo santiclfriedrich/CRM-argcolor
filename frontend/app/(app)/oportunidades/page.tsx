@@ -11,6 +11,7 @@ import {
   ClipboardList,
   ExternalLink,
   Eye,
+  FileSpreadsheet,
   FileText,
   Filter,
   Highlighter,
@@ -52,6 +53,7 @@ import { useResizableColumns } from "@/components/ui/resizable-columns";
 import {
   ESTADO_META,
   subirAdjuntosOportunidad,
+  descargarExcelOportunidades,
   useAdjuntosCompras,
   useBulkDeleteOportunidades,
   useCreateOportunidad,
@@ -573,6 +575,20 @@ export default function OportunidadesPage() {
     esGub && !!o.apertura && o.apertura >= hoyStr && o.apertura <= limiteAperturaStr;
   const { toast, update } = useToast();
   const { data, isLoading, isError } = useOportunidades({ ...filtros, ambito: seccion });
+
+  const [exportando, setExportando] = useState(false);
+  const exportarExcel = async () => {
+    setExportando(true);
+    const tId = toast("Generando Excel…", "loading");
+    try {
+      await descargarExcelOportunidades({ ...filtros, ambito: seccion });
+      update(tId, "Excel descargado", "success");
+    } catch {
+      update(tId, "No se pudo generar el Excel", "error");
+    } finally {
+      setExportando(false);
+    }
+  };
   const createMut = useCreateOportunidad();
   const deleteMut = useDeleteOportunidad();
   const bulkDelete = useBulkDeleteOportunidades();
@@ -814,6 +830,9 @@ export default function OportunidadesPage() {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <TransferenciasPendientes />
+          <Button variant="outline" onClick={exportarExcel} disabled={exportando}>
+            <FileSpreadsheet size={16} /> {exportando ? "Generando…" : "Excel"}
+          </Button>
           <Button onClick={() => setCreating(true)}>
             <Plus size={16} /> Nueva oportunidad
           </Button>

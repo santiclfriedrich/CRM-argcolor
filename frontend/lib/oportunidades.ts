@@ -161,6 +161,36 @@ export const ESTADO_META: Record<EstadoOportunidad, { label: string; tone: Badge
     { label: string; tone: BadgeTone }
   >;
 
+// Descarga un Excel (.xlsx) de las oportunidades con los filtros dados (misma
+// sección/filtros que el listado). Dispara la descarga en el navegador.
+export async function descargarExcelOportunidades(
+  filtros?: OportunidadFiltros
+): Promise<void> {
+  const params: Record<string, string | number | boolean> = {};
+  if (filtros?.estado) params.estado = filtros.estado;
+  if (filtros?.cliente_id) params.cliente_id = filtros.cliente_id;
+  if (filtros?.ambito) params.ambito = filtros.ambito;
+  if (filtros?.desde) params.desde = filtros.desde;
+  if (filtros?.hasta) params.hasta = filtros.hasta;
+  if (filtros?.solo_mias) params.solo_mias = true;
+  if (filtros?.usuario_id) params.usuario_id = filtros.usuario_id;
+  if (filtros?.con_pedido) params.con_pedido = true;
+
+  const res = await api.get(`${BASE}/export.xlsx`, { params, responseType: "blob" });
+  const disp = (res.headers["content-disposition"] as string) || "";
+  const m = disp.match(/filename="?([^"]+)"?/);
+  const nombre = m?.[1] ?? `oportunidades_${filtros?.ambito ?? "todas"}.xlsx`;
+
+  const url = URL.createObjectURL(res.data as Blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function useOportunidades(filtros?: OportunidadFiltros) {
   // Solo mandamos params con valor (los vacíos se omiten).
   const params: Record<string, string | number | boolean> = {};
