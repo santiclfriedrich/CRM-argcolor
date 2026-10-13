@@ -10,7 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefChip } from "@/components/ui/ref-chip";
 import { useConfirm } from "@/components/ui/confirm-dialog";
-import { OrdenEntradaToggle, useOrdenEntrada } from "@/components/ui/orden-entrada";
+import {
+  OrdenEntradaToggle,
+  useOrdenEntrada,
+} from "@/components/ui/orden-entrada";
 import { useResizableColumns } from "@/components/ui/resizable-columns";
 import { useSeccion } from "@/components/ui/seccion";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -33,7 +36,11 @@ const TONO_PRESUPUESTO = {
 
 export default function PresupuestosPage() {
   const { seccion } = useSeccion();
-  const { data, isLoading, isError } = usePresupuestos(undefined, undefined, seccion);
+  const { data, isLoading, isError } = usePresupuestos(
+    undefined,
+    undefined,
+    seccion
+  );
   const deleteMut = useDeletePresupuesto();
   const confirm = useConfirm();
 
@@ -58,12 +65,20 @@ export default function PresupuestosPage() {
   );
 
   // Orden de entrada (default: nuevas arriba, como viene del backend id desc).
-  const { nuevasArriba, toggle: toggleOrden } = useOrdenEntrada("presupuestos", true);
-  const filas = [...visibles].sort((a, b) => (nuevasArriba ? b.id - a.id : a.id - b.id));
+  const { nuevasArriba, toggle: toggleOrden } = useOrdenEntrada(
+    "presupuestos",
+    true
+  );
+  const filas = [...visibles].sort((a, b) =>
+    nuevasArriba ? b.id - a.id : a.id - b.id
+  );
 
   // Columnas de ancho ajustable (Código, Oportunidad, Cliente, Total, Estado,
   // Creado por, acciones).
-  const cols = useResizableColumns("presupuestos", [150, 260, 260, 150, 130, 200, 150]);
+  const cols = useResizableColumns(
+    "presupuestos",
+    [150, 260, 260, 150, 130, 200, 150]
+  );
 
   // Virtualización: solo se montan las filas visibles.
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -93,14 +108,6 @@ export default function PresupuestosPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-ink">Presupuestos</h1>
-        <p className="mt-1 text-sm text-ink-2">
-          Cotizaciones armadas en el CRM. Para crear una nueva, entrá a una oportunidad y usá
-          “Armar presupuesto”.
-        </p>
-      </div>
-
       {data && (
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <div className="inline-flex rounded-full border border-line bg-surface2 p-0.5 text-sm">
@@ -119,7 +126,8 @@ export default function PresupuestosPage() {
             ))}
           </div>
           <p className="text-sm text-ink-2">
-            {visibles.length} {visibles.length === 1 ? "presupuesto" : "presupuestos"}
+            {visibles.length}{" "}
+            {visibles.length === 1 ? "presupuesto" : "presupuestos"}
           </p>
           <OrdenEntradaToggle
             nuevasArriba={nuevasArriba}
@@ -160,9 +168,7 @@ export default function PresupuestosPage() {
                   <span className="truncate">Total</span>
                   {cols.handle(3)}
                 </th>
-                <th>
-                  Estado{cols.handle(4)}
-                </th>
+                <th>Estado{cols.handle(4)}</th>
                 <th>
                   <span className="truncate">Creado por</span>
                   {cols.handle(5)}
@@ -173,7 +179,11 @@ export default function PresupuestosPage() {
             <tbody>
               {padTop > 0 && (
                 <tr aria-hidden>
-                  <td colSpan={7} className="border-0 p-0" style={{ height: padTop }} />
+                  <td
+                    colSpan={7}
+                    className="border-0 p-0"
+                    style={{ height: padTop }}
+                  />
                 </tr>
               )}
               {vItems.map((vi) => {
@@ -194,15 +204,30 @@ export default function PresupuestosPage() {
                       </Link>
                     </td>
                     <td className="truncate px-3 py-2">
-                      <Link href={`/oportunidades?op=${p.oportunidad_id}`} className="inline-flex max-w-full">
-                        <RefChip icon={<Target size={12} className="shrink-0 text-ink-3" />}>
-                          {p.oportunidad?.asunto ?? `Oportunidad ${p.oportunidad_id}`}
+                      <Link
+                        href={`/oportunidades?op=${p.oportunidad_id}`}
+                        className="inline-flex max-w-full"
+                      >
+                        <RefChip
+                          icon={
+                            <Target size={12} className="shrink-0 text-ink-3" />
+                          }
+                        >
+                          {p.oportunidad?.asunto ??
+                            `Oportunidad ${p.oportunidad_id}`}
                         </RefChip>
                       </Link>
                     </td>
                     <td className="truncate px-3 py-2">
                       {p.oportunidad?.cliente?.razon_social ? (
-                        <RefChip icon={<Building2 size={12} className="shrink-0 text-ink-3" />}>
+                        <RefChip
+                          icon={
+                            <Building2
+                              size={12}
+                              className="shrink-0 text-ink-3"
+                            />
+                          }
+                        >
                           {p.oportunidad.cliente.razon_social}
                         </RefChip>
                       ) : (
@@ -219,7 +244,11 @@ export default function PresupuestosPage() {
                     </td>
                     <td className="truncate px-3 py-2">
                       {p.creado_por?.nombre ? (
-                        <RefChip icon={<User size={12} className="shrink-0 text-ink-3" />}>
+                        <RefChip
+                          icon={
+                            <User size={12} className="shrink-0 text-ink-3" />
+                          }
+                        >
                           {p.creado_por.nombre}
                         </RefChip>
                       ) : (
@@ -228,7 +257,11 @@ export default function PresupuestosPage() {
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center justify-end gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => abrirPdf(p.id)}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => abrirPdf(p.id)}
+                        >
                           <FileText size={14} /> PDF
                         </Button>
                         <Tooltip label="Eliminar">
@@ -250,7 +283,11 @@ export default function PresupuestosPage() {
               })}
               {padBottom > 0 && (
                 <tr aria-hidden>
-                  <td colSpan={7} className="border-0 p-0" style={{ height: padBottom }} />
+                  <td
+                    colSpan={7}
+                    className="border-0 p-0"
+                    style={{ height: padBottom }}
+                  />
                 </tr>
               )}
               {visibles.length === 0 && (
