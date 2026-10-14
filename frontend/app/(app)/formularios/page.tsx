@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardType, Download, Pencil, Sparkles, Upload } from "lucide-react";
+import { ClipboardType, Pencil, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
 import { type FormEvent, useRef, useState } from "react";
 
@@ -11,14 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import {
-  type FormularioCompletado,
+  type CampoFormulario,
   type PerfilEmpresa,
-  rellenarFormularioPdf,
-  useCompletarFormulario,
   useGuardarPerfilEmpresa,
   usePerfilEmpresa,
 } from "@/lib/config";
-import { cn } from "@/lib/utils";
 
 // Editor visual (react-pdf) solo en el cliente (pdf.js no corre en SSR).
 const EditorPlano = dynamic(
@@ -108,54 +105,37 @@ export default function FormulariosPage() {
 // Subir un formulario (PDF) y que la IA proponga qué va en cada campo según el
 // perfil. Es un borrador para revisar (todavía no estampa el PDF).
 function CompletarFormulario() {
-  const completar = useCompletarFormulario();
-  const { toast } = useToast();
+  const { data: perfil } = usePerfilEmpresa();
   const inputRef = useRef<HTMLInputElement>(null);
   const [archivo, setArchivo] = useState<File | null>(null);
-  const [resultado, setResultado] = useState<FormularioCompletado | null>(null);
-  const [descargando, setDescargando] = useState(false);
   const [editorAbierto, setEditorAbierto] = useState(false);
 
-  const nombre = archivo?.name ?? "Formulario";
+  // Los datos del perfil (no vacíos) que el usuario va a ubicar sobre el PDF.
+  const camposPerfil: CampoFormulario[] = perfil
+    ? CAMPOS_PERFIL.flatMap((g) => g.campos)
+        .map(({ k, label }) => ({
+          etiqueta: label,
+          valor: String(perfil[k] ?? ""),
+          encontrado: true,
+          campo: "",
+        }))
+        .filter((c) => c.valor.trim() !== "")
+    : [];
 
-  const analizar = (file: File) => {
+  const elegir = (file: File) => {
     setArchivo(file);
-    setResultado(null);
-    completar.mutate(file, {
-      onSuccess: (r) => setResultado(r),
-      onError: () =>
-        toast("No se pudo analizar el formulario (¿IA configurada?)", "error"),
-    });
-  };
-
-  // Edita el valor de un campo en el resultado.
-  const editarCampo = (i: number, valor: string) =>
-    setResultado((r) =>
-      r
-        ? { ...r, campos: r.campos.map((c, j) => (j === i ? { ...c, valor } : c)) }
-        : r
-    );
-
-  const descargar = async () => {
-    if (!resultado || !archivo) return;
-    setDescargando(true);
-    try {
-      await rellenarFormularioPdf(archivo, resultado.campos);
-    } catch {
-      toast("No se pudo generar el PDF", "error");
-    } finally {
-      setDescargando(false);
-    }
+    setEditorAbierto(true);
   };
 
   return (
     <>
-      <h2 className="mt-8 flex items-center gap-2 text-lg font-semibold tracking-tight text-ink">
-        <Sparkles size={18} className="text-accent" /> Completar un formulario con IA
+      <h2 className="mt-8 text-lg font-semibold tracking-tight text-ink">
+        Completar un formulario
       </h2>
       <p className="mt-1 text-sm text-ink-2">
-        Subí el PDF de un formulario y la IA propone qué valor va en cada campo
-        según el perfil. Es un borrador para revisar.
+        Subí el PDF del formulario: se abre un editor con la vista previa para que
+        ubiques tus datos sobre las líneas (la IA puede pre-ubicarlos) y descargues
+        el formulario completo.
       </p>
 
       <Card className="mt-4 p-5">
@@ -166,92 +146,36 @@ function CompletarFormulario() {
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
-            if (f) analizar(f);
+            if (f) elegir(f);
             e.target.value = "";
           }}
         />
         <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() => inputRef.current?.click()}
-            disabled={completar.isPending}
-          >
+          <Button variant="outline" onClick={() => inputRef.current?.click()}>
             <Upload size={16} /> Subir formulario (PDF)
           </Button>
-          {(resultado || completar.isPending) && (
-            <span className="text-sm text-ink-2">{nombre}</span>
-          )}
-          {completar.isPending && (
-            <span className="text-sm text-accent">Analizando con IA…</span>
+          {archivo && (
+            <>
+              <span className="text-sm text-ink-2">{archivo.name}</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setEditorAbierto(true)}
+              >
+                <Pencil size={15} /> Abrir editor
+              </Button>
+            </>
           )}
         </div>
-
-        {resultado && (
-          <div className="mt-5 border-t border-line pt-4">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-ink">
-                Campos detectados ({resultado.campos.length})
-              </p>
-              {resultado.rellenable && (
-                <Button onClick={descargar} disabled={descargando}>
-                  <Download size={16} />{" "}
-                  {descargando ? "Generando…" : "Descargar formulario completo"}
-                </Button>
-              )}
-            </div>
-            {!resultado.rellenable && (
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-400/60 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-                <span>
-                  Este formulario es <strong>plano</strong>: abrí el editor para
-                  ubicar cada dato sobre el PDF y descargarlo completo.
-                </span>
-                <Button size="sm" onClick={() => setEditorAbierto(true)}>
-                  <Pencil size={15} /> Abrir editor
-                </Button>
-              </div>
-            )}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {resultado.campos.map((c, i) => (
-                <div key={`${c.etiqueta}-${i}`}>
-                  <Label htmlFor={`cf-${i}`}>
-                    {c.etiqueta}
-                    {!c.encontrado && (
-                      <span className="ml-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
-                        · falta en el perfil
-                      </span>
-                    )}
-                  </Label>
-                  <Input
-                    id={`cf-${i}`}
-                    value={c.valor}
-                    onChange={(e) => editarCampo(i, e.target.value)}
-                    className={cn(
-                      !c.encontrado && "border-amber-400 dark:border-amber-500/60"
-                    )}
-                  />
-                </div>
-              ))}
-            </div>
-            {resultado.notas && (
-              <p className="mt-4 rounded-lg border border-line bg-surface2/60 px-3 py-2 text-sm text-ink-2">
-                <span className="font-medium text-ink">Nota de la IA:</span>{" "}
-                {resultado.notas}
-              </p>
-            )}
-            <p className="mt-3 text-xs text-ink-3">
-              Revisá y corregí los valores; completá los que falten
-              {resultado.rellenable
-                ? " y descargá el formulario original ya completo."
-                : "."}
-            </p>
-          </div>
+        {!perfil && (
+          <p className="mt-3 text-sm text-ink-2">Cargando perfil…</p>
         )}
       </Card>
 
-      {editorAbierto && archivo && resultado && (
+      {editorAbierto && archivo && perfil && (
         <EditorPlano
           archivo={archivo}
-          campos={resultado.campos}
+          campos={camposPerfil}
           onClose={() => setEditorAbierto(false)}
         />
       )}
