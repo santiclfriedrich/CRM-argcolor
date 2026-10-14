@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardType, Sparkles, Upload } from "lucide-react";
+import { ClipboardType, Download, Sparkles, Upload } from "lucide-react";
 import { type FormEvent, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/toast";
 import {
   type FormularioCompletado,
   type PerfilEmpresa,
+  descargarFormularioPdf,
   useCompletarFormulario,
   useGuardarPerfilEmpresa,
   usePerfilEmpresa,
@@ -103,8 +104,9 @@ function CompletarFormulario() {
   const completar = useCompletarFormulario();
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [nombre, setNombre] = useState<string | null>(null);
+  const [nombre, setNombre] = useState<string>("Formulario");
   const [resultado, setResultado] = useState<FormularioCompletado | null>(null);
+  const [descargando, setDescargando] = useState(false);
 
   const analizar = (file: File) => {
     setNombre(file.name);
@@ -114,6 +116,30 @@ function CompletarFormulario() {
       onError: () =>
         toast("No se pudo analizar el formulario (¿IA configurada?)", "error"),
     });
+  };
+
+  // Edita el valor de un campo en el resultado.
+  const editarCampo = (i: number, valor: string) =>
+    setResultado((r) =>
+      r
+        ? { ...r, campos: r.campos.map((c, j) => (j === i ? { ...c, valor } : c)) }
+        : r
+    );
+
+  const descargar = async () => {
+    if (!resultado) return;
+    setDescargando(true);
+    try {
+      await descargarFormularioPdf({
+        titulo: nombre,
+        campos: resultado.campos,
+        notas: resultado.notas,
+      });
+    } catch {
+      toast("No se pudo generar el PDF", "error");
+    } finally {
+      setDescargando(false);
+    }
   };
 
   return (
@@ -146,7 +172,9 @@ function CompletarFormulario() {
           >
             <Upload size={16} /> Subir formulario (PDF)
           </Button>
-          {nombre && <span className="text-sm text-ink-2">{nombre}</span>}
+          {(resultado || completar.isPending) && (
+            <span className="text-sm text-ink-2">{nombre}</span>
+          )}
           {completar.isPending && (
             <span className="text-sm text-accent">Analizando con IA…</span>
           )}
@@ -154,9 +182,14 @@ function CompletarFormulario() {
 
         {resultado && (
           <div className="mt-5 border-t border-line pt-4">
-            <p className="mb-3 text-sm font-semibold text-ink">
-              Campos detectados ({resultado.campos.length})
-            </p>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-ink">
+                Campos detectados ({resultado.campos.length})
+              </p>
+              <Button onClick={descargar} disabled={descargando}>
+                <Download size={16} /> {descargando ? "Generando…" : "Descargar PDF"}
+              </Button>
+            </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {resultado.campos.map((c, i) => (
                 <div key={`${c.etiqueta}-${i}`}>
@@ -170,7 +203,8 @@ function CompletarFormulario() {
                   </Label>
                   <Input
                     id={`cf-${i}`}
-                    defaultValue={c.valor}
+                    value={c.valor}
+                    onChange={(e) => editarCampo(i, e.target.value)}
                     className={cn(
                       !c.encontrado && "border-amber-400 dark:border-amber-500/60"
                     )}
@@ -185,8 +219,8 @@ function CompletarFormulario() {
               </p>
             )}
             <p className="mt-3 text-xs text-ink-3">
-              Revisá y corregí los valores. (Próximo paso: bajar el PDF ya
-              completado.)
+              Revisá y corregí los valores; completá los que falten y descargá el
+              PDF con los datos.
             </p>
           </div>
         )}

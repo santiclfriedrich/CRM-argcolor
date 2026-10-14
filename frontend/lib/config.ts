@@ -101,6 +101,28 @@ export function useCompletarFormulario() {
   });
 }
 
+// Baja un PDF con los datos del formulario (ya revisados por el usuario).
+export async function descargarFormularioPdf(body: {
+  titulo: string;
+  campos: CampoFormulario[];
+  notas: string | null;
+}): Promise<void> {
+  const res = await api.post("/api/v1/formularios/descargar", body, {
+    responseType: "blob",
+  });
+  const disp = (res.headers["content-disposition"] as string) || "";
+  const m = disp.match(/filename="?([^"]+)"?/);
+  const nombre = m?.[1] ?? "formulario - datos.pdf";
+  const url = window.URL.createObjectURL(res.data as Blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 // --- Destinatarios del mail a Compras ---
 export interface DestinatariosCompras {
   to: string | null;

@@ -1,12 +1,22 @@
 """Autocompletar formularios de licitación con IA a partir del Perfil de Empresa."""
 
+import io
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_ai, get_current_user
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
-from app.integrations.ai.base import AIProvider, DocumentPart, FormularioCompletado
+from app.integrations.ai.base import (
+    AIProvider,
+    CampoFormulario,
+    DocumentPart,
+    FormularioCompletado,
+)
+from app.services.export_formulario import datos_a_pdf
 from app.services.perfil_empresa import get_perfil_empresa
 
 router = APIRouter(prefix="/formularios", tags=["formularios"])
@@ -47,3 +57,31 @@ def completar_formulario(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"No se pudo procesar el formulario con la IA: {exc}",
         ) from exc
+
+
+class DescargarFormularioBody(BaseModel):
+    """Datos (editados por el usuario) para generar el PDF descargable."""
+
+    titulo: str = "Formulario"
+    campos: list[CampoFormulario] = []
+    notas: str | None = None
+
+
+@router.post("/descargar")
+def descargar_formulario(
+    body: DescargarFormularioBody,
+    _: Usuario = Depends(get_current_user),
+) -> StreamingResponse:
+    """Devuelve un PDF con los datos del formulario (campo → valor), tal como
+    quedaron después de la revisión del usuario."""
+    pdf = datos_a_pdf(
+        body.titulo,
+        [(c.etiqueta, c.valor) for c in body.campos],
+        notas=body.notas,
+    )
+    nombre = f"{body.titulo.rsplit('.', 1)[0] or 'formulario'} - datos.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
+    )
