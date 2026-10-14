@@ -4,6 +4,7 @@ import {
   Building2,
   ChevronDown,
   ClipboardList,
+  ClipboardType,
   FileText,
   Inbox,
   LayoutDashboard,
@@ -42,6 +43,7 @@ const NAV_PRINCIPAL = [
 ];
 const NAV_SECUNDARIO = [
   { href: "/pedidos", label: "Seguimiento de Pedidos", icon: Package },
+  { href: "/formularios", label: "Formularios", icon: ClipboardType },
   { href: "/tareas", label: "Tareas", icon: ListChecks },
   { href: "/notas", label: "Notas", icon: NotebookPen },
   { href: "/configuracion", label: "Configuración", icon: Settings },
