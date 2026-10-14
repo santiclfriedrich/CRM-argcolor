@@ -73,6 +73,9 @@ class CampoFormulario(BaseModel):
     valor: str = ""
     # True si el valor salió del perfil; False si el form lo pide pero no estaba.
     encontrado: bool = True
+    # Nombre interno del campo en el PDF (solo en PDFs rellenables/AcroForm); se
+    # usa para escribir el valor en el campo correcto al descargar. Vacío si plano.
+    campo: str = ""
 
 
 class FormularioCompletado(BaseModel):
@@ -80,6 +83,9 @@ class FormularioCompletado(BaseModel):
 
     campos: list[CampoFormulario] = []
     notas: str | None = None
+    # True si el PDF es rellenable (AcroForm) y por lo tanto se puede descargar el
+    # formulario original ya completo; False si es plano (necesita plantilla).
+    rellenable: bool = False
 
 
 class AIProvider(ABC):
@@ -109,3 +115,11 @@ class AIProvider(ABC):
         el perfil de empresa. No es abstracto para no obligar a todos los
         proveedores a implementarlo; Gemini lo soporta."""
         raise NotImplementedError("Este proveedor de IA no soporta completar formularios.")
+
+    def mapear_acroform(
+        self, perfil: dict, campos_pdf: list[dict]
+    ) -> "FormularioCompletado":
+        """Mapea los campos reales de un PDF rellenable (AcroForm) a valores del
+        perfil. `campos_pdf` = [{"name", "label"}]. Devuelve cada campo con su
+        `campo` (nombre interno) para poder escribirlo después."""
+        raise NotImplementedError("Este proveedor de IA no soporta mapear formularios.")

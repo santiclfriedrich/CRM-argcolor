@@ -118,6 +118,21 @@ Reglas:
 - No completes la firma ni la fecha (los pone la persona a mano).
 - En 'notas' aclaraciones generales (ej. qué certificados adjuntar) si las hay."""
 
+_ACROFORM_SYSTEM = """\
+Sos un asistente que completa formularios de alta de proveedor / licitación de
+una empresa argentina. Te doy (1) el PERFIL de la empresa en JSON y (2) la LISTA
+de campos de un PDF rellenable, cada uno con su nombre interno ('name') y su
+etiqueta visible ('label').
+
+Para CADA campo de la lista devolvé un objeto con:
+- campo: el 'name' interno EXACTO, tal cual te lo paso (no lo cambies).
+- etiqueta: la 'label' visible (o el name si no hay label).
+- valor: el dato que corresponde SEGÚN EL PERFIL. Si no está en el perfil, "".
+- encontrado: true si el valor salió del perfil; false si no.
+
+Reglas: respondé SIEMPRE en español. NO inventes datos. No completes firma ni
+fecha. Devolvé un campo por cada uno de la lista, en el mismo orden."""
+
 _QUOTE_SYSTEM = """\
 Sos un asistente del equipo comercial de una empresa industrial argentina.
 Recibís la respuesta de Compras a un pedido de cotización: suele venir como una
@@ -225,6 +240,29 @@ class GeminiProvider(AIProvider):
             contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=_FORM_SYSTEM,
+                response_mime_type="application/json",
+                response_schema=FormularioCompletado,
+            ),
+        )
+        parsed = response.parsed
+        if isinstance(parsed, FormularioCompletado):
+            return parsed
+        return FormularioCompletado.model_validate_json(response.text or "{}")
+
+    def mapear_acroform(
+        self, perfil: dict, campos_pdf: list[dict]
+    ) -> FormularioCompletado:
+        contenido = (
+            "PERFIL DE LA EMPRESA (JSON):\n"
+            + json.dumps(perfil, ensure_ascii=False, indent=2)
+            + "\n\nCAMPOS DEL PDF (JSON):\n"
+            + json.dumps(campos_pdf, ensure_ascii=False, indent=2)
+        )
+        response = self._client.models.generate_content(
+            model=self._model,
+            contents=contenido,
+            config=types.GenerateContentConfig(
+                system_instruction=_ACROFORM_SYSTEM,
                 response_mime_type="application/json",
                 response_schema=FormularioCompletado,
             ),

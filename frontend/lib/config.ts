@@ -81,10 +81,12 @@ export interface CampoFormulario {
   etiqueta: string;
   valor: string;
   encontrado: boolean;
+  campo: string; // nombre interno del campo en PDFs rellenables; "" si plano
 }
 export interface FormularioCompletado {
   campos: CampoFormulario[];
   notas: string | null;
+  rellenable: boolean; // true = se puede bajar el PDF original completo
 }
 
 export function useCompletarFormulario() {
@@ -101,18 +103,21 @@ export function useCompletarFormulario() {
   });
 }
 
-// Baja un PDF con los datos del formulario (ya revisados por el usuario).
-export async function descargarFormularioPdf(body: {
-  titulo: string;
-  campos: CampoFormulario[];
-  notas: string | null;
-}): Promise<void> {
-  const res = await api.post("/api/v1/formularios/descargar", body, {
+// Rellena el PDF ORIGINAL (rellenable/AcroForm) con los valores revisados y lo
+// baja ya completo.
+export async function rellenarFormularioPdf(
+  archivo: File,
+  campos: CampoFormulario[]
+): Promise<void> {
+  const fd = new FormData();
+  fd.append("archivo", archivo);
+  fd.append("campos", JSON.stringify(campos));
+  const res = await api.post("/api/v1/formularios/rellenar", fd, {
     responseType: "blob",
   });
   const disp = (res.headers["content-disposition"] as string) || "";
   const m = disp.match(/filename="?([^"]+)"?/);
-  const nombre = m?.[1] ?? "formulario - datos.pdf";
+  const nombre = m?.[1] ?? "formulario - completo.pdf";
   const url = window.URL.createObjectURL(res.data as Blob);
   const a = document.createElement("a");
   a.href = url;

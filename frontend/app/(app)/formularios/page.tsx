@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/toast";
 import {
   type FormularioCompletado,
   type PerfilEmpresa,
-  descargarFormularioPdf,
+  rellenarFormularioPdf,
   useCompletarFormulario,
   useGuardarPerfilEmpresa,
   usePerfilEmpresa,
@@ -104,12 +104,14 @@ function CompletarFormulario() {
   const completar = useCompletarFormulario();
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [nombre, setNombre] = useState<string>("Formulario");
+  const [archivo, setArchivo] = useState<File | null>(null);
   const [resultado, setResultado] = useState<FormularioCompletado | null>(null);
   const [descargando, setDescargando] = useState(false);
 
+  const nombre = archivo?.name ?? "Formulario";
+
   const analizar = (file: File) => {
-    setNombre(file.name);
+    setArchivo(file);
     setResultado(null);
     completar.mutate(file, {
       onSuccess: (r) => setResultado(r),
@@ -127,14 +129,10 @@ function CompletarFormulario() {
     );
 
   const descargar = async () => {
-    if (!resultado) return;
+    if (!resultado || !archivo) return;
     setDescargando(true);
     try {
-      await descargarFormularioPdf({
-        titulo: nombre,
-        campos: resultado.campos,
-        notas: resultado.notas,
-      });
+      await rellenarFormularioPdf(archivo, resultado.campos);
     } catch {
       toast("No se pudo generar el PDF", "error");
     } finally {
@@ -186,10 +184,20 @@ function CompletarFormulario() {
               <p className="text-sm font-semibold text-ink">
                 Campos detectados ({resultado.campos.length})
               </p>
-              <Button onClick={descargar} disabled={descargando}>
-                <Download size={16} /> {descargando ? "Generando…" : "Descargar PDF"}
-              </Button>
+              {resultado.rellenable && (
+                <Button onClick={descargar} disabled={descargando}>
+                  <Download size={16} />{" "}
+                  {descargando ? "Generando…" : "Descargar formulario completo"}
+                </Button>
+              )}
             </div>
+            {!resultado.rellenable && (
+              <p className="mb-3 rounded-lg border border-amber-400/60 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                Este formulario es <strong>plano</strong> (no rellenable): la IA
+                igual mapeó los datos, pero para bajarlo completo hay que armar su
+                plantilla una vez. Avisame y la preparo.
+              </p>
+            )}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {resultado.campos.map((c, i) => (
                 <div key={`${c.etiqueta}-${i}`}>
@@ -219,8 +227,10 @@ function CompletarFormulario() {
               </p>
             )}
             <p className="mt-3 text-xs text-ink-3">
-              Revisá y corregí los valores; completá los que falten y descargá el
-              PDF con los datos.
+              Revisá y corregí los valores; completá los que falten
+              {resultado.rellenable
+                ? " y descargá el formulario original ya completo."
+                : "."}
             </p>
           </div>
         )}
