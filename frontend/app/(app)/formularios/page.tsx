@@ -1,6 +1,7 @@
 "use client";
 
-import { ClipboardType, Download, Sparkles, Upload } from "lucide-react";
+import { ClipboardType, Download, Pencil, Sparkles, Upload } from "lucide-react";
+import dynamic from "next/dynamic";
 import { type FormEvent, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,12 @@ import {
   usePerfilEmpresa,
 } from "@/lib/config";
 import { cn } from "@/lib/utils";
+
+// Editor visual (react-pdf) solo en el cliente (pdf.js no corre en SSR).
+const EditorPlano = dynamic(
+  () => import("@/components/formularios/editor-plano").then((m) => m.EditorPlano),
+  { ssr: false }
+);
 
 // Datos fijos de la empresa para autocompletar formularios de licitación.
 const CAMPOS_PERFIL: {
@@ -107,6 +114,7 @@ function CompletarFormulario() {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [resultado, setResultado] = useState<FormularioCompletado | null>(null);
   const [descargando, setDescargando] = useState(false);
+  const [editorAbierto, setEditorAbierto] = useState(false);
 
   const nombre = archivo?.name ?? "Formulario";
 
@@ -192,11 +200,15 @@ function CompletarFormulario() {
               )}
             </div>
             {!resultado.rellenable && (
-              <p className="mb-3 rounded-lg border border-amber-400/60 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-                Este formulario es <strong>plano</strong> (no rellenable): la IA
-                igual mapeó los datos, pero para bajarlo completo hay que armar su
-                plantilla una vez. Avisame y la preparo.
-              </p>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-400/60 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                <span>
+                  Este formulario es <strong>plano</strong>: abrí el editor para
+                  ubicar cada dato sobre el PDF y descargarlo completo.
+                </span>
+                <Button size="sm" onClick={() => setEditorAbierto(true)}>
+                  <Pencil size={15} /> Abrir editor
+                </Button>
+              </div>
             )}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {resultado.campos.map((c, i) => (
@@ -235,6 +247,14 @@ function CompletarFormulario() {
           </div>
         )}
       </Card>
+
+      {editorAbierto && archivo && resultado && (
+        <EditorPlano
+          archivo={archivo}
+          campos={resultado.campos}
+          onClose={() => setEditorAbierto(false)}
+        />
+      )}
     </>
   );
 }

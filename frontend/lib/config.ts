@@ -103,6 +103,53 @@ export function useCompletarFormulario() {
   });
 }
 
+export interface PosicionIA {
+  etiqueta: string;
+  page: number;
+  x: number;
+  y: number;
+}
+
+// Ayuda de IA: propone dónde va cada etiqueta en un PDF plano (fracciones 0..1).
+export async function ubicarCamposIA(
+  archivo: File,
+  etiquetas: string[]
+): Promise<PosicionIA[]> {
+  const fd = new FormData();
+  fd.append("archivo", archivo);
+  fd.append("etiquetas", JSON.stringify(etiquetas));
+  const res = await api.post<{ posiciones: PosicionIA[] }>(
+    "/api/v1/formularios/ubicar",
+    fd,
+    { timeout: 120000 }
+  );
+  return res.data.posiciones ?? [];
+}
+
+// Estampa un PDF plano con las posiciones del editor y lo baja completo.
+export async function rellenarPlanoPdf(
+  archivo: File,
+  posiciones: { page: number; x: number; y: number; valor: string }[]
+): Promise<void> {
+  const fd = new FormData();
+  fd.append("archivo", archivo);
+  fd.append("posiciones", JSON.stringify(posiciones));
+  const res = await api.post("/api/v1/formularios/rellenar-plano", fd, {
+    responseType: "blob",
+  });
+  const disp = (res.headers["content-disposition"] as string) || "";
+  const m = disp.match(/filename="?([^"]+)"?/);
+  const nombre = m?.[1] ?? "formulario - completo.pdf";
+  const url = window.URL.createObjectURL(res.data as Blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 // Rellena el PDF ORIGINAL (rellenable/AcroForm) con los valores revisados y lo
 // baja ya completo.
 export async function rellenarFormularioPdf(

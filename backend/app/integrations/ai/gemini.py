@@ -17,6 +17,7 @@ from app.integrations.ai.base import (
     FormularioCompletado,
     ImagePart,
     QuoteDraft,
+    Ubicaciones,
 )
 
 _EXTRACT_SYSTEM = """\
@@ -133,6 +134,18 @@ Para CADA campo de la lista devolvé un objeto con:
 Reglas: respondé SIEMPRE en español. NO inventes datos. No completes firma ni
 fecha. Devolvé un campo por cada uno de la lista, en el mismo orden."""
 
+_UBICAR_SYSTEM = """\
+Te doy un PDF de un formulario (plano) y una lista de ETIQUETAS de datos a
+completar. Para CADA etiqueta, indicá dónde habría que ESCRIBIR el valor: la
+página (empezando en 0) y la posición (x, y) en FRACCIONES de 0 a 1 medidas desde
+la esquina SUPERIOR IZQUIERDA de esa página.
+
+Importante: la posición es la del ESPACIO EN BLANCO donde va el dato (al lado o
+debajo de la etiqueta impresa en el formulario), NO la de la etiqueta misma. Para
+casilleros, la posición del casillero a marcar.
+
+Devolvé una posición por cada etiqueta de la lista. Respondé en español."""
+
 _QUOTE_SYSTEM = """\
 Sos un asistente del equipo comercial de una empresa industrial argentina.
 Recibís la respuesta de Compras a un pedido de cotización: suele venir como una
@@ -248,6 +261,28 @@ class GeminiProvider(AIProvider):
         if isinstance(parsed, FormularioCompletado):
             return parsed
         return FormularioCompletado.model_validate_json(response.text or "{}")
+
+    def ubicar_campos(
+        self, etiquetas: list[str], document: DocumentPart
+    ) -> Ubicaciones:
+        contents: list[object] = [
+            "ETIQUETAS A UBICAR (JSON):\n"
+            + json.dumps(etiquetas, ensure_ascii=False),
+            *self._document_parts([document]),
+        ]
+        response = self._client.models.generate_content(
+            model=self._model,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=_UBICAR_SYSTEM,
+                response_mime_type="application/json",
+                response_schema=Ubicaciones,
+            ),
+        )
+        parsed = response.parsed
+        if isinstance(parsed, Ubicaciones):
+            return parsed
+        return Ubicaciones.model_validate_json(response.text or "{}")
 
     def mapear_acroform(
         self, perfil: dict, campos_pdf: list[dict]

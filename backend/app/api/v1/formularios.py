@@ -16,7 +16,12 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_ai, get_current_user
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
-from app.integrations.ai.base import AIProvider, DocumentPart, FormularioCompletado
+from app.integrations.ai.base import (
+    AIProvider,
+    DocumentPart,
+    FormularioCompletado,
+    Ubicaciones,
+)
 from app.services import acroform
 from app.services.estampado import estampar
 from app.services.perfil_empresa import get_perfil_empresa
@@ -104,6 +109,40 @@ def rellenar_formulario(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
     )
+
+
+@router.post("/ubicar", response_model=Ubicaciones)
+def ubicar_campos(
+    archivo: UploadFile = File(...),
+    etiquetas: str = Form(...),
+    ai: AIProvider = Depends(get_ai),
+    _: Usuario = Depends(get_current_user),
+) -> Ubicaciones:
+    """Ayuda de IA (visión): propone dónde va cada etiqueta en el PDF plano, en
+    fracciones 0..1. El usuario lo corrige en el editor."""
+    data = _leer_pdf(archivo)
+    try:
+        lista = json.loads(etiquetas)
+        if not isinstance(lista, list):
+            raise ValueError
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Etiquetas inválidas."
+        ) from exc
+    documento = DocumentPart(
+        data=data, mime_type="application/pdf", filename=archivo.filename
+    )
+    try:
+        return ai.ubicar_campos([str(x) for x in lista], documento)
+    except NotImplementedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(exc)
+        ) from exc
+    except Exception as exc:  # noqa: BLE001 - frontera con la IA
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"No se pudo ubicar con IA: {exc}",
+        ) from exc
 
 
 @router.post("/rellenar-plano")

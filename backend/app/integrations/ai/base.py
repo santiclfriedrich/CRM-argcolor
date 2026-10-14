@@ -88,6 +88,19 @@ class FormularioCompletado(BaseModel):
     rellenable: bool = False
 
 
+class PosicionCampo(BaseModel):
+    """Dónde escribir un dato en un PDF plano (fracciones 0..1 desde arriba-izq)."""
+
+    etiqueta: str
+    page: int = 0
+    x: float = 0.0
+    y: float = 0.0
+
+
+class Ubicaciones(BaseModel):
+    posiciones: list[PosicionCampo] = []
+
+
 class AIProvider(ABC):
     """Contrato que toda implementación de IA debe cumplir."""
 
@@ -123,3 +136,11 @@ class AIProvider(ABC):
         perfil. `campos_pdf` = [{"name", "label"}]. Devuelve cada campo con su
         `campo` (nombre interno) para poder escribirlo después."""
         raise NotImplementedError("Este proveedor de IA no soporta mapear formularios.")
+
+    def ubicar_campos(
+        self, etiquetas: list[str], document: "DocumentPart"
+    ) -> "Ubicaciones":
+        """Con visión: para cada etiqueta, dice en qué página y posición (x,y en
+        0..1) habría que escribir el valor en un PDF plano. Es una ayuda que el
+        usuario después corrige en el editor."""
+        raise NotImplementedError("Este proveedor de IA no soporta ubicar campos.")
