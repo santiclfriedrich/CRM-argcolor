@@ -18,6 +18,7 @@ from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.integrations.ai.base import AIProvider, DocumentPart, FormularioCompletado
 from app.services import acroform
+from app.services.estampado import estampar
 from app.services.perfil_empresa import get_perfil_empresa
 
 router = APIRouter(prefix="/formularios", tags=["formularios"])
@@ -96,6 +97,34 @@ def rellenar_formulario(
         ) from exc
 
     pdf = acroform.rellenar(data, valores)
+    base = (archivo.filename or "formulario").rsplit(".", 1)[0]
+    nombre = f"{base} - completo.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
+    )
+
+
+@router.post("/rellenar-plano")
+def rellenar_plano(
+    archivo: UploadFile = File(...),
+    posiciones: str = Form(...),
+    _: Usuario = Depends(get_current_user),
+) -> StreamingResponse:
+    """Estampa texto sobre un PDF plano según las posiciones del editor visual y lo
+    devuelve. `posiciones` es un JSON [{page, x, y, valor, size?}] con x,y en 0..1."""
+    data = _leer_pdf(archivo)
+    try:
+        items = json.loads(posiciones)
+        if not isinstance(items, list):
+            raise ValueError
+    except (json.JSONDecodeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Posiciones inválidas."
+        ) from exc
+
+    pdf = estampar(data, items)
     base = (archivo.filename or "formulario").rsplit(".", 1)[0]
     nombre = f"{base} - completo.pdf"
     return StreamingResponse(
