@@ -18,7 +18,8 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.vers
 
 type Pos = { page: number; x: number; y: number }; // page 0-based; x,y en 0..1
 
-const ANCHO = 680;
+const ANCHO = 680; // ancho de render del PDF en px
+const SIZE_PT = 10; // tamaño del texto estampado, en puntos (debe matchear al PDF)
 
 export function EditorPlano({
   archivo,
@@ -39,6 +40,9 @@ export function EditorPlano({
   const [ubicando, setUbicando] = useState(false);
   const [descargando, setDescargando] = useState(false);
   const [arrastrando, setArrastrando] = useState<number | null>(null);
+  // Escala px/punto del render, para que el texto del editor tenga el mismo
+  // tamaño que el estampado en el PDF (A4 ≈ 595.32 pt de ancho por defecto).
+  const [escala, setEscala] = useState(ANCHO / 595.32);
   const pageRef = useRef<HTMLDivElement>(null);
 
   // Terminar el arrastre al soltar el mouse en cualquier lado.
@@ -93,7 +97,11 @@ export function EditorPlano({
         const next = { ...prev };
         campos.forEach((c, i) => {
           const r = porEtiqueta.get(c.etiqueta.trim().toLowerCase());
-          if (r) next[i] = { page: r.page ?? 0, x: r.x, y: r.y };
+          // Descarta posiciones inválidas (0,0 o fuera de rango): la IA las usa
+          // cuando no supo ubicar el campo; si no, se amontonan arriba-izquierda.
+          if (r && r.x > 0 && r.x < 1 && r.y > 0 && r.y < 1) {
+            next[i] = { page: r.page ?? 0, x: r.x, y: r.y };
+          }
         });
         return next;
       });
@@ -107,8 +115,10 @@ export function EditorPlano({
 
   const descargar = async () => {
     const posiciones = campos
-      .map((c, i) => ({ ...pos[i], valor: c.valor }))
-      .filter((p): p is Pos & { valor: string } => "x" in p && Boolean(p.valor));
+      .map((c, i) => ({ ...pos[i], valor: c.valor, size: SIZE_PT }))
+      .filter((p): p is Pos & { valor: string; size: number } =>
+        "x" in p && Boolean(p.valor)
+      );
     if (posiciones.length === 0) {
       toast.toast("Ubicá al menos un dato antes de descargar", "info");
       return;
@@ -240,6 +250,9 @@ export function EditorPlano({
                       width={ANCHO}
                       renderTextLayer={false}
                       renderAnnotationLayer={false}
+                      onLoadSuccess={(page) =>
+                        setEscala(ANCHO / (page.originalWidth || 595.32))
+                      }
                     />
                     {/* Marcadores de la página actual (negro, como el documento;
                         se arrastran para moverlos). */}
@@ -259,12 +272,16 @@ export function EditorPlano({
                           }}
                           onClick={(e) => e.stopPropagation()}
                           className={cn(
-                            "absolute -translate-y-1/2 cursor-move whitespace-nowrap rounded-sm px-0.5 text-[11px] font-medium leading-tight text-black",
+                            "absolute cursor-move whitespace-nowrap font-sans leading-none text-black",
                             activo
-                              ? "bg-accent/15 ring-1 ring-accent"
-                              : "bg-white/60 hover:ring-1 hover:ring-accent/60"
+                              ? "bg-accent/15 outline outline-1 outline-accent"
+                              : "bg-white/50 hover:outline hover:outline-1 hover:outline-accent/60"
                           )}
-                          style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}
+                          style={{
+                            left: `${p.x * 100}%`,
+                            top: `${p.y * 100}%`,
+                            fontSize: `${SIZE_PT * escala}px`,
+                          }}
                         >
                           {c.valor || c.etiqueta}
                         </span>

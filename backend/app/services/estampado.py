@@ -33,11 +33,12 @@ def estampar(data: bytes, posiciones: list[dict]) -> bytes:
             for p in items:
                 fx = min(max(float(p.get("x", 0)), 0.0), 1.0)
                 fy = min(max(float(p.get("y", 0)), 0.0), 1.0)
-                size = float(p.get("size") or 9)
+                size = float(p.get("size") or 10)
                 x = fx * w
-                # El click marca la esquina superior del texto; la baseline va
-                # 'size' puntos más abajo (PDF tiene el origen abajo-izquierda).
-                y = h - (fy * h) - size
+                # (fx, fy) es la esquina SUPERIOR-izquierda del texto (igual que el
+                # marcador del editor). La baseline va ~0.8*size debajo del tope;
+                # el PDF tiene el origen abajo-izquierda, por eso restamos de h.
+                y = h - (fy * h) - size * 0.8
                 c.setFont("Helvetica", size)
                 c.drawString(x, y, str(p["valor"]))
             c.save()
