@@ -22,6 +22,7 @@ from app.services.grupos_compras import (
     list_grupos,
     update_grupo,
 )
+from app.services.perfil_empresa import get_perfil_empresa, set_perfil_empresa
 from app.services.solicitudes import (
     get_destinatarios_compras,
     set_destinatarios_compras,
@@ -92,6 +93,53 @@ def actualizar_compras(
         to=str(body.to) if body.to else None,
         cc=[str(e) for e in body.cc],
     )
+
+
+class PerfilEmpresa(BaseModel):
+    """Datos fijos de la empresa para autocompletar formularios de licitación."""
+
+    razon_social: str = ""
+    cuit: str = ""
+    forma_juridica: str = ""
+    fecha_contrato_social: str = ""
+    domicilio: str = ""
+    localidad: str = ""
+    cp: str = ""
+    provincia: str = ""
+    telefono: str = ""
+    email: str = ""
+    condicion_iva: str = ""
+    condicion_iibb: str = ""
+    nro_iibb: str = ""
+    jurisdicciones_iibb: str = ""
+    condicion_ganancias: str = ""
+    actividad_principal: str = ""
+    actividad_secundaria: str = ""
+    banco: str = ""
+    sucursal: str = ""
+    cuenta: str = ""
+    cbu: str = ""
+    contacto_nombre: str = ""
+    contacto_area: str = ""
+    contacto_email: str = ""
+    concepto_retencion: str = ""
+    observaciones: str = ""
+
+
+@router.get("/perfil-empresa", response_model=PerfilEmpresa)
+def leer_perfil_empresa(
+    db: Session = Depends(get_db), _: Usuario = Depends(get_current_user)
+) -> dict:
+    return get_perfil_empresa(db)
+
+
+@router.put("/perfil-empresa", response_model=PerfilEmpresa)
+def actualizar_perfil_empresa(
+    body: PerfilEmpresa,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> dict:
+    return set_perfil_empresa(db, body.model_dump())
 
 
 # --- Grupos de destinatarios de Compras (por usuario) ---

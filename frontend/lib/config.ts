@@ -27,6 +27,55 @@ export function useUpdateAutomatizacion() {
   });
 }
 
+// --- Perfil de empresa (datos fijos para formularios de licitación) ---
+export interface PerfilEmpresa {
+  razon_social: string;
+  cuit: string;
+  forma_juridica: string;
+  fecha_contrato_social: string;
+  domicilio: string;
+  localidad: string;
+  cp: string;
+  provincia: string;
+  telefono: string;
+  email: string;
+  condicion_iva: string;
+  condicion_iibb: string;
+  nro_iibb: string;
+  jurisdicciones_iibb: string;
+  condicion_ganancias: string;
+  actividad_principal: string;
+  actividad_secundaria: string;
+  banco: string;
+  sucursal: string;
+  cuenta: string;
+  cbu: string;
+  contacto_nombre: string;
+  contacto_area: string;
+  contacto_email: string;
+  concepto_retencion: string;
+  observaciones: string;
+}
+
+const PERFIL_KEY = ["configuracion", "perfil-empresa"] as const;
+const PERFIL_URL = "/api/v1/configuracion/perfil-empresa";
+
+export function usePerfilEmpresa() {
+  return useQuery({
+    queryKey: PERFIL_KEY,
+    queryFn: async () => (await api.get<PerfilEmpresa>(PERFIL_URL)).data,
+  });
+}
+
+export function useGuardarPerfilEmpresa() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: PerfilEmpresa) =>
+      (await api.put<PerfilEmpresa>(PERFIL_URL, body)).data,
+    onSuccess: (data) => qc.setQueryData(PERFIL_KEY, data),
+  });
+}
+
 // --- Destinatarios del mail a Compras ---
 export interface DestinatariosCompras {
   to: string | null;
