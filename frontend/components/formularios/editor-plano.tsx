@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronLeft, ChevronRight, Download, Sparkles, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 
 import { Button } from "@/components/ui/button";
@@ -38,19 +38,45 @@ export function EditorPlano({
   const [pos, setPos] = useState<Record<number, Pos>>({});
   const [ubicando, setUbicando] = useState(false);
   const [descargando, setDescargando] = useState(false);
+  const [arrastrando, setArrastrando] = useState<number | null>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
 
+  // Terminar el arrastre al soltar el mouse en cualquier lado.
+  useEffect(() => {
+    const up = () => setArrastrando(null);
+    window.addEventListener("mouseup", up);
+    return () => window.removeEventListener("mouseup", up);
+  }, []);
+
+  const fraccion = (e: { clientX: number; clientY: number }) => {
+    const el = pageRef.current;
+    if (!el) return { x: 0, y: 0 };
+    const r = el.getBoundingClientRect();
+    return {
+      x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1),
+      y: Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1),
+    };
+  };
+
+  // Clic en un espacio vacío: ubica el dato seleccionado.
   const colocarEnClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (arrastrando !== null) return;
     if (sel === null) {
       toast.toast("Elegí primero un dato de la lista", "info");
       return;
     }
-    const r = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width;
-    const y = (e.clientY - r.top) / r.height;
+    const { x, y } = fraccion(e);
     setPos((p) => ({ ...p, [sel]: { page: pagina - 1, x, y } }));
     // Avanza al próximo dato sin ubicar, para ir rápido.
     const sig = campos.findIndex((_, i) => i > sel && pos[i] === undefined);
     setSel(sig === -1 ? null : sig);
+  };
+
+  // Arrastrar un marcador ya ubicado para moverlo.
+  const moverArrastrando = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (arrastrando === null) return;
+    const { x, y } = fraccion(e);
+    setPos((p) => ({ ...p, [arrastrando]: { page: pagina - 1, x, y } }));
   };
 
   const ubicarConIA = async () => {
@@ -201,11 +227,13 @@ export function EditorPlano({
                   error={<p className="p-6 text-center text-sm text-danger">No se pudo abrir el PDF.</p>}
                 >
                   <div
+                    ref={pageRef}
                     className={cn(
                       "relative shadow-soft",
                       sel !== null ? "cursor-crosshair" : "cursor-default"
                     )}
                     onClick={colocarEnClick}
+                    onMouseMove={moverArrastrando}
                   >
                     <Page
                       pageNumber={pagina}
@@ -213,14 +241,29 @@ export function EditorPlano({
                       renderTextLayer={false}
                       renderAnnotationLayer={false}
                     />
-                    {/* Marcadores de la página actual */}
+                    {/* Marcadores de la página actual (negro, como el documento;
+                        se arrastran para moverlos). */}
                     {campos.map((c, i) => {
                       const p = pos[i];
                       if (!p || p.page !== pagina - 1) return null;
+                      const activo = sel === i;
                       return (
                         <span
                           key={`m-${i}`}
-                          className="pointer-events-none absolute -translate-y-1/2 whitespace-nowrap rounded bg-accent px-1 text-[11px] font-semibold text-white"
+                          title="Arrastrá para mover"
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            setSel(i);
+                            setArrastrando(i);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className={cn(
+                            "absolute -translate-y-1/2 cursor-move whitespace-nowrap rounded-sm px-0.5 text-[11px] font-medium leading-tight text-black",
+                            activo
+                              ? "bg-accent/15 ring-1 ring-accent"
+                              : "bg-white/60 hover:ring-1 hover:ring-accent/60"
+                          )}
                           style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}
                         >
                           {c.valor || c.etiqueta}
