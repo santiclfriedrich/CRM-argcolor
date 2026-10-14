@@ -66,6 +66,22 @@ class QuoteDraft(BaseModel):
     notas: str | None = None
 
 
+class CampoFormulario(BaseModel):
+    """Un campo del formulario y el valor que la IA propone (del perfil)."""
+
+    etiqueta: str
+    valor: str = ""
+    # True si el valor salió del perfil; False si el form lo pide pero no estaba.
+    encontrado: bool = True
+
+
+class FormularioCompletado(BaseModel):
+    """Resultado de completar un formulario con el perfil de empresa."""
+
+    campos: list[CampoFormulario] = []
+    notas: str | None = None
+
+
 class AIProvider(ABC):
     """Contrato que toda implementación de IA debe cumplir."""
 
@@ -85,3 +101,11 @@ class AIProvider(ABC):
     @abstractmethod
     def summarize_thread(self, messages: list[str]) -> str:
         """Resume un hilo de mails."""
+
+    def completar_formulario(
+        self, perfil: dict, document: "DocumentPart"
+    ) -> "FormularioCompletado":
+        """Lee el PDF de un formulario y propone qué valor va en cada campo según
+        el perfil de empresa. No es abstracto para no obligar a todos los
+        proveedores a implementarlo; Gemini lo soporta."""
+        raise NotImplementedError("Este proveedor de IA no soporta completar formularios.")

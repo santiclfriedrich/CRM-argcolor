@@ -8,6 +8,7 @@ from app.api.v1 import (
     config,
     contactos,
     dominios,
+    formularios,
     health,
     mails,
     notas,
@@ -38,3 +39,4 @@ api_router.include_router(notas.router)
 api_router.include_router(notificaciones.router)
 api_router.include_router(config.router)
 api_router.include_router(sync_gbp.router)
+api_router.include_router(formularios.router)

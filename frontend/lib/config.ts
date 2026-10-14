@@ -76,6 +76,31 @@ export function useGuardarPerfilEmpresa() {
   });
 }
 
+// --- Autocompletar formularios con IA ---
+export interface CampoFormulario {
+  etiqueta: string;
+  valor: string;
+  encontrado: boolean;
+}
+export interface FormularioCompletado {
+  campos: CampoFormulario[];
+  notas: string | null;
+}
+
+export function useCompletarFormulario() {
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const fd = new FormData();
+      fd.append("archivo", file);
+      return (
+        await api.post<FormularioCompletado>("/api/v1/formularios/completar", fd, {
+          timeout: 120000,
+        })
+      ).data;
+    },
+  });
+}
+
 // --- Destinatarios del mail a Compras ---
 export interface DestinatariosCompras {
   to: string | null;

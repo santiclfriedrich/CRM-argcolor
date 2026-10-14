@@ -1,7 +1,7 @@
 "use client";
 
-import { ClipboardType } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { ClipboardType, Sparkles, Upload } from "lucide-react";
+import { type FormEvent, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,10 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import {
+  type FormularioCompletado,
   type PerfilEmpresa,
+  useCompletarFormulario,
   useGuardarPerfilEmpresa,
   usePerfilEmpresa,
 } from "@/lib/config";
+import { cn } from "@/lib/utils";
 
 // Datos fijos de la empresa para autocompletar formularios de licitación.
 const CAMPOS_PERFIL: {
@@ -80,6 +83,8 @@ export default function FormulariosPage() {
         de alta de proveedor y licitaciones. Vienen precargados; editalos y guardá.
       </p>
 
+      <CompletarFormulario />
+
       <h2 className="mt-8 text-lg font-semibold tracking-tight text-ink">
         Perfil de empresa
       </h2>
@@ -89,6 +94,104 @@ export default function FormulariosPage() {
         <p className="mt-4 text-sm text-ink-2">Cargando…</p>
       )}
     </div>
+  );
+}
+
+// Subir un formulario (PDF) y que la IA proponga qué va en cada campo según el
+// perfil. Es un borrador para revisar (todavía no estampa el PDF).
+function CompletarFormulario() {
+  const completar = useCompletarFormulario();
+  const { toast } = useToast();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [nombre, setNombre] = useState<string | null>(null);
+  const [resultado, setResultado] = useState<FormularioCompletado | null>(null);
+
+  const analizar = (file: File) => {
+    setNombre(file.name);
+    setResultado(null);
+    completar.mutate(file, {
+      onSuccess: (r) => setResultado(r),
+      onError: () =>
+        toast("No se pudo analizar el formulario (¿IA configurada?)", "error"),
+    });
+  };
+
+  return (
+    <>
+      <h2 className="mt-8 flex items-center gap-2 text-lg font-semibold tracking-tight text-ink">
+        <Sparkles size={18} className="text-accent" /> Completar un formulario con IA
+      </h2>
+      <p className="mt-1 text-sm text-ink-2">
+        Subí el PDF de un formulario y la IA propone qué valor va en cada campo
+        según el perfil. Es un borrador para revisar.
+      </p>
+
+      <Card className="mt-4 p-5">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="application/pdf"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) analizar(f);
+            e.target.value = "";
+          }}
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => inputRef.current?.click()}
+            disabled={completar.isPending}
+          >
+            <Upload size={16} /> Subir formulario (PDF)
+          </Button>
+          {nombre && <span className="text-sm text-ink-2">{nombre}</span>}
+          {completar.isPending && (
+            <span className="text-sm text-accent">Analizando con IA…</span>
+          )}
+        </div>
+
+        {resultado && (
+          <div className="mt-5 border-t border-line pt-4">
+            <p className="mb-3 text-sm font-semibold text-ink">
+              Campos detectados ({resultado.campos.length})
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {resultado.campos.map((c, i) => (
+                <div key={`${c.etiqueta}-${i}`}>
+                  <Label htmlFor={`cf-${i}`}>
+                    {c.etiqueta}
+                    {!c.encontrado && (
+                      <span className="ml-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                        · falta en el perfil
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    id={`cf-${i}`}
+                    defaultValue={c.valor}
+                    className={cn(
+                      !c.encontrado && "border-amber-400 dark:border-amber-500/60"
+                    )}
+                  />
+                </div>
+              ))}
+            </div>
+            {resultado.notas && (
+              <p className="mt-4 rounded-lg border border-line bg-surface2/60 px-3 py-2 text-sm text-ink-2">
+                <span className="font-medium text-ink">Nota de la IA:</span>{" "}
+                {resultado.notas}
+              </p>
+            )}
+            <p className="mt-3 text-xs text-ink-3">
+              Revisá y corregí los valores. (Próximo paso: bajar el PDF ya
+              completado.)
+            </p>
+          </div>
+        )}
+      </Card>
+    </>
   );
 }
 

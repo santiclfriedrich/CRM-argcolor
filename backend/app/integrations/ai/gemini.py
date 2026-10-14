@@ -4,6 +4,8 @@ Usa el SDK oficial vigente `google-genai`. La extracción devuelve JSON
 estructurado validado contra los schemas Pydantic de `base.py`.
 """
 
+import json
+
 from google import genai
 from google.genai import types
 
@@ -12,6 +14,7 @@ from app.integrations.ai.base import (
     AIProvider,
     DocumentPart,
     EmailData,
+    FormularioCompletado,
     ImagePart,
     QuoteDraft,
 )
@@ -94,6 +97,26 @@ Reglas (solo para consulta_comercial):
 """
 
 _SUMMARY_SYSTEM = "Resumí el siguiente hilo de mails en español, en 3-5 líneas accionables."
+
+_FORM_SYSTEM = """\
+Sos un asistente que completa formularios de alta de proveedor / licitación de
+una empresa argentina. Te doy (1) el PERFIL de la empresa en JSON y (2) el PDF de
+un formulario a completar.
+
+Identificá TODOS los campos que hay que completar en el formulario —incluidas las
+opciones o casilleros a marcar (condición ante el IVA, IIBB, Ganancias, conceptos
+sujetos a retención, etc.)— y devolvé, para cada uno:
+- etiqueta: el nombre del campo tal como figura en el formulario.
+- valor: el dato que corresponde SEGÚN EL PERFIL. Para opciones/casilleros, poné
+  la opción que hay que marcar (ej. "Responsable Inscripto").
+- encontrado: true si el valor salió del perfil; false si el formulario lo pide
+  pero el dato NO está en el perfil (en ese caso dejá valor = "").
+
+Reglas:
+- Respondé SIEMPRE en español.
+- NO inventes datos: si no está en el perfil, encontrado=false y valor "".
+- No completes la firma ni la fecha (los pone la persona a mano).
+- En 'notas' aclaraciones generales (ej. qué certificados adjuntar) si las hay."""
 
 _QUOTE_SYSTEM = """\
 Sos un asistente del equipo comercial de una empresa industrial argentina.
@@ -188,3 +211,25 @@ class GeminiProvider(AIProvider):
             config=types.GenerateContentConfig(system_instruction=_SUMMARY_SYSTEM),
         )
         return response.text or ""
+
+    def completar_formulario(
+        self, perfil: dict, document: DocumentPart
+    ) -> FormularioCompletado:
+        contents: list[object] = [
+            "PERFIL DE LA EMPRESA (JSON):\n"
+            + json.dumps(perfil, ensure_ascii=False, indent=2),
+            *self._document_parts([document]),
+        ]
+        response = self._client.models.generate_content(
+            model=self._model,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=_FORM_SYSTEM,
+                response_mime_type="application/json",
+                response_schema=FormularioCompletado,
+            ),
+        )
+        parsed = response.parsed
+        if isinstance(parsed, FormularioCompletado):
+            return parsed
+        return FormularioCompletado.model_validate_json(response.text or "{}")
