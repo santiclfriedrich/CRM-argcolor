@@ -16,6 +16,29 @@ def _fecha(valor: date | datetime | None) -> str:
     return valor.strftime("%d/%m/%Y") if valor is not None else ""
 
 
+def _contacto(c: Cliente):
+    """Contacto representativo: el principal con mail; si no, el primero con mail;
+    si no, el principal; si no, el primero. Puede ser None."""
+    contactos = list(getattr(c, "contactos", None) or [])
+    if not contactos:
+        return None
+    return (
+        next((k for k in contactos if k.es_principal and k.email), None)
+        or next((k for k in contactos if k.email), None)
+        or next((k for k in contactos if k.es_principal), None)
+        or contactos[0]
+    )
+
+
+def _emails(c: Cliente) -> str:
+    """Todos los mails de los contactos, sin repetir."""
+    vistos: list[str] = []
+    for k in getattr(c, "contactos", None) or []:
+        if k.email and k.email not in vistos:
+            vistos.append(k.email)
+    return ", ".join(vistos)
+
+
 # (encabezado, función que saca el valor del cliente)
 _COLS: list[tuple[str, object]] = [
     ("N° cliente", lambda c: c.numero_cliente or ""),
@@ -24,6 +47,9 @@ _COLS: list[tuple[str, object]] = [
     ("Tipo", lambda c: c.tipo or ""),
     ("Sector", lambda c: c.sector or ""),
     ("Teléfono", lambda c: c.telefono or ""),
+    ("Contacto", lambda c: (_contacto(c).nombre if _contacto(c) else "")),
+    ("Email", lambda c: (_contacto(c).email or "" if _contacto(c) else "")),
+    ("Emails (todos)", _emails),
     ("Sitio web", lambda c: c.sitio_web or ""),
     ("Empleados", lambda c: c.empleados),
     ("Dirección facturación", lambda c: c.direccion_facturacion or ""),

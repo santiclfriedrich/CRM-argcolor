@@ -112,7 +112,8 @@ def export_clientes(
 ) -> StreamingResponse:
     """Descarga un Excel (.xlsx) con las cuentas y su información."""
     query = select(Cliente).options(
-        selectinload(Cliente.vendedor_asignado).load_only(Usuario.id, Usuario.nombre)
+        selectinload(Cliente.vendedor_asignado).load_only(Usuario.id, Usuario.nombre),
+        selectinload(Cliente.contactos),
     )
     if solo_activos:
         query = query.where(Cliente.activo.is_(True))

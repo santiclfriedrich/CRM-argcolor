@@ -256,9 +256,13 @@ def test_export_xlsx_clientes(client: TestClient) -> None:
 
     from openpyxl import load_workbook
 
-    client.post(
+    cid = client.post(
         "/api/v1/clientes",
         json={"razon_social": "BENCEN S.A.", "cuit": "30586999512", "telefono": "11-5555"},
+    ).json()["id"]
+    client.post(
+        f"/api/v1/clientes/{cid}/contactos",
+        json={"nombre": "Ana", "email": "ana@bencen.com", "es_principal": True},
     )
 
     r = client.get("/api/v1/clientes/export.xlsx")
@@ -271,5 +275,7 @@ def test_export_xlsx_clientes(client: TestClient) -> None:
     encabezados = [c.value for c in ws[1]]
     assert "Razón social" in encabezados
     assert "CUIT" in encabezados
+    assert "Email" in encabezados
     valores = [c.value for fila in ws.iter_rows(min_row=2) for c in fila]
     assert "BENCEN S.A." in valores
+    assert "ana@bencen.com" in valores
