@@ -249,3 +249,27 @@ def test_cuit_obligatorio_formato_y_unico(client: TestClient) -> None:
     dup = client.post("/api/v1/clientes", json={"razon_social": "Y", "cuit": "30586999512"})
     assert dup.status_code == 409
     assert "30-58699951-2" in dup.json()["detail"]
+
+
+def test_export_xlsx_clientes(client: TestClient) -> None:
+    import io
+
+    from openpyxl import load_workbook
+
+    client.post(
+        "/api/v1/clientes",
+        json={"razon_social": "BENCEN S.A.", "cuit": "30586999512", "telefono": "11-5555"},
+    )
+
+    r = client.get("/api/v1/clientes/export.xlsx")
+    assert r.status_code == 200, r.text
+    assert "spreadsheetml" in r.headers["content-type"]
+    assert ".xlsx" in r.headers["content-disposition"]
+
+    wb = load_workbook(io.BytesIO(r.content))
+    ws = wb.active
+    encabezados = [c.value for c in ws[1]]
+    assert "Razón social" in encabezados
+    assert "CUIT" in encabezados
+    valores = [c.value for fila in ws.iter_rows(min_row=2) for c in fila]
+    assert "BENCEN S.A." in valores

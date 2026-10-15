@@ -24,6 +24,22 @@ export const clienteKeys = {
 
 // ---------- Clientes ----------
 
+// Descarga un Excel (.xlsx) con las cuentas y su info.
+export async function descargarExcelClientes(): Promise<void> {
+  const res = await api.get(`${BASE}/export.xlsx`, { responseType: "blob" });
+  const disp = (res.headers["content-disposition"] as string) || "";
+  const m = disp.match(/filename="?([^"]+)"?/);
+  const nombre = m?.[1] ?? "cuentas.xlsx";
+  const url = window.URL.createObjectURL(res.data as Blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 export function useClientes() {
   return useQuery({
     queryKey: clienteKeys.all,

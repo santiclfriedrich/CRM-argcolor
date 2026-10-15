@@ -1,7 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Plus, RefreshCw, User } from "lucide-react";
+import { FileSpreadsheet, Plus, RefreshCw, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -13,7 +13,8 @@ import { RefChip } from "@/components/ui/ref-chip";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useResizableColumns } from "@/components/ui/resizable-columns";
-import { useClientes, useCreateCliente } from "@/lib/clientes";
+import { useToast } from "@/components/ui/toast";
+import { descargarExcelClientes, useClientes, useCreateCliente } from "@/lib/clientes";
 import { clearDraft, DRAFT_CLIENTE } from "@/lib/draft";
 import { useGbpSyncStatus, useRunGbpSync } from "@/lib/sync";
 import { errorMessage } from "@/lib/utils";
@@ -66,9 +67,22 @@ const cuitErrorDe = (err: unknown): string | null =>
 
 export default function CuentasPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [creating, setCreating] = useState(false);
+  const [exportando, setExportando] = useState(false);
   const { data, isLoading, isError } = useClientes();
   const createMut = useCreateCliente();
+
+  const exportarExcel = async () => {
+    setExportando(true);
+    try {
+      await descargarExcelClientes();
+    } catch {
+      toast("No se pudo generar el Excel", "error");
+    } finally {
+      setExportando(false);
+    }
+  };
 
   const cuentas = data ?? [];
 
@@ -100,6 +114,9 @@ export default function CuentasPage() {
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <SyncGbpBoton />
+          <Button variant="outline" onClick={exportarExcel} disabled={exportando}>
+            <FileSpreadsheet size={16} /> {exportando ? "Generando…" : "Excel"}
+          </Button>
           <Button onClick={() => setCreating(true)}>
             <Plus size={16} /> Nueva cuenta
           </Button>

@@ -1,6 +1,9 @@
 """CRUD endpoints for clientes."""
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session, load_only, selectinload
@@ -18,6 +21,7 @@ from app.schemas.cliente import (
     ClienteUpdate,
 )
 from app.services.borrado import eliminar_cliente
+from app.services.export_clientes import XLSX_MIME, clientes_a_xlsx
 
 router = APIRouter(prefix="/clientes", tags=["clientes"])
 
@@ -97,6 +101,28 @@ def list_clientes(
             )
             .order_by(Cliente.razon_social)
         )
+    )
+
+
+@router.get("/export.xlsx")
+def export_clientes(
+    solo_activos: bool = False,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> StreamingResponse:
+    """Descarga un Excel (.xlsx) con las cuentas y su información."""
+    query = select(Cliente).options(
+        selectinload(Cliente.vendedor_asignado).load_only(Usuario.id, Usuario.nombre)
+    )
+    if solo_activos:
+        query = query.where(Cliente.activo.is_(True))
+    clientes = list(db.scalars(query.order_by(Cliente.razon_social)))
+    data = clientes_a_xlsx(clientes)
+    nombre = f"cuentas_{date.today():%Y%m%d}.xlsx"
+    return StreamingResponse(
+        iter([data]),
+        media_type=XLSX_MIME,
+        headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
     )
 
 
