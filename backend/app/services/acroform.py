@@ -1,8 +1,22 @@
 """Leer y rellenar PDFs con campos de formulario (AcroForm) usando pypdf."""
 
 import io
+import re
 
 from pypdf import PdfReader, PdfWriter
+
+# Etiquetas "basura" que generan los exportadores (untitled1, Text3, Campo5…):
+# cuando predominan, el auto-relleno no sirve y conviene el editor visual.
+_JUNK = re.compile(
+    r"^(untitled|text|field|campo|check\s?box|checkbox|cuadro|casilla|undefined)\s*\d*$",
+    re.IGNORECASE,
+)
+
+
+def _util(label: str) -> bool:
+    """La etiqueta es legible (no es 'untitled7' ni una sola letra/número)."""
+    t = (label or "").strip()
+    return len(t) >= 3 and not _JUNK.match(t) and bool(re.search(r"[a-zA-ZáéíóúñÁÉÍÓÚÑ]{2,}", t))
 
 
 def leer_campos(data: bytes) -> list[dict[str, str]]:
@@ -26,6 +40,20 @@ def tiene_campos(data: bytes) -> bool:
         return bool(leer_campos(data))
     except Exception:  # noqa: BLE001 - PDF corrupto/ilegible
         return False
+
+
+def es_util_rellenable(data: bytes) -> bool:
+    """True si el PDF es rellenable Y sus campos tienen etiquetas legibles (así el
+    auto-relleno con IA sirve). Si los nombres son basura, False → editor visual."""
+    try:
+        campos = leer_campos(data)
+    except Exception:  # noqa: BLE001 - PDF ilegible
+        return False
+    if not campos:
+        return False
+    utiles = sum(1 for c in campos if _util(c.get("label", "")))
+    # Al menos un campo útil y que predominen (≥ la mitad).
+    return utiles >= 1 and utiles >= len(campos) / 2
 
 
 def rellenar(data: bytes, valores: dict[str, str]) -> bytes:

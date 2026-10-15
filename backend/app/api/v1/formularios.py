@@ -11,6 +11,7 @@ import json
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_ai, get_current_user
@@ -42,6 +43,23 @@ def _leer_pdf(archivo: UploadFile) -> bytes:
     return data
 
 
+class Deteccion(BaseModel):
+    """Cómo conviene completar el formulario según su tipo."""
+
+    rellenable: bool  # True = AcroForm con etiquetas legibles → auto-relleno
+
+
+@router.post("/detectar", response_model=Deteccion)
+def detectar_formulario(
+    archivo: UploadFile = File(...),
+    _: Usuario = Depends(get_current_user),
+) -> Deteccion:
+    """Chequeo rápido (sin IA): decide si el PDF conviene por auto-relleno
+    (rellenable con etiquetas legibles) o por el editor visual."""
+    data = _leer_pdf(archivo)
+    return Deteccion(rellenable=acroform.es_util_rellenable(data))
+
+
 @router.post("/completar", response_model=FormularioCompletado)
 def completar_formulario(
     archivo: UploadFile = File(...),
@@ -54,7 +72,7 @@ def completar_formulario(
     data = _leer_pdf(archivo)
     perfil = get_perfil_empresa(db)
     try:
-        if acroform.tiene_campos(data):
+        if acroform.es_util_rellenable(data):
             res = ai.mapear_acroform(perfil, acroform.leer_campos(data))
             res.rellenable = True
         else:

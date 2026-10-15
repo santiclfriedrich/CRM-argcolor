@@ -89,6 +89,19 @@ export interface FormularioCompletado {
   rellenable: boolean; // true = se puede bajar el PDF original completo
 }
 
+// Chequeo rápido (sin IA): true = conviene auto-relleno (AcroForm con etiquetas
+// legibles); false = conviene el editor visual.
+export async function detectarFormulario(archivo: File): Promise<boolean> {
+  const fd = new FormData();
+  fd.append("archivo", archivo);
+  const res = await api.post<{ rellenable: boolean }>(
+    "/api/v1/formularios/detectar",
+    fd,
+    { timeout: 60000 }
+  );
+  return res.data.rellenable;
+}
+
 export function useCompletarFormulario() {
   return useMutation({
     mutationFn: async (file: File) => {

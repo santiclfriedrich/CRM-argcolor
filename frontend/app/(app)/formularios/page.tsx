@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardType, Pencil, Upload } from "lucide-react";
+import { ClipboardType, Download, Pencil, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
 import { type FormEvent, useRef, useState } from "react";
 
@@ -12,10 +12,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import {
   type CampoFormulario,
+  type FormularioCompletado,
   type PerfilEmpresa,
+  detectarFormulario,
+  rellenarFormularioPdf,
+  useCompletarFormulario,
   useGuardarPerfilEmpresa,
   usePerfilEmpresa,
 } from "@/lib/config";
+import { cn } from "@/lib/utils";
 
 // Editor visual (react-pdf) solo en el cliente (pdf.js no corre en SSR).
 const EditorPlano = dynamic(
@@ -106,11 +111,16 @@ export default function FormulariosPage() {
 // perfil. Es un borrador para revisar (todavía no estampa el PDF).
 function CompletarFormulario() {
   const { data: perfil } = usePerfilEmpresa();
+  const completar = useCompletarFormulario();
+  const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [archivo, setArchivo] = useState<File | null>(null);
+  const [resultado, setResultado] = useState<FormularioCompletado | null>(null);
   const [editorAbierto, setEditorAbierto] = useState(false);
+  const [detectando, setDetectando] = useState(false);
+  const [descargando, setDescargando] = useState(false);
 
-  // Los datos del perfil (no vacíos) que el usuario va a ubicar sobre el PDF.
+  // Los datos del perfil (no vacíos) que el usuario ubica en el editor visual.
   const camposPerfil: CampoFormulario[] = perfil
     ? CAMPOS_PERFIL.flatMap((g) => g.campos)
         .map(({ k, label }) => ({
@@ -122,9 +132,48 @@ function CompletarFormulario() {
         .filter((c) => c.valor.trim() !== "")
     : [];
 
-  const elegir = (file: File) => {
+  // Al subir: detectar si conviene auto-relleno (rellenable con etiquetas
+  // legibles) o el editor visual. Ante la duda/error, editor (siempre funciona).
+  const elegir = async (file: File) => {
     setArchivo(file);
-    setEditorAbierto(true);
+    setResultado(null);
+    setEditorAbierto(false);
+    setDetectando(true);
+    try {
+      const rellenable = await detectarFormulario(file);
+      if (rellenable) {
+        completar.mutate(file, {
+          onSuccess: (r) => setResultado(r),
+          onError: () => {
+            toast("No se pudo mapear con IA; abrí el editor", "error");
+            setEditorAbierto(true);
+          },
+        });
+      } else {
+        setEditorAbierto(true);
+      }
+    } catch {
+      setEditorAbierto(true);
+    } finally {
+      setDetectando(false);
+    }
+  };
+
+  const editarCampo = (i: number, valor: string) =>
+    setResultado((r) =>
+      r ? { ...r, campos: r.campos.map((c, j) => (j === i ? { ...c, valor } : c)) } : r
+    );
+
+  const descargar = async () => {
+    if (!resultado || !archivo) return;
+    setDescargando(true);
+    try {
+      await rellenarFormularioPdf(archivo, resultado.campos);
+    } catch {
+      toast("No se pudo generar el PDF", "error");
+    } finally {
+      setDescargando(false);
+    }
   };
 
   return (
@@ -133,9 +182,8 @@ function CompletarFormulario() {
         Completar un formulario
       </h2>
       <p className="mt-1 text-sm text-ink-2">
-        Subí el PDF del formulario: se abre un editor con la vista previa para que
-        ubiques tus datos sobre las líneas (la IA puede pre-ubicarlos) y descargues
-        el formulario completo.
+        Subí el PDF. Si es rellenable, lo completa solo (revisás y descargás); si
+        no, se abre el editor para ubicar tus datos sobre las líneas.
       </p>
 
       <Card className="mt-4 p-5">
@@ -151,24 +199,63 @@ function CompletarFormulario() {
           }}
         />
         <div className="flex flex-wrap items-center gap-3">
-          <Button variant="outline" onClick={() => inputRef.current?.click()}>
+          <Button
+            variant="outline"
+            onClick={() => inputRef.current?.click()}
+            disabled={detectando || completar.isPending}
+          >
             <Upload size={16} /> Subir formulario (PDF)
           </Button>
-          {archivo && (
-            <>
-              <span className="text-sm text-ink-2">{archivo.name}</span>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setEditorAbierto(true)}
-              >
-                <Pencil size={15} /> Abrir editor
-              </Button>
-            </>
+          {archivo && <span className="text-sm text-ink-2">{archivo.name}</span>}
+          {(detectando || completar.isPending) && (
+            <span className="text-sm text-accent">Analizando…</span>
           )}
         </div>
-        {!perfil && (
-          <p className="mt-3 text-sm text-ink-2">Cargando perfil…</p>
+        {!perfil && <p className="mt-3 text-sm text-ink-2">Cargando perfil…</p>}
+
+        {resultado && (
+          <div className="mt-5 border-t border-line pt-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-ink">
+                Formulario rellenable — revisá los datos ({resultado.campos.length})
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditorAbierto(true)}
+                >
+                  <Pencil size={15} /> Abrir editor
+                </Button>
+                <Button onClick={descargar} disabled={descargando}>
+                  <Download size={16} />{" "}
+                  {descargando ? "Generando…" : "Descargar formulario completo"}
+                </Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {resultado.campos.map((c, i) => (
+                <div key={`${c.etiqueta}-${i}`}>
+                  <Label htmlFor={`cf-${i}`}>
+                    {c.etiqueta}
+                    {!c.encontrado && (
+                      <span className="ml-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                        · falta en el perfil
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    id={`cf-${i}`}
+                    value={c.valor}
+                    onChange={(e) => editarCampo(i, e.target.value)}
+                    className={cn(
+                      !c.encontrado && "border-amber-400 dark:border-amber-500/60"
+                    )}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </Card>
 
