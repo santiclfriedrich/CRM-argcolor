@@ -22,7 +22,7 @@ export function Tooltip({
         className={cn(
           "pointer-events-none absolute bottom-full z-50 mb-1 rounded-lg bg-navy px-2 py-1 text-xs font-medium text-white opacity-0 shadow-md transition-opacity duration-100 group-hover:opacity-100",
           wide
-            ? "left-0 max-w-[260px] whitespace-normal leading-snug"
+            ? "left-0 w-[260px] whitespace-normal leading-snug"
             : "left-1/2 -translate-x-1/2 whitespace-nowrap"
         )}
       >

@@ -505,7 +505,7 @@ function ForecastMonteCarlo({
           Pronóstico de ingresos
           <Tooltip
             wide
-            label="Simula miles de escenarios sobre tus oportunidades abiertas (cada una cierra según la probabilidad de su estado). La banda marca dónde cae el 80% de los resultados."
+            label="Simula miles de escenarios sobre tus oportunidades abiertas (cada una cierra según su estado). La banda marca dónde cae el 80% de los resultados."
           >
             <span className="inline-flex text-ink-3">
               <Info size={15} />
