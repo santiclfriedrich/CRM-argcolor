@@ -482,6 +482,7 @@ function ForecastMonteCarlo({
     () => simularForecast(valores, tasa),
     [valores, tasa]
   );
+  const [hover, setHover] = useState<number | null>(null);
 
   if (valores.length === 0) {
     return (
@@ -523,32 +524,65 @@ function ForecastMonteCarlo({
       </div>
 
       {/* Histograma de resultados; en acento la banda central del 70%. */}
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="mt-4 w-full"
-        preserveAspectRatio="none"
-        role="img"
-        aria-label="Distribución de ingresos simulados"
-      >
-        {sim.barras.map((b, i) => {
-          const h = (b.count / maxCount) * (H - 2);
-          const dentro = b.x1 >= sim.pBajo && b.x0 <= sim.pAlto;
-          return (
+      <div className="relative mt-4">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className="w-full"
+          preserveAspectRatio="none"
+          role="img"
+          aria-label="Distribución de ingresos simulados"
+        >
+          {sim.barras.map((b, i) => {
+            const h = (b.count / maxCount) * (H - 2);
+            const dentro = b.x1 >= sim.pBajo && b.x0 <= sim.pAlto;
+            return (
+              <rect
+                key={i}
+                x={i * bw + gap / 2}
+                y={H - h}
+                width={bw - gap}
+                height={h}
+                rx={1.5}
+                pointerEvents="none"
+                style={{
+                  fill: dentro ? "rgb(var(--c-accent))" : "var(--c-ink-3)",
+                  opacity: dentro ? 1 : 0.35,
+                }}
+              />
+            );
+          })}
+          {/* Zonas transparentes de alto completo: hacen hover fácil hasta en
+              las barras chiquitas. */}
+          {sim.barras.map((_, i) => (
             <rect
-              key={i}
-              x={i * bw + gap / 2}
-              y={H - h}
-              width={bw - gap}
-              height={h}
-              rx={1.5}
-              style={{
-                fill: dentro ? "rgb(var(--c-accent))" : "var(--c-ink-3)",
-                opacity: dentro ? 1 : 0.35,
-              }}
+              key={`h-${i}`}
+              x={i * bw}
+              y={0}
+              width={bw}
+              height={H}
+              fill="transparent"
+              style={{ cursor: "pointer" }}
+              onMouseEnter={() => setHover(i)}
+              onMouseLeave={() => setHover(null)}
             />
-          );
-        })}
-      </svg>
+          ))}
+        </svg>
+
+        {hover !== null && (
+          <div
+            className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 -translate-y-full rounded-md border border-line bg-surface px-2 py-1 text-xs shadow-pop"
+            style={{ left: `${((hover + 0.5) / sim.barras.length) * 100}%` }}
+          >
+            <p className="whitespace-nowrap font-mono font-semibold tabular-nums text-ink">
+              {montoCompacto(sim.barras[hover].x0)} – {montoCompacto(sim.barras[hover].x1)}
+            </p>
+            <p className="whitespace-nowrap text-ink-2">
+              {sim.barras[hover].count} de {sim.iteraciones.toLocaleString("es-AR")} (
+              {Math.round((sim.barras[hover].count / sim.iteraciones) * 100)}%)
+            </p>
+          </div>
+        )}
+      </div>
       <div className="mt-1 flex justify-between font-mono text-xs tabular-nums text-ink-3">
         <span>{montoCompacto(sim.min)}</span>
         <span>{montoCompacto(sim.max)}</span>
