@@ -22,6 +22,7 @@ import { useSeccion } from "@/components/ui/seccion";
 import { Tooltip } from "@/components/ui/tooltip";
 import { STATUS, tint } from "@/lib/status";
 import { useClientes } from "@/lib/clientes";
+import { simularForecast } from "@/lib/montecarlo";
 import { useGenerarSeguimiento } from "@/lib/notificaciones";
 import { useOportunidades } from "@/lib/oportunidades";
 import { type TipoRegistro, useRegistrosRecientes } from "@/lib/recientes";
@@ -99,11 +100,22 @@ export default function InicioPage() {
     let abiertas = 0;
     let ganadas = 0;
     let perdidas = 0;
+    // Para el pronóstico Monte Carlo: montos de las abiertas + conteo de cierres.
+    const abiertasValores: number[] = [];
+    let ganadasCount = 0;
+    let perdidasCount = 0;
     for (const o of visibles) {
       const v = Number(o.valor_estimado) || 0;
-      if (o.estado === "perdida") perdidas += v;
-      else if (GANADAS.includes(o.estado)) ganadas += v;
-      else abiertas += v;
+      if (o.estado === "perdida") {
+        perdidas += v;
+        perdidasCount += 1;
+      } else if (GANADAS.includes(o.estado)) {
+        ganadas += v;
+        ganadasCount += 1;
+      } else {
+        abiertas += v;
+        if (v > 0) abiertasValores.push(v);
+      }
     }
 
     // Oportunidades en curso: activas por semáforo (ni terminales ni ganadas).
@@ -139,6 +151,7 @@ export default function InicioPage() {
 
     return {
       montos: { abiertas, ganadas, perdidas },
+      mc: { valores: abiertasValores, ganadas: ganadasCount, perdidas: perdidasCount },
       sem,
       activasTotal: activas.length,
       cuentas: { total: cuentas.length, conActiva, soloCerradas, sinActividad },
@@ -253,6 +266,12 @@ export default function InicioPage() {
           hrefLabel="Ver cuentas"
         />
       </div>
+
+      <ForecastMonteCarlo
+        valores={vista.mc.valores}
+        ganadas={vista.mc.ganadas}
+        perdidas={vista.mc.perdidas}
+      />
 
       <SeguimientoHoy buckets={vista.buckets} />
 
@@ -442,6 +461,126 @@ function Donut({
         </span>
       </div>
     </div>
+  );
+}
+
+// ---- Pronóstico de ingresos (método Monte Carlo) ----
+function ForecastMonteCarlo({
+  valores,
+  ganadas,
+  perdidas,
+}: {
+  valores: number[];
+  ganadas: number;
+  perdidas: number;
+}) {
+  const cerradas = ganadas + perdidas;
+  const sinHistorial = cerradas === 0;
+  const tasa = sinHistorial ? 0.3 : ganadas / cerradas;
+
+  const sim = useMemo(
+    () => simularForecast(valores, tasa),
+    [valores, tasa]
+  );
+
+  if (valores.length === 0) {
+    return (
+      <Card className="mt-6 p-5">
+        <h2 className="text-base font-semibold tracking-tight text-ink">
+          Pronóstico de ingresos (Monte Carlo)
+        </h2>
+        <p className="mt-2 text-sm text-ink-2">
+          No hay oportunidades abiertas con monto para proyectar.
+        </p>
+      </Card>
+    );
+  }
+
+  const maxCount = Math.max(...sim.barras.map((b) => b.count), 1);
+  const W = 640;
+  const H = 150;
+  const gap = 2;
+  const bw = W / sim.barras.length;
+
+  return (
+    <Card className="mt-6 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2 className="text-base font-semibold tracking-tight text-ink">
+            Pronóstico de ingresos (Monte Carlo)
+          </h2>
+          <p className="mt-0.5 text-sm text-ink-2">
+            Simulación de {sim.iteraciones.toLocaleString("es-AR")} escenarios
+            sobre tus oportunidades abiertas.
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-ink-3">70% de probabilidad entre</p>
+          <p className="font-mono text-lg font-bold tabular-nums text-accent">
+            {montoCompacto(sim.pBajo)} – {montoCompacto(sim.pAlto)}
+          </p>
+        </div>
+      </div>
+
+      {/* Histograma de resultados; en acento la banda central del 70%. */}
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="mt-4 w-full"
+        preserveAspectRatio="none"
+        role="img"
+        aria-label="Distribución de ingresos simulados"
+      >
+        {sim.barras.map((b, i) => {
+          const h = (b.count / maxCount) * (H - 2);
+          const dentro = b.x1 >= sim.pBajo && b.x0 <= sim.pAlto;
+          return (
+            <rect
+              key={i}
+              x={i * bw + gap / 2}
+              y={H - h}
+              width={bw - gap}
+              height={h}
+              rx={1.5}
+              style={{
+                fill: dentro ? "rgb(var(--c-accent))" : "var(--c-ink-3)",
+                opacity: dentro ? 1 : 0.35,
+              }}
+            />
+          );
+        })}
+      </svg>
+      <div className="mt-1 flex justify-between font-mono text-xs tabular-nums text-ink-3">
+        <span>{montoCompacto(sim.min)}</span>
+        <span>{montoCompacto(sim.max)}</span>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm text-ink-2">
+        <span>
+          Esperado{" "}
+          <span className="font-mono font-semibold tabular-nums text-ink">
+            {montoCompacto(sim.media)}
+          </span>
+        </span>
+        <span>
+          Mediana{" "}
+          <span className="font-mono font-semibold tabular-nums text-ink">
+            {montoCompacto(sim.p50)}
+          </span>
+        </span>
+        <span>
+          {valores.length} abiertas · conversión{" "}
+          <span className="font-semibold text-ink">{Math.round(tasa * 100)}%</span>
+          {!sinHistorial && ` (${ganadas}/${cerradas})`}
+        </span>
+      </div>
+      {sinHistorial && (
+        <p className="mt-2 text-xs text-ink-3">
+          Todavía no hay cierres (ganadas/perdidas) para calcular la conversión
+          real: se usa 30% estimado. A medida que cierres oportunidades, el
+          pronóstico se afina solo.
+        </p>
+      )}
+    </Card>
   );
 }
 
