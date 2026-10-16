@@ -502,9 +502,10 @@ function ForecastMonteCarlo({
     <Card className="mt-6 p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h2 className="flex items-center gap-1.5 text-base font-semibold tracking-tight text-ink">
-          Pronóstico de ingresos (Monte Carlo)
+          Pronóstico de ingresos
           <Tooltip
-            label={`Simula ${sim.iteraciones.toLocaleString("es-AR")} escenarios sobre tus oportunidades abiertas: cada una se cierra según la probabilidad de su estado (ajustable en Configuración → Conversión por estado). La banda muestra dónde cae el 80% de los escenarios.`}
+            wide
+            label="Simula miles de escenarios sobre tus oportunidades abiertas (cada una cierra según la probabilidad de su estado). La banda marca dónde cae el 80% de los resultados."
           >
             <span className="inline-flex text-ink-3">
               <Info size={15} />

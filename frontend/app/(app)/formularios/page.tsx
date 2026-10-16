@@ -88,10 +88,6 @@ export default function FormulariosPage() {
       <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-ink">
         <ClipboardType size={22} className="text-accent" /> Formularios
       </h1>
-      <p className="mt-1 text-sm text-ink-2">
-        El perfil de empresa con los datos que siempre se piden en los formularios
-        de alta de proveedor y licitaciones. Vienen precargados; editalos y guardá.
-      </p>
 
       <CompletarFormulario />
 
