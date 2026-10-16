@@ -22,6 +22,7 @@ import { useSeccion } from "@/components/ui/seccion";
 import { Tooltip } from "@/components/ui/tooltip";
 import { STATUS, tint } from "@/lib/status";
 import { useClientes } from "@/lib/clientes";
+import { useConversionEstados } from "@/lib/config";
 import { simularForecast } from "@/lib/montecarlo";
 import { useGenerarSeguimiento } from "@/lib/notificaciones";
 import { useOportunidades } from "@/lib/oportunidades";
@@ -100,21 +101,16 @@ export default function InicioPage() {
     let abiertas = 0;
     let ganadas = 0;
     let perdidas = 0;
-    // Para el pronóstico Monte Carlo: montos de las abiertas + conteo de cierres.
-    const abiertasValores: number[] = [];
-    let ganadasCount = 0;
-    let perdidasCount = 0;
+    // Para el pronóstico Monte Carlo: las abiertas con su estado y su monto
+    // (la probabilidad de cierre sale por estado, ver ForecastMonteCarlo).
+    const abiertasDeals: { estado: EstadoOportunidad; valor: number }[] = [];
     for (const o of visibles) {
       const v = Number(o.valor_estimado) || 0;
-      if (o.estado === "perdida") {
-        perdidas += v;
-        perdidasCount += 1;
-      } else if (GANADAS.includes(o.estado)) {
-        ganadas += v;
-        ganadasCount += 1;
-      } else {
+      if (o.estado === "perdida") perdidas += v;
+      else if (GANADAS.includes(o.estado)) ganadas += v;
+      else {
         abiertas += v;
-        if (v > 0) abiertasValores.push(v);
+        if (v > 0) abiertasDeals.push({ estado: o.estado, valor: v });
       }
     }
 
@@ -151,7 +147,7 @@ export default function InicioPage() {
 
     return {
       montos: { abiertas, ganadas, perdidas },
-      mc: { valores: abiertasValores, ganadas: ganadasCount, perdidas: perdidasCount },
+      mc: { abiertas: abiertasDeals },
       sem,
       activasTotal: activas.length,
       cuentas: { total: cuentas.length, conActiva, soloCerradas, sinActividad },
@@ -267,11 +263,7 @@ export default function InicioPage() {
         />
       </div>
 
-      <ForecastMonteCarlo
-        valores={vista.mc.valores}
-        ganadas={vista.mc.ganadas}
-        perdidas={vista.mc.perdidas}
-      />
+      <ForecastMonteCarlo abiertas={vista.mc.abiertas} />
 
       <SeguimientoHoy buckets={vista.buckets} />
 
@@ -466,25 +458,27 @@ function Donut({
 
 // ---- Pronóstico de ingresos (método Monte Carlo) ----
 function ForecastMonteCarlo({
-  valores,
-  ganadas,
-  perdidas,
+  abiertas,
 }: {
-  valores: number[];
-  ganadas: number;
-  perdidas: number;
+  abiertas: { estado: EstadoOportunidad; valor: number }[];
 }) {
-  const cerradas = ganadas + perdidas;
-  const sinHistorial = cerradas === 0;
-  const tasa = sinHistorial ? 0.3 : ganadas / cerradas;
-
-  const sim = useMemo(
-    () => simularForecast(valores, tasa),
-    [valores, tasa]
-  );
+  const { data: conv } = useConversionEstados();
   const [hover, setHover] = useState<number | null>(null);
 
-  if (valores.length === 0) {
+  // Cada oportunidad abierta con su probabilidad de cierre según su estado.
+  const deals = useMemo(() => {
+    const probs = (conv ?? {}) as Record<string, number>;
+    return abiertas.map((d) => ({ valor: d.valor, prob: probs[d.estado] ?? 0.15 }));
+  }, [abiertas, conv]);
+
+  const sim = useMemo(() => simularForecast(deals, { banda: 0.8 }), [deals]);
+
+  // Conversión ponderada por monto (solo para mostrar un % representativo).
+  const totalPipe = deals.reduce((a, d) => a + d.valor, 0);
+  const convPonderada =
+    totalPipe > 0 ? deals.reduce((a, d) => a + d.valor * d.prob, 0) / totalPipe : 0;
+
+  if (abiertas.length === 0) {
     return (
       <Card className="mt-6 p-5">
         <h2 className="text-base font-semibold tracking-tight text-ink">
@@ -516,7 +510,7 @@ function ForecastMonteCarlo({
           </p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-ink-3">70% de probabilidad entre</p>
+          <p className="text-xs text-ink-3">80% de probabilidad entre</p>
           <p className="font-mono text-lg font-bold tabular-nums text-accent">
             {montoCompacto(sim.pBajo)} – {montoCompacto(sim.pAlto)}
           </p>
@@ -602,18 +596,16 @@ function ForecastMonteCarlo({
           </span>
         </span>
         <span>
-          {valores.length} abiertas · conversión{" "}
-          <span className="font-semibold text-ink">{Math.round(tasa * 100)}%</span>
-          {!sinHistorial && ` (${ganadas}/${cerradas})`}
+          {abiertas.length} abiertas · conversión ponderada{" "}
+          <span className="font-semibold text-ink">
+            {Math.round(convPonderada * 100)}%
+          </span>
         </span>
       </div>
-      {sinHistorial && (
-        <p className="mt-2 text-xs text-ink-3">
-          Todavía no hay cierres (ganadas/perdidas) para calcular la conversión
-          real: se usa 30% estimado. A medida que cierres oportunidades, el
-          pronóstico se afina solo.
-        </p>
-      )}
+      <p className="mt-2 text-xs text-ink-3">
+        Probabilidad de cierre por estado (ajustable en Configuración → Conversión
+        por estado).
+      </p>
     </Card>
   );
 }

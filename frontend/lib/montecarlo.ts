@@ -24,21 +24,22 @@ function percentil(ordenados: number[], p: number): number {
   return ordenados[i];
 }
 
+// Cada oportunidad abierta con su monto y su probabilidad de cierre (0..1).
+export type DealMC = { valor: number; prob: number };
+
 export function simularForecast(
-  valores: number[],
-  tasaConversion: number,
+  deals: DealMC[],
   opts: { iteraciones?: number; bins?: number; banda?: number } = {}
 ): ForecastMC {
   const iteraciones = opts.iteraciones ?? 4000;
   const bins = opts.bins ?? 22;
-  const banda = opts.banda ?? 0.7; // banda central (70%)
-  const p = Math.min(Math.max(tasaConversion, 0), 1);
+  const banda = opts.banda ?? 0.8; // banda central (80%)
 
   const totales = new Array<number>(iteraciones);
   for (let i = 0; i < iteraciones; i++) {
     let suma = 0;
-    for (const v of valores) {
-      if (Math.random() < p) suma += v;
+    for (const d of deals) {
+      if (Math.random() < d.prob) suma += d.valor;
     }
     totales[i] = suma;
   }

@@ -15,6 +15,10 @@ from app.schemas.grupo_compras import (
 )
 from app.schemas.speech import SpeechCreate, SpeechRead, SpeechUpdate
 from app.services.automatizacion import get_automatizacion, set_automatizacion
+from app.services.conversion_estados import (
+    get_conversion_estados,
+    set_conversion_estados,
+)
 from app.services.grupos_compras import (
     create_grupo,
     delete_grupo,
@@ -140,6 +144,33 @@ def actualizar_perfil_empresa(
     _: Usuario = Depends(get_current_user),
 ) -> dict:
     return set_perfil_empresa(db, body.model_dump())
+
+
+class ConversionEstados(BaseModel):
+    """Probabilidad de cierre por estado (fracción 0..1) para el pronóstico."""
+
+    nueva: float = 0.10
+    requiere_aclaracion: float = 0.10
+    en_compras: float = 0.25
+    cotizado_compras: float = 0.40
+    presupuestada: float = 0.55
+    confirmada: float = 0.85
+
+
+@router.get("/conversion-estados", response_model=ConversionEstados)
+def leer_conversion_estados(
+    db: Session = Depends(get_db), _: Usuario = Depends(get_current_user)
+) -> dict:
+    return get_conversion_estados(db)
+
+
+@router.put("/conversion-estados", response_model=ConversionEstados)
+def actualizar_conversion_estados(
+    body: ConversionEstados,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> dict:
+    return set_conversion_estados(db, body.model_dump())
 
 
 # --- Grupos de destinatarios de Compras (por usuario) ---

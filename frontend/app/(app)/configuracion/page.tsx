@@ -11,15 +11,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
 import {
+  type ConversionEstados,
   type GrupoCompras,
   type Speech,
   useAutomatizacion,
+  useConversionEstados,
   useCreateGrupoCompras,
   useCreateSpeech,
   useDeleteGrupoCompras,
   useDeleteSpeech,
   useGruposCompras,
+  useGuardarConversionEstados,
   useSpeeches,
   useUpdateAutomatizacion,
   useUpdateGrupoCompras,
@@ -70,6 +74,7 @@ export default function ConfiguracionPage() {
 
       <GruposCompras />
       <SpeechesConfig />
+      <ConversionEstadosConfig />
     </div>
   );
 }
@@ -151,6 +156,84 @@ function FilaUsuarioSync({ usuario }: { usuario: Usuario }) {
 }
 
 // Grupos de destinatarios de Compras, propios de cada usuario.
+// --- Conversión por estado (pronóstico Monte Carlo del inicio) ---
+const CONV_LABELS: { k: keyof ConversionEstados; label: string }[] = [
+  { k: "nueva", label: "Nueva" },
+  { k: "requiere_aclaracion", label: "Requiere aclaración" },
+  { k: "en_compras", label: "Enviado a compras" },
+  { k: "cotizado_compras", label: "Cotizado por compras" },
+  { k: "presupuestada", label: "Enviada al cliente" },
+  { k: "confirmada", label: "Confirmada" },
+];
+
+function ConversionEstadosConfig() {
+  const { data } = useConversionEstados();
+  return (
+    <>
+      <h2 className="mt-8 text-lg font-semibold tracking-tight text-ink">
+        Conversión por estado (pronóstico)
+      </h2>
+      <p className="mt-1 text-sm text-ink-2">
+        Probabilidad de que una oportunidad en cada estado termine cerrándose. La
+        usa el pronóstico Monte Carlo del inicio.
+      </p>
+      {data ? (
+        <ConversionForm inicial={data} />
+      ) : (
+        <p className="mt-4 text-sm text-ink-2">Cargando…</p>
+      )}
+    </>
+  );
+}
+
+function ConversionForm({ inicial }: { inicial: ConversionEstados }) {
+  const guardar = useGuardarConversionEstados();
+  const { toast } = useToast();
+  const [val, setVal] = useState<ConversionEstados>(inicial);
+
+  const set = (k: keyof ConversionEstados, pct: number) =>
+    setVal((v) => ({ ...v, [k]: Math.min(Math.max(pct, 0), 100) / 100 }));
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    guardar.mutate(val, {
+      onSuccess: () => toast("Conversión guardada", "success"),
+      onError: () => toast("No se pudo guardar", "error"),
+    });
+  };
+
+  return (
+    <form onSubmit={submit}>
+      <Card className="mt-4 space-y-4 p-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {CONV_LABELS.map(({ k, label }) => (
+            <div key={k}>
+              <Label htmlFor={`cv-${k}`}>{label}</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id={`cv-${k}`}
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={Math.round(val[k] * 100)}
+                  onChange={(e) => set(k, Number(e.target.value))}
+                  className="w-24"
+                />
+                <span className="text-sm text-ink-2">%</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end">
+          <Button type="submit" disabled={guardar.isPending}>
+            {guardar.isPending ? "Guardando…" : "Guardar"}
+          </Button>
+        </div>
+      </Card>
+    </form>
+  );
+}
+
 function GruposCompras() {
   const { data: grupos, isLoading } = useGruposCompras();
   const createMut = useCreateGrupoCompras();

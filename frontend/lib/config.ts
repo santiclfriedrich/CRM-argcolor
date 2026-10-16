@@ -76,6 +76,36 @@ export function useGuardarPerfilEmpresa() {
   });
 }
 
+// --- Conversión por estado (pronóstico Monte Carlo) ---
+export interface ConversionEstados {
+  nueva: number;
+  requiere_aclaracion: number;
+  en_compras: number;
+  cotizado_compras: number;
+  presupuestada: number;
+  confirmada: number;
+}
+
+const CONV_KEY = ["configuracion", "conversion-estados"] as const;
+const CONV_URL = "/api/v1/configuracion/conversion-estados";
+
+export function useConversionEstados() {
+  return useQuery({
+    queryKey: CONV_KEY,
+    queryFn: async () => (await api.get<ConversionEstados>(CONV_URL)).data,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useGuardarConversionEstados() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: ConversionEstados) =>
+      (await api.put<ConversionEstados>(CONV_URL, body)).data,
+    onSuccess: (data) => qc.setQueryData(CONV_KEY, data),
+  });
+}
+
 // --- Autocompletar formularios con IA ---
 export interface CampoFormulario {
   etiqueta: string;
