@@ -12,6 +12,8 @@ export type ForecastMC = {
   pAlto: number; // extremo superior (p.ej. 85%)
   min: number;
   max: number;
+  histMin: number; // dominio del histograma (recorta la cola extrema)
+  histMax: number;
   // Histograma para graficar: cada barra con su rango [x0, x1] y cuántos
   // escenarios cayeron ahí.
   barras: { x0: number; x1: number; count: number }[];
@@ -32,7 +34,7 @@ export function simularForecast(
   opts: { iteraciones?: number; bins?: number; banda?: number } = {}
 ): ForecastMC {
   const iteraciones = opts.iteraciones ?? 4000;
-  const bins = opts.bins ?? 22;
+  const bins = opts.bins ?? 32;
   const banda = opts.banda ?? 0.8; // banda central (80%)
 
   const totales = new Array<number>(iteraciones);
@@ -50,14 +52,19 @@ export function simularForecast(
   const max = totales[iteraciones - 1];
   const resto = (1 - banda) / 2;
 
-  // Histograma.
+  // Histograma: recortamos el 5% superior (cola extrema) para que un par de
+  // escenarios altísimos no estiren el eje y dejen un hueco grande en el medio.
+  const histMin = min;
+  const p95 = percentil(totales, 0.95);
+  const histMax = p95 > histMin ? p95 : max;
   const barras: { x0: number; x1: number; count: number }[] = [];
-  const ancho = (max - min) / bins || 1;
+  const ancho = (histMax - histMin) / bins || 1;
   for (let b = 0; b < bins; b++) {
-    barras.push({ x0: min + b * ancho, x1: min + (b + 1) * ancho, count: 0 });
+    barras.push({ x0: histMin + b * ancho, x1: histMin + (b + 1) * ancho, count: 0 });
   }
   for (const t of totales) {
-    let idx = Math.floor((t - min) / ancho);
+    if (t > histMax) continue; // la cola recortada no se grafica
+    let idx = Math.floor((t - histMin) / ancho);
     if (idx >= bins) idx = bins - 1;
     if (idx < 0) idx = 0;
     barras[idx].count++;
@@ -70,6 +77,8 @@ export function simularForecast(
     pAlto: percentil(totales, 1 - resto),
     min,
     max,
+    histMin,
+    histMax,
     barras,
     iteraciones,
   };

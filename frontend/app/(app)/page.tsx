@@ -6,6 +6,7 @@ import {
   Building2,
   Clock,
   FileText,
+  Info,
   Plus,
   Target,
   Truck,
@@ -493,22 +494,23 @@ function ForecastMonteCarlo({
 
   const maxCount = Math.max(...sim.barras.map((b) => b.count), 1);
   const W = 640;
-  const H = 150;
-  const gap = 2;
+  const H = 96;
+  const gap = 3;
   const bw = W / sim.barras.length;
 
   return (
     <Card className="mt-6 p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className="text-base font-semibold tracking-tight text-ink">
-            Pronóstico de ingresos (Monte Carlo)
-          </h2>
-          <p className="mt-0.5 text-sm text-ink-2">
-            Simulación de {sim.iteraciones.toLocaleString("es-AR")} escenarios
-            sobre tus oportunidades abiertas.
-          </p>
-        </div>
+        <h2 className="flex items-center gap-1.5 text-base font-semibold tracking-tight text-ink">
+          Pronóstico de ingresos (Monte Carlo)
+          <Tooltip
+            label={`Simula ${sim.iteraciones.toLocaleString("es-AR")} escenarios sobre tus oportunidades abiertas: cada una se cierra según la probabilidad de su estado (ajustable en Configuración → Conversión por estado). La banda muestra dónde cae el 80% de los escenarios.`}
+          >
+            <span className="inline-flex text-ink-3">
+              <Info size={15} />
+            </span>
+          </Tooltip>
+        </h2>
         <div className="text-right">
           <p className="text-xs text-ink-3">80% de probabilidad entre</p>
           <p className="font-mono text-lg font-bold tabular-nums text-accent">
@@ -578,8 +580,8 @@ function ForecastMonteCarlo({
         )}
       </div>
       <div className="mt-1 flex justify-between font-mono text-xs tabular-nums text-ink-3">
-        <span>{montoCompacto(sim.min)}</span>
-        <span>{montoCompacto(sim.max)}</span>
+        <span>{montoCompacto(sim.histMin)}</span>
+        <span>{montoCompacto(sim.histMax)}</span>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm text-ink-2">
@@ -602,10 +604,6 @@ function ForecastMonteCarlo({
           </span>
         </span>
       </div>
-      <p className="mt-2 text-xs text-ink-3">
-        Probabilidad de cierre por estado (ajustable en Configuración → Conversión
-        por estado).
-      </p>
     </Card>
   );
 }
