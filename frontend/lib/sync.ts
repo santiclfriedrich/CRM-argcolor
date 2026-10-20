@@ -31,3 +31,30 @@ export function useRunGbpSync() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["gbp-sync-status"] }),
   });
 }
+
+export interface TraerClienteResult {
+  status:
+    | "creado"
+    | "ya_existe"
+    | "no_encontrado"
+    | "tipo_no_sincronizable"
+    | "sin_cuit"
+    | "error";
+  cust_id: number;
+  razon_social?: string | null;
+  cuit?: string | null;
+  tipo?: string | null;
+  ck_id?: string | null;
+  detalle?: string | null;
+}
+
+// Trae del ERP un cliente puntual por su N° exacto (para el cliente viejo que el
+// sync incremental no ve). Refresca el listado al terminar.
+export function useTraerClientePorNumero() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (custId: number) =>
+      (await api.post<TraerClienteResult>(`${BASE}/cliente/${custId}`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["clientes"] }),
+  });
+}

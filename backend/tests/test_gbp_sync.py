@@ -19,6 +19,7 @@ from app.services.gbp_sync import (
     get_watermark,
     normalizar_cuit,
     set_watermark,
+    sincronizar_cliente_por_id,
     sincronizar_clientes,
     sincronizar_incremental,
     split_emails,
@@ -215,3 +216,44 @@ def test_sync_incremental_sin_watermark_hace_full(db: Session) -> None:
     rep = sincronizar_incremental(db, FakeERP(_rows()))
     assert rep.creados == 2
     assert get_watermark(db) is not None  # el full dejó el baseline
+
+
+# --- traer un cliente puntual por N° exacto (escotilla para id menor al watermark) ---
+def test_traer_cliente_por_id_crea_sin_tocar_watermark(db: Session) -> None:
+    set_watermark(db, 43379)  # watermark alto
+    erp = FakeERP([
+        {"ck_id": "16", "cust_id": "34923", "cust_name": "CLIENTE VIEJO SA",
+         "cust_taxNumber": "30-12345678-9", "cust_email": "info@viejo.com.ar"},
+    ])
+    r = sincronizar_cliente_por_id(db, erp, 34923)
+    assert r["status"] == "creado"
+    assert r["razon_social"] == "CLIENTE VIEJO SA"
+    assert db.scalar(select(func.count()).select_from(Cliente)) == 1
+    assert get_watermark(db) == 43379  # un id MENOR no retrocede el watermark
+
+
+def test_traer_cliente_por_id_no_encontrado(db: Session) -> None:
+    r = sincronizar_cliente_por_id(db, FakeERP([]), 999)
+    assert r["status"] == "no_encontrado"
+
+
+def test_traer_cliente_por_id_ya_existe(db: Session) -> None:
+    db.add(Cliente(razon_social="YA", cuit="30-12345678-9", tipo="Corporativo"))
+    db.commit()
+    erp = FakeERP([
+        {"ck_id": "16", "cust_id": "500", "cust_name": "DUP",
+         "cust_taxNumber": "30-12345678-9"},
+    ])
+    r = sincronizar_cliente_por_id(db, erp, 500)
+    assert r["status"] == "ya_existe"
+    assert db.scalar(select(func.count()).select_from(Cliente)) == 1
+
+
+def test_traer_cliente_por_id_tipo_no_sincronizable(db: Session) -> None:
+    erp = FakeERP([
+        {"ck_id": "5", "cust_id": "600", "cust_name": "OTRO TIPO",
+         "cust_taxNumber": "30-99999999-9"},
+    ])
+    r = sincronizar_cliente_por_id(db, erp, 600)
+    assert r["status"] == "tipo_no_sincronizable"
+    assert r["ck_id"] == "5"

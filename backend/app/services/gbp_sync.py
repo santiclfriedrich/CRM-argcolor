@@ -300,6 +300,72 @@ def sincronizar_incremental(
     return rep
 
 
+def sincronizar_cliente_por_id(
+    db: Session,
+    erp,  # noqa: ANN001 - objeto con fetch_customer()
+    cust_id: int,
+) -> dict[str, str | int | None]:
+    """Trae del ERP UN cliente por su `cust_id` exacto y lo da de alta en el CRM.
+
+    Escotilla manual para el caso que el incremental (que solo camina ids hacia
+    arriba desde el watermark) no ve: un cliente VIEJO con id menor al último
+    sincronizado que recién ahora califica (ck_id 1/16/17) o nunca se trajo.
+    Es 1 sola llamada al ERP (~0.3s), así que corre sincrónico. Devuelve un dict
+    con `status`: creado | ya_existe | no_encontrado | tipo_no_sincronizable |
+    sin_cuit | error.
+    """
+    row = erp.fetch_customer(cust_id)
+    if row is None:
+        return {"status": "no_encontrado", "cust_id": cust_id}
+
+    razon = (row.get("cust_name") or "").strip() or None
+    ck = (row.get("ck_id") or "").strip()
+    if ck not in CK_ID_A_CLASE:
+        return {
+            "status": "tipo_no_sincronizable",
+            "cust_id": cust_id,
+            "razon_social": razon,
+            "ck_id": ck or None,
+        }
+
+    cuit = normalizar_cuit(row.get("cust_taxNumber"))
+    if cuit is None:
+        return {"status": "sin_cuit", "cust_id": cust_id, "razon_social": razon}
+
+    cuits_existentes = {solo_digitos(c) for c in db.scalars(select(Cliente.cuit)) if c}
+    if solo_digitos(cuit) in cuits_existentes:
+        return {
+            "status": "ya_existe",
+            "cust_id": cust_id,
+            "razon_social": razon,
+            "cuit": cuit,
+        }
+
+    dominios_existentes = {d.lower() for d in db.scalars(select(DominioCliente.dominio)) if d}
+    rep = ReporteSync()
+    creado = _alta_desde_row(db, row, ck, dominios_existentes, rep)
+    db.commit()
+    if creado:
+        # Si quedó por encima del watermark, lo subimos (consistencia); si es menor
+        # no tocamos el watermark (sería retroceder y re-caminar ids ya vistos).
+        wm = get_watermark(db)
+        if wm is not None and cust_id > wm:
+            set_watermark(db, cust_id)
+        return {
+            "status": "creado",
+            "cust_id": cust_id,
+            "razon_social": razon,
+            "cuit": cuit,
+            "tipo": CK_ID_A_CLASE[ck],
+        }
+    return {
+        "status": "error",
+        "cust_id": cust_id,
+        "razon_social": razon,
+        "detalle": rep.detalle_errores[0] if rep.detalle_errores else None,
+    }
+
+
 def sincronizar_clientes(
     db: Session,
     erp,  # noqa: ANN001 - cualquier objeto con iter_customers()

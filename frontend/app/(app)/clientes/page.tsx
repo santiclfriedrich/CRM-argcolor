@@ -1,7 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { FileSpreadsheet, Plus, RefreshCw, User } from "lucide-react";
+import { FileSpreadsheet, Info, Plus, RefreshCw, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -11,12 +11,13 @@ import { ClientePicker } from "@/components/clientes/cliente-picker";
 import { Badge } from "@/components/ui/badge";
 import { RefChip } from "@/components/ui/ref-chip";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { useResizableColumns } from "@/components/ui/resizable-columns";
 import { useToast } from "@/components/ui/toast";
 import { descargarExcelClientes, useClientes, useCreateCliente } from "@/lib/clientes";
 import { clearDraft, DRAFT_CLIENTE } from "@/lib/draft";
-import { useGbpSyncStatus, useRunGbpSync } from "@/lib/sync";
+import { useGbpSyncStatus, useRunGbpSync, useTraerClientePorNumero } from "@/lib/sync";
 import { errorMessage } from "@/lib/utils";
 
 // Botón (admin) para disparar el sync de clientes GBP -> CRM. El scheduler igual
@@ -54,6 +55,72 @@ function SyncGbpBoton() {
         <RefreshCw size={16} className={corriendo ? "animate-spin" : ""} />
         {corriendo ? "Sincronizando…" : "Sincronizar GBP"}
       </Button>
+    </div>
+  );
+}
+
+// Escotilla para el cliente viejo que el sync incremental no trae (id menor al
+// último sincronizado): se ingresa el N° exacto y se trae de GBP al toque.
+function TraerClientePorNumero() {
+  const traer = useTraerClientePorNumero();
+  const { toast } = useToast();
+  const [abierto, setAbierto] = useState(false);
+  const [numero, setNumero] = useState("");
+
+  const submit = () => {
+    const n = Number.parseInt(numero.trim(), 10);
+    if (!Number.isFinite(n) || n <= 0) return;
+    traer.mutate(n, {
+      onSuccess: (r) => {
+        const nombre = r.razon_social ? ` — ${r.razon_social}` : "";
+        if (r.status === "creado") {
+          toast(`Cliente ${r.cust_id}${nombre} agregado`, "success");
+          setNumero("");
+          setAbierto(false);
+        } else if (r.status === "ya_existe") {
+          toast(`El cliente ${r.cust_id}${nombre} ya figura en el CRM`, "success");
+        } else if (r.status === "no_encontrado") {
+          toast(`No se encontró el cliente ${r.cust_id} en GBP`, "error");
+        } else if (r.status === "tipo_no_sincronizable") {
+          toast(`El cliente ${r.cust_id}${nombre} no es de un tipo que se sincroniza`, "error");
+        } else if (r.status === "sin_cuit") {
+          toast(`El cliente ${r.cust_id}${nombre} no tiene CUIT válido`, "error");
+        } else {
+          toast(`No se pudo traer el cliente ${r.cust_id}`, "error");
+        }
+      },
+      onError: () => toast("No se pudo consultar GBP", "error"),
+    });
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        className="inline-flex items-center gap-1 text-xs text-ink-3 hover:text-ink"
+      >
+        <Info size={14} /> ¿No figura el cliente?
+      </button>
+      {abierto && (
+        <div className="absolute right-0 z-20 mt-2 w-72 rounded-lg border border-line bg-surface p-3 shadow-md">
+          <p className="mb-2 text-sm font-medium text-ink">Traer por N° de cliente</p>
+          <div className="flex items-center gap-2">
+            <Input
+              value={numero}
+              onChange={(e) => setNumero(e.target.value.replace(/[^0-9]/g, ""))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+              }}
+              inputMode="numeric"
+              autoFocus
+            />
+            <Button onClick={submit} disabled={traer.isPending || !numero.trim()}>
+              {traer.isPending ? "Buscando…" : "Traer"}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -114,6 +181,7 @@ export default function CuentasPage() {
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <SyncGbpBoton />
+          <TraerClientePorNumero />
           <Button variant="outline" onClick={exportarExcel} disabled={exportando}>
             <FileSpreadsheet size={16} /> {exportando ? "Generando…" : "Excel"}
           </Button>
