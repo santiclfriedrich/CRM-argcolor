@@ -27,9 +27,11 @@ def _verificar_token(token: str) -> None:
 
 
 @router.get("/gbp")
-def disparar_sync(token: str = "", force: int = 0, full: int = 0) -> dict:
+def disparar_sync(token: str = "", force: int = 0, full: int = 1) -> dict:
     """Dispara la sync (por token, GET para abrirlo desde el navegador).
-    `full=1` = scan completo; por defecto incremental (ids nuevos)."""
+    Por defecto scan COMPLETO (agarra altas con cualquier cust_id, incluso
+    menores al watermark). `full=0` fuerza el incremental rápido (solo ids
+    nuevos hacia arriba)."""
     _verificar_token(token)
     return lanzar_sync(force=bool(force), full=bool(full))
 
@@ -44,12 +46,15 @@ def estado_sync(token: str = "") -> dict:
 @router.post("/gbp/run")
 def run_sync(
     force: int = 0,
-    full: int = 0,
+    full: int = 1,
     _: Usuario = Depends(get_current_user),
 ) -> dict:
     """Dispara la sync desde el CRM (cualquier usuario logueado). Botón
-    'Sincronizar GBP'. Por defecto incremental; `full=1` para un resync completo.
-    La sync tiene lock, así que disparos simultáneos no la duplican."""
+    'Sincronizar GBP'. Por defecto hace un scan COMPLETO (paginado y concurrente,
+    ~segundos) para que un cliente recién creado en GBP aparezca sí o sí, tenga
+    el cust_id que tenga. `full=0` usa el incremental rápido (solo ids nuevos
+    hacia arriba, no ve ids menores al último sincronizado). La sync tiene lock,
+    así que disparos simultáneos no la duplican."""
     return lanzar_sync(force=bool(force), full=bool(full))
 
 

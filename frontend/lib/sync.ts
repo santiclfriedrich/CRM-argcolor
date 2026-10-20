@@ -1,4 +1,5 @@
-// Sync de clientes GBP -> CRM (botón manual; el scheduler la corre cada 8h).
+// Sync de clientes GBP -> CRM (botón manual = scan completo; el scheduler también
+// corre un scan completo cada ~20 min para traer las altas del ERP solas).
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
