@@ -89,7 +89,16 @@ function TraerClientePorNumero() {
           toast(`No se pudo traer el cliente ${r.cust_id}`, "error");
         }
       },
-      onError: () => toast("No se pudo consultar GBP", "error"),
+      onError: (err) => {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        const detalle = errorMessage(err);
+        toast(
+          `No se pudo consultar GBP${status ? ` (HTTP ${status})` : " (sin respuesta)"}${
+            detalle ? ` — ${detalle}` : ""
+          }`,
+          "error"
+        );
+      },
     });
   };
 
