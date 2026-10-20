@@ -71,10 +71,10 @@ def _run_seguimiento() -> None:
 
 
 def _run_gbp_sync() -> None:
-    """Sync de clientes GBP -> CRM: scan COMPLETO (paginado + concurrente, ~segundos).
-    Agarra cualquier alta tenga el cust_id que tenga —también menores al watermark,
-    que el incremental 'hacia arriba' se pierde— y cambios en clientes existentes.
-    Respeta el lock: si ya hay una corrida (manual o previa), no hace nada."""
+    """Sync de clientes GBP -> CRM de madrugada: scan COMPLETO (agarra altas y
+    también cambios en clientes existentes, que el incremental se perdería).
+    Respeta el lock: si ya hay una corrida (manual o previa), no hace nada.
+    El botón del CRM usa el modo incremental (rápido) para las altas del día."""
     from app.services.gbp_runner import lanzar_sync
 
     r = lanzar_sync(full=True)
@@ -144,18 +144,12 @@ def start_scheduler() -> None:
     # Correos programados: chequeo cada minuto para enviarlos a su hora.
     _scheduler.add_job(_run_programados, "interval", minutes=1, id="mails_programados")
 
-    # Sync de clientes GBP: scan COMPLETO cada N minutos (GBP_SYNC_INTERVAL_MIN).
-    # Como el scan es paginado y concurrente (~segundos, no horas), se corre seguido
-    # para que una alta en el ERP aparezca sola en el CRM en pocos minutos, sin
-    # depender de que alguien toque el botón. El lock evita solapamientos.
+    # Sync incremental de clientes GBP: 1 vez al día de madrugada (07:00 UTC ≈
+    # 04:00 ART). Cada corrida tarda ~1-3h (el fetch SOAP de GBP es lento), así
+    # que se corre cuando nadie usa el ERP. Manual: botón "Sincronizar GBP".
     if settings.GBP_USER and settings.GBP_PWD and settings.GBP_WS:
-        _scheduler.add_job(
-            _run_gbp_sync,
-            "interval",
-            minutes=settings.GBP_SYNC_INTERVAL_MIN,
-            id="gbp_sync",
-        )
-        logger.info("Sync GBP programado cada %s min (full)", settings.GBP_SYNC_INTERVAL_MIN)
+        _scheduler.add_job(_run_gbp_sync, "cron", hour=7, minute=0, id="gbp_sync")
+        logger.info("Sync GBP programado diario (07:00 UTC)")
 
     _scheduler.start()
     logger.info("Scheduler activo (seguimiento diario + recordatorios cada 5 min)")

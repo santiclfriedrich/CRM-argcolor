@@ -102,10 +102,6 @@ class Settings(BaseSettings):
     # Páginas de clientes que se bajan en paralelo (acorta el fetch, que es lento
     # por la latencia del ERP). Subir con cuidado para no saturar GBP.
     GBP_FETCH_CONCURRENCY: int = 8
-    # Cada cuántos minutos corre el scheduler la sync de clientes (scan completo).
-    # El scan es paginado y concurrente (~17 páginas), así que tarda segundos; con
-    # esto los clientes nuevos del ERP aparecen solos en el CRM sin tocar el botón.
-    GBP_SYNC_INTERVAL_MIN: int = 20
     # Token secreto para disparar la sync desde un endpoint (corre en el server).
     # Si queda vacío, el endpoint está deshabilitado.
     GBP_SYNC_TOKEN: str = ""
