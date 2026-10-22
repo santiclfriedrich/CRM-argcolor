@@ -14,12 +14,7 @@ from app.db.models.notas_personales import NotaPersonal
 from app.db.models.notificaciones import Notificacion
 from app.db.models.oportunidades import EstadoOportunidad, Oportunidad
 from app.db.models.presupuesto_items import PresupuestoItem
-from app.db.models.presupuestos import EstadoPresupuesto, Presupuesto
-from app.db.models.presupuestos_gbp import (
-    EstadoCargaGbp,
-    PresupuestoGbp,
-    PresupuestoGbpItem,
-)
+from app.db.models.presupuestos import EstadoCargaGbp, EstadoPresupuesto, Presupuesto
 from app.db.models.productos import Producto
 from app.db.models.recordatorios import Recordatorio, TipoRecordatorio
 from app.db.models.respuestas_compras import RespuestaCompras
@@ -51,10 +46,8 @@ __all__ = [
     "Oportunidad",
     "PresupuestoItem",
     "EstadoPresupuesto",
-    "Presupuesto",
     "EstadoCargaGbp",
-    "PresupuestoGbp",
-    "PresupuestoGbpItem",
+    "Presupuesto",
     "Producto",
     "Recordatorio",
     "TipoRecordatorio",

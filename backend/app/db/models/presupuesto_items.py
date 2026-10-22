@@ -22,6 +22,7 @@ class PresupuestoItem(Base):
     subtotal: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=0, nullable=False)
     sku: Mapped[str | None] = mapped_column(String(120))
     fabricante: Mapped[str | None] = mapped_column(String(120))
+    part_number: Mapped[str | None] = mapped_column(String(120))  # código del fabricante
     observaciones: Mapped[str | None] = mapped_column(Text)
     orden: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 

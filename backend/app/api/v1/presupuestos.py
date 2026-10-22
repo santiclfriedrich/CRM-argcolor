@@ -22,6 +22,7 @@ from app.schemas.presupuesto import (
     PresupuestoRead,
     PresupuestoUpdate,
 )
+from app.services import presupuestos_gbp as gbp_svc
 from app.services.presupuestos import (
     actualizar_presupuesto,
     crear_desde_solicitud,
@@ -29,6 +30,7 @@ from app.services.presupuestos import (
     enviar_al_cliente,
     render_pdf,
 )
+from app.services.storage import get_storage
 
 router = APIRouter(prefix="/presupuestos", tags=["presupuestos"])
 
@@ -91,8 +93,9 @@ def create_presupuesto(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> Presupuesto:
-    """Crea un presupuesto (borrador) y avanza la oportunidad a 'presupuestada'."""
-    if db.get(Oportunidad, body.oportunidad_id) is None:
+    """Crea un presupuesto (borrador). Con oportunidad la avanza a 'presupuestada';
+    standalone (solo N° de cliente) si no se pasa oportunidad."""
+    if body.oportunidad_id is not None and db.get(Oportunidad, body.oportunidad_id) is None:
         raise HTTPException(status_code=404, detail="La oportunidad no existe")
     presupuesto = crear_presupuesto(db, body)
     presupuesto.creado_por_id = current_user.id
@@ -210,15 +213,40 @@ def enviar_presupuesto(
     return _get_loaded(db, presupuesto_id)
 
 
+@router.post("/{presupuesto_id}/cargar-gbp", response_model=PresupuestoRead)
+def cargar_en_gbp(
+    presupuesto_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> Presupuesto:
+    """Encola el presupuesto para que el bot lo cargue en GBP (acción explícita).
+    Requiere N° de cliente, forma de entrega e ítems válidos (IVA en los manuales)."""
+    presupuesto = _get_loaded(db, presupuesto_id)
+    _assert_owner(presupuesto, current_user)
+    try:
+        gbp_svc.encolar(db, presupuesto)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return _get_loaded(db, presupuesto_id)
+
+
 @router.get("/{presupuesto_id}/pdf")
 def descargar_pdf(
     presupuesto_id: int,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> Response:
-    """Genera el PDF con los datos actuales y lo devuelve para descargar/ver."""
+    """Devuelve el PDF para descargar/ver. Si el presupuesto ya se cargó en GBP,
+    sirve el PDF OFICIAL que generó GBP; si no, genera el del CRM al vuelo."""
     presupuesto = _get_loaded(db, presupuesto_id)
     _assert_owner(presupuesto, current_user)
+    if presupuesto.pdf_gbp_key:
+        data = get_storage().get(presupuesto.pdf_gbp_key)
+        return Response(
+            content=data,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'inline; filename="{presupuesto.codigo}.pdf"'},
+        )
     try:
         contenido = render_pdf(db, presupuesto)
     except RuntimeError as exc:

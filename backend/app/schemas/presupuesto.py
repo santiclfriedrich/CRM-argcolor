@@ -24,6 +24,7 @@ class ItemBase(BaseModel):
     iva: Decimal | None = None
     sku: str | None = None
     fabricante: str | None = None
+    part_number: str | None = None
     observaciones: str | None = None
 
 
@@ -43,7 +44,11 @@ class PresupuestoBase(BaseModel):
 
 
 class PresupuestoCreate(PresupuestoBase):
-    oportunidad_id: int
+    # Opcional: standalone (solo cliente) o colgado de una oportunidad.
+    oportunidad_id: int | None = None
+    cliente_id: int | None = None
+    cliente_numero: str | None = None
+    entrega_por: str | None = None
     items: list[ItemBase] = []
 
 
@@ -83,9 +88,13 @@ class PresupuestoRead(PresupuestoBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    oportunidad_id: int
+    oportunidad_id: int | None = None
+    cliente_numero: str | None = None
+    entrega_por: str | None = None
     codigo: str
     estado: EstadoPresupuesto
+    estado_carga: str | None = None
+    id_gbp_pedido: str | None = None
     monto_total: Decimal | None = None
     version: int
     pdf_url: str | None = None
@@ -107,9 +116,11 @@ class PresupuestoListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    oportunidad_id: int
+    oportunidad_id: int | None = None
+    cliente_numero: str | None = None
     codigo: str
     estado: EstadoPresupuesto
+    estado_carga: str | None = None
     monto_total: Decimal | None = None
     moneda: str = "USD"
     created_at: datetime

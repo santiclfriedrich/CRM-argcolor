@@ -1,9 +1,9 @@
-"""Lógica de los presupuestos a cargar en GBP (cola que consume el bot).
+"""Carga de presupuestos en GBP: cola que consume el bot (worker self-hosted).
 
-El CRM es una cola + un buzón de PDFs: encola trabajos (`pendiente`), el bot los
-toma de a uno (`en_proceso`), y al terminar sube el PDF y marca `cargado`/`error`.
-Todas las conexiones las inicia el bot (outbound), así que acá no hay nada que
-"empuje" hacia la PC: solo se sirve el próximo job y se registran resultados.
+Opera sobre el `Presupuesto` del CRM (no una entidad aparte): el campo
+`estado_carga` marca el ciclo `pendiente -> en_proceso -> cargado | error`
+(None = nunca se mandó a GBP). El CRM es cola + buzón de PDFs; el bot inicia
+todas las conexiones (outbound), así que acá no hay nada que empuje hacia la PC.
 """
 
 from __future__ import annotations
@@ -16,136 +16,148 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.config import get_settings
 from app.core.exceptions import NotFoundError
-from app.db.models.presupuestos_gbp import (
+from app.db.models.presupuestos import (
+    ENTREGA_OPCIONES,
+    IVA_OPCIONES,
     EstadoCargaGbp,
-    PresupuestoGbp,
-    PresupuestoGbpItem,
+    Presupuesto,
 )
-from app.schemas.presupuesto_gbp import PresupuestoGbpCreate
+from app.schemas.presupuesto_gbp import ItemBotRead, JobBotRead
 from app.services.storage import get_storage
 
 logger = logging.getLogger(__name__)
+_IVA_VALIDOS = set(IVA_OPCIONES)
 
 
-def _pdf_key(presupuesto: PresupuestoGbp) -> str:
+def _pdf_key(presupuesto: Presupuesto) -> str:
     return f"presupuestos_gbp/{presupuesto.id}.pdf"
 
 
-def crear(
-    db: Session, data: PresupuestoGbpCreate, creado_por_id: int | None
-) -> PresupuestoGbp:
-    estado = (
-        EstadoCargaGbp.pendiente.value if data.encolar else EstadoCargaGbp.borrador.value
-    )
-    presupuesto = PresupuestoGbp(
-        oportunidad_id=data.oportunidad_id,
-        cliente_numero=data.cliente_numero,
-        entrega_por=data.entrega_por,
-        estado_carga=estado,
-        creado_por_id=creado_por_id,
-    )
-    for i, item in enumerate(data.items):
-        presupuesto.items.append(
-            PresupuestoGbpItem(
-                orden=i,
-                tipo=item.tipo,
-                sku=item.sku,
-                descripcion=item.descripcion,
-                cantidad=item.cantidad,
-                precio_usd=item.precio_usd,
-                iva=item.iva if item.tipo == "manual" else None,
-                fabricante=item.fabricante,
-                part_number=item.part_number,
-            )
-        )
-    db.add(presupuesto)
-    db.commit()
-    db.refresh(presupuesto)
-    return presupuesto
+def _item_tipo(sku: str | None) -> str:
+    return "normal" if sku else "manual"
 
 
-def obtener(db: Session, presupuesto_id: int) -> PresupuestoGbp:
+def obtener(db: Session, presupuesto_id: int) -> Presupuesto:
     presupuesto = db.scalars(
-        select(PresupuestoGbp)
-        .where(PresupuestoGbp.id == presupuesto_id)
-        .options(selectinload(PresupuestoGbp.items))
+        select(Presupuesto)
+        .where(Presupuesto.id == presupuesto_id)
+        .options(selectinload(Presupuesto.items))
     ).first()
     if presupuesto is None:
         raise NotFoundError("Presupuesto no encontrado")
     return presupuesto
 
 
-def listar(db: Session, estado: str | None = None) -> list[PresupuestoGbp]:
-    stmt = select(PresupuestoGbp).order_by(PresupuestoGbp.created_at.desc())
-    if estado:
-        stmt = stmt.where(PresupuestoGbp.estado_carga == estado)
-    return list(db.scalars(stmt))
+def validar_para_gbp(presupuesto: Presupuesto) -> None:
+    """Chequea que el presupuesto esté listo para cargarse en GBP. Lanza
+    ValueError con un mensaje claro si falta algo."""
+    if not presupuesto.cliente_numero:
+        raise ValueError("Falta el N° de cliente")
+    if presupuesto.entrega_por not in ENTREGA_OPCIONES:
+        raise ValueError(f"Entrega inválida. Opciones: {', '.join(ENTREGA_OPCIONES)}")
+    if not presupuesto.items:
+        raise ValueError("El presupuesto no tiene ítems")
+    for it in presupuesto.items:
+        if not it.sku and it.iva not in _IVA_VALIDOS:  # manual -> IVA 21/10.5
+            raise ValueError(
+                f"Ítem manual '{it.descripcion[:40]}': el IVA debe ser 21 o 10.5"
+            )
+
+
+def encolar(db: Session, presupuesto: Presupuesto) -> Presupuesto:
+    """Manda el presupuesto a la cola del bot (acción explícita 'Cargar en GBP')."""
+    validar_para_gbp(presupuesto)
+    presupuesto.estado_carga = EstadoCargaGbp.pendiente.value
+    presupuesto.gbp_error = None
+    db.commit()
+    db.refresh(presupuesto)
+    return presupuesto
 
 
 def _reciclar_colgados(db: Session) -> None:
-    """Un job que quedó `en_proceso` más del timeout = el bot crasheó en medio.
-    Vuelve a `pendiente` para que se reintente (la idempotencia del bot evita
-    duplicar en GBP: antes de crear chequea si ya tiene numero_gbp)."""
+    """Un job `en_proceso` más del timeout = el bot crasheó. Vuelve a `pendiente`
+    (la idempotencia del bot evita duplicar: si ya tiene id_gbp_pedido, no recrea)."""
     limite = datetime.now(timezone.utc) - timedelta(
         minutes=get_settings().GBP_BOT_JOB_TIMEOUT_MIN
     )
     colgados = db.scalars(
-        select(PresupuestoGbp).where(
-            PresupuestoGbp.estado_carga == EstadoCargaGbp.en_proceso.value,
-            PresupuestoGbp.tomado_en < limite,
+        select(Presupuesto).where(
+            Presupuesto.estado_carga == EstadoCargaGbp.en_proceso.value,
+            Presupuesto.gbp_tomado_en < limite,
         )
     ).all()
     for p in colgados:
         p.estado_carga = EstadoCargaGbp.pendiente.value
-        logger.warning("GBP bot: job %s colgado reciclado a pendiente", p.id)
+        logger.warning("GBP bot: presupuesto %s colgado reciclado a pendiente", p.id)
     if colgados:
         db.commit()
 
 
-def tomar_siguiente(db: Session) -> PresupuestoGbp | None:
-    """Devuelve el próximo job `pendiente` (el más viejo) marcándolo `en_proceso`.
-    Hay un solo bot, así que no hace falta locking de fila: select + update."""
+def tomar_siguiente(db: Session) -> Presupuesto | None:
+    """Próximo presupuesto `pendiente` (el más viejo), marcándolo `en_proceso`.
+    Hay un solo bot, así que alcanza con select + update (sin locking de fila)."""
     _reciclar_colgados(db)
     job = db.scalars(
-        select(PresupuestoGbp)
-        .where(PresupuestoGbp.estado_carga == EstadoCargaGbp.pendiente.value)
-        .order_by(PresupuestoGbp.created_at.asc())
-        .options(selectinload(PresupuestoGbp.items))
+        select(Presupuesto)
+        .where(Presupuesto.estado_carga == EstadoCargaGbp.pendiente.value)
+        .order_by(Presupuesto.created_at.asc())
+        .options(selectinload(Presupuesto.items))
         .limit(1)
     ).first()
     if job is None:
         return None
     job.estado_carga = EstadoCargaGbp.en_proceso.value
-    job.tomado_en = datetime.now(timezone.utc)
-    job.intentos += 1
+    job.gbp_tomado_en = datetime.now(timezone.utc)
+    job.gbp_intentos += 1
     db.commit()
     db.refresh(job)
     return job
 
 
+def build_job(presupuesto: Presupuesto) -> JobBotRead:
+    return JobBotRead(
+        id=presupuesto.id,
+        cliente_numero=presupuesto.cliente_numero or "",
+        entrega_por=presupuesto.entrega_por or "",
+        moneda=presupuesto.moneda or "USD",
+        documento="Presupuesto USD",
+        items=[
+            ItemBotRead(
+                tipo=_item_tipo(it.sku),
+                sku=it.sku,
+                descripcion=it.descripcion,
+                cantidad=it.cantidad,
+                precio_usd=it.precio_unitario,
+                iva=it.iva if not it.sku else None,
+            )
+            for it in presupuesto.items
+        ],
+    )
+
+
 def registrar_resultado(
     db: Session, presupuesto_id: int, numero_gbp: str, pdf: bytes
-) -> PresupuestoGbp:
+) -> Presupuesto:
     presupuesto = obtener(db, presupuesto_id)
     if not pdf.startswith(b"%PDF"):
         raise ValueError("El archivo subido no es un PDF")
     key = _pdf_key(presupuesto)
     get_storage().put(key, pdf, "application/pdf")
-    presupuesto.numero_gbp = numero_gbp.strip() or None
-    presupuesto.pdf_key = key
+    presupuesto.id_gbp_pedido = numero_gbp.strip() or None
+    presupuesto.pdf_gbp_key = key
     presupuesto.estado_carga = EstadoCargaGbp.cargado.value
-    presupuesto.cargado_en = datetime.now(timezone.utc)
-    presupuesto.error_mensaje = None
+    presupuesto.gbp_cargado_en = datetime.now(timezone.utc)
+    presupuesto.gbp_error = None
     db.commit()
     db.refresh(presupuesto)
     logger.info("GBP bot: presupuesto %s cargado (GBP %s)", presupuesto_id, numero_gbp)
     return presupuesto
 
 
-def registrar_error(db: Session, presupuesto_id: int, mensaje: str) -> PresupuestoGbp:
+def registrar_error(db: Session, presupuesto_id: int, mensaje: str) -> Presupuesto:
     presupuesto = obtener(db, presupuesto_id)
     presupuesto.estado_carga = EstadoCargaGbp.error.value
-    presupuesto.error_mensaje = mensaje[:2000]
+    presupuesto.gbp_error = mensaje[:2000]
     db.commit()
     db.refresh(presupuesto)
     logger.warning("GBP bot: presupuesto %s con error: %s", presupuesto_id, mensaje[:200])

@@ -88,6 +88,7 @@ def _items_desde_schema(items: list[ItemBase]) -> list[PresupuestoItem]:
             iva=Decimal(it.iva) if it.iva is not None else None,
             sku=it.sku,
             fabricante=it.fabricante,
+            part_number=it.part_number,
             observaciones=it.observaciones,
             orden=orden,
         )
@@ -100,6 +101,9 @@ def crear_presupuesto(db: Session, data: PresupuestoCreate) -> Presupuesto:
     """Crea un presupuesto (borrador) con sus ítems y avanza la oportunidad."""
     presupuesto = Presupuesto(
         oportunidad_id=data.oportunidad_id,
+        cliente_id=data.cliente_id,
+        cliente_numero=data.cliente_numero,
+        entrega_por=data.entrega_por,
         codigo=generar_codigo(db),
         moneda=data.moneda or "USD",
         condicion_pago=data.condicion_pago,
@@ -111,11 +115,15 @@ def crear_presupuesto(db: Session, data: PresupuestoCreate) -> Presupuesto:
     db.add(presupuesto)
 
     # Al armar la primera cotización, la oportunidad pasa a "presupuestada".
-    op = presupuesto.oportunidad
-    if op is None:
-        from app.db.models.oportunidades import Oportunidad
+    from app.db.models.oportunidades import Oportunidad
 
+    op = presupuesto.oportunidad
+    if op is None and data.oportunidad_id is not None:
         op = db.get(Oportunidad, data.oportunidad_id)
+    # Para unificar el render del PDF: si hay oportunidad y no se pasó cliente,
+    # tomamos el cliente de la oportunidad.
+    if op is not None and presupuesto.cliente_id is None:
+        presupuesto.cliente_id = op.cliente_id
     if op is not None and op.estado not in (
         EstadoOportunidad.confirmada,
         EstadoOportunidad.perdida,
@@ -261,7 +269,7 @@ def _fmt_forma_pago(valor: str | None) -> str | None:
 
 def _render_html(presupuesto: Presupuesto) -> str:
     op = presupuesto.oportunidad
-    cli = op.cliente if op else None
+    cli = presupuesto.cliente or (op.cliente if op else None)
     vend = op.vendedor if op else None
     contacto = op.contacto if op else None
     moneda = presupuesto.moneda or "USD"
