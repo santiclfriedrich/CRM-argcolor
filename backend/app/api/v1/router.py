@@ -15,6 +15,7 @@ from app.api.v1 import (
     notificaciones,
     oportunidades,
     presupuestos,
+    presupuestos_gbp,
     search,
     solicitudes,
     sync_gbp,
@@ -31,6 +32,7 @@ api_router.include_router(contactos.router)
 api_router.include_router(dominios.router)
 api_router.include_router(oportunidades.router)
 api_router.include_router(presupuestos.router)
+api_router.include_router(presupuestos_gbp.router)
 api_router.include_router(search.router)
 api_router.include_router(tareas.router)
 api_router.include_router(solicitudes.router)

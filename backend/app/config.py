@@ -105,6 +105,13 @@ class Settings(BaseSettings):
     # Token secreto para disparar la sync desde un endpoint (corre en el server).
     # Si queda vacío, el endpoint está deshabilitado.
     GBP_SYNC_TOKEN: str = ""
+    # Token de servicio del bot de presupuestos (worker Playwright self-hosted).
+    # Viaja en el header X-Bot-Token. Si queda vacío, los endpoints del bot están
+    # deshabilitados (403).
+    GBP_BOT_TOKEN: str = ""
+    # Minutos tras los cuales un job tomado por el bot que quedó colgado
+    # (en_proceso) se recicla a pendiente (= el bot crasheó en medio de la carga).
+    GBP_BOT_JOB_TIMEOUT_MIN: int = 15
     # Solo se sincronizan estos tipos de cliente (ck_id) -> "Clase de cliente".
     # Mapa en app/services/gbp_sync.py (CK_ID_A_CLASE).
 
