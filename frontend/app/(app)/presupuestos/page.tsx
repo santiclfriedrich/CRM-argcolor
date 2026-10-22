@@ -1,7 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Building2, FileText, Target, Trash2, User } from "lucide-react";
+import { Building2, FileText, Plus, Target, Trash2, User } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -19,12 +19,15 @@ import { useSeccion } from "@/components/ui/seccion";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   abrirPdf,
+  ESTADO_CARGA_GBP,
   ESTADO_PRESUPUESTO,
   fmtMonto,
   useDeletePresupuesto,
   usePresupuestos,
 } from "@/lib/presupuestos";
 import type { EstadoPresupuesto, Presupuesto } from "@/lib/types";
+
+import { CrearPresupuestoModal } from "./crear-modal";
 
 const TONO_PRESUPUESTO = {
   borrador: "neutral",
@@ -43,6 +46,7 @@ export default function PresupuestosPage() {
   );
   const deleteMut = useDeletePresupuesto();
   const confirm = useConfirm();
+  const [crearOpen, setCrearOpen] = useState(false);
 
   const { data: session } = useSession();
   const currentUserId = Number(session?.usuario?.id) || null;
@@ -129,13 +133,19 @@ export default function PresupuestosPage() {
             {visibles.length}{" "}
             {visibles.length === 1 ? "presupuesto" : "presupuestos"}
           </p>
-          <OrdenEntradaToggle
-            nuevasArriba={nuevasArriba}
-            onToggle={toggleOrden}
-            className="ml-auto"
-          />
+          <div className="ml-auto flex items-center gap-2">
+            <Button onClick={() => setCrearOpen(true)}>
+              <Plus size={16} /> Crear nuevo presupuesto
+            </Button>
+            <OrdenEntradaToggle
+              nuevasArriba={nuevasArriba}
+              onToggle={toggleOrden}
+            />
+          </div>
         </div>
       )}
+
+      {crearOpen && <CrearPresupuestoModal onClose={() => setCrearOpen(false)} />}
 
       {isLoading && <p className="mt-4 text-ink-2">Cargando…</p>}
       {isError && <p className="mt-4 text-danger">No se pudo cargar.</p>}
@@ -238,9 +248,17 @@ export default function PresupuestosPage() {
                       {fmtMonto(p.monto_total, p.moneda)}
                     </td>
                     <td className="truncate px-3 py-2">
-                      <Badge tone={TONO_PRESUPUESTO[p.estado]}>
-                        {ESTADO_PRESUPUESTO[p.estado].label}
-                      </Badge>
+                      <div className="flex flex-col items-start gap-1">
+                        <Badge tone={TONO_PRESUPUESTO[p.estado]}>
+                          {ESTADO_PRESUPUESTO[p.estado].label}
+                        </Badge>
+                        {p.estado_carga && (
+                          <Badge tone={ESTADO_CARGA_GBP[p.estado_carga].tono}>
+                            {ESTADO_CARGA_GBP[p.estado_carga].label}
+                            {p.id_gbp_pedido ? ` · ${p.id_gbp_pedido}` : ""}
+                          </Badge>
+                        )}
+                      </div>
                     </td>
                     <td className="truncate px-3 py-2">
                       {p.creado_por?.nombre ? (

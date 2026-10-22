@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, FileText, Plus, Save, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Save, Send, Trash2, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -13,10 +13,14 @@ import { Modal } from "@/components/ui/modal";
 import { SelectMenu } from "@/components/ui/select-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip } from "@/components/ui/tooltip";
+import { useToast } from "@/components/ui/toast";
 import {
   abrirPdf,
+  ENTREGA_OPCIONES,
+  ESTADO_CARGA_GBP,
   ESTADO_PRESUPUESTO,
   fmtMonto,
+  useCargarEnGbp,
   useEnviarPresupuesto,
   usePresupuesto,
   useUpdatePresupuesto,
@@ -35,6 +39,7 @@ const TONO_PRESUPUESTO = {
 type Row = {
   key: string;
   fabricante: string;
+  part_number: string;
   sku: string;
   descripcion: string;
   cantidad: string;
@@ -58,6 +63,7 @@ const subtotalRow = (r: Row) =>
 const filaVacia = (): Row => ({
   key: nuevaKey(),
   fabricante: "",
+  part_number: "",
   sku: "",
   descripcion: "",
   cantidad: "1",
@@ -71,6 +77,7 @@ function toRows(p: Presupuesto): Row[] {
   return p.items.map((it) => ({
     key: nuevaKey(),
     fabricante: it.fabricante ?? "",
+    part_number: it.part_number ?? "",
     sku: it.sku ?? "",
     descripcion: it.descripcion,
     cantidad: String(it.cantidad),
@@ -124,8 +131,11 @@ export default function ArmadorPresupuestoPage() {
   const [validez, setValidez] = useState("");
   const [moneda, setMoneda] = useState("USD");
   const [estado, setEstado] = useState<EstadoPresupuesto>("borrador");
+  const [entrega, setEntrega] = useState("");
   const [cargado, setCargado] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const cargarGbp = useCargarEnGbp(id);
+  const { toast } = useToast();
 
   // Hidrata el formulario una vez cuando llega el presupuesto.
   useEffect(() => {
@@ -136,6 +146,7 @@ export default function ArmadorPresupuestoPage() {
       setValidez(presupuesto.validez ?? "");
       setMoneda(presupuesto.moneda ?? "USD");
       setEstado(presupuesto.estado);
+      setEntrega(presupuesto.entrega_por ?? "");
       setCargado(true);
     }
   }, [presupuesto, cargado]);
@@ -160,33 +171,41 @@ export default function ArmadorPresupuestoPage() {
         iva: r.iva.trim() ? num(r.iva) : null,
         sku: r.sku.trim() || null,
         fabricante: r.fabricante.trim() || null,
+        part_number: r.part_number.trim() || null,
         observaciones: r.observaciones.trim() || null,
       }));
 
-  const guardar = () =>
-    updateMut.mutate({
-      condicion_pago: condicion || null,
-      plazo_entrega: plazo || null,
-      validez: validez || null,
-      moneda,
-      estado,
-      items: payloadItems(),
-    });
+  const cuerpo = () => ({
+    condicion_pago: condicion || null,
+    plazo_entrega: plazo || null,
+    validez: validez || null,
+    moneda,
+    estado,
+    entrega_por: entrega || null,
+    items: payloadItems(),
+  });
+
+  const guardar = () => updateMut.mutate(cuerpo());
 
   const verPdf = () =>
-    updateMut.mutate(
-      {
-        condicion_pago: condicion || null,
-        plazo_entrega: plazo || null,
-        validez: validez || null,
-        moneda,
-        estado,
-        items: payloadItems(),
-      },
-      { onSuccess: () => abrirPdf(id) }
-    );
+    updateMut.mutate(cuerpo(), { onSuccess: () => abrirPdf(id) });
 
-  const cliente = presupuesto.oportunidad?.cliente?.razon_social ?? "Sin cliente";
+  // Guarda y encola para que el bot lo cargue en GBP (acción explícita).
+  const cargarEnGbp = () =>
+    updateMut.mutate(cuerpo(), {
+      onSuccess: () =>
+        cargarGbp.mutate(undefined, {
+          onSuccess: () => toast("Enviado a la cola de GBP", "success"),
+          onError: (e) => toast(errorMessage(e), "error"),
+        }),
+      onError: (e) => toast(errorMessage(e), "error"),
+    });
+
+  const cliente =
+    presupuesto.oportunidad?.cliente?.razon_social ??
+    (presupuesto.cliente_numero
+      ? `Cliente ${presupuesto.cliente_numero}`
+      : "Sin cliente");
 
   return (
     <div className="w-full">
@@ -203,13 +222,18 @@ export default function ArmadorPresupuestoPage() {
             {presupuesto.codigo}
           </h1>
           <p className="text-sm text-ink-2">
-            {cliente} ·{" "}
-            <Link
-              href={`/oportunidades?op=${presupuesto.oportunidad_id}`}
-              className="font-medium text-accent hover:underline"
-            >
-              Oportunidad #{presupuesto.oportunidad_id}
-            </Link>
+            {cliente}
+            {presupuesto.oportunidad_id != null && (
+              <>
+                {" · "}
+                <Link
+                  href={`/oportunidades?op=${presupuesto.oportunidad_id}`}
+                  className="font-medium text-accent hover:underline"
+                >
+                  Oportunidad #{presupuesto.oportunidad_id}
+                </Link>
+              </>
+            )}
           </p>
           <p className="mt-1 text-xs text-ink-3">
             Creado por {presupuesto.creado_por?.nombre ?? "—"}
@@ -223,9 +247,22 @@ export default function ArmadorPresupuestoPage() {
             )}
           </p>
         </div>
-        <Badge tone={TONO_PRESUPUESTO[estado]}>
-          {ESTADO_PRESUPUESTO[estado].label}
-        </Badge>
+        <div className="flex flex-col items-end gap-1">
+          <Badge tone={TONO_PRESUPUESTO[estado]}>
+            {ESTADO_PRESUPUESTO[estado].label}
+          </Badge>
+          {presupuesto.estado_carga && (
+            <Badge tone={ESTADO_CARGA_GBP[presupuesto.estado_carga].tono}>
+              {ESTADO_CARGA_GBP[presupuesto.estado_carga].label}
+              {presupuesto.id_gbp_pedido ? ` · ${presupuesto.id_gbp_pedido}` : ""}
+            </Badge>
+          )}
+          {presupuesto.estado_carga === "error" && presupuesto.gbp_error && (
+            <span className="max-w-xs text-right text-xs text-danger">
+              {presupuesto.gbp_error}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Cabecera: condiciones comerciales */}
@@ -254,6 +291,15 @@ export default function ArmadorPresupuestoPage() {
           <Label>Validez</Label>
           <Input value={validez} onChange={(e) => setValidez(e.target.value)} placeholder="15 días" />
         </div>
+        <div className="sm:col-span-2">
+          <Label>Entregar por (GBP)</Label>
+          <SelectMenu
+            value={entrega}
+            onChange={setEntrega}
+            placeholder="— Elegir —"
+            options={ENTREGA_OPCIONES.map((o) => ({ value: o, label: o }))}
+          />
+        </div>
       </div>
 
       {/* Ítems */}
@@ -262,7 +308,8 @@ export default function ArmadorPresupuestoPage() {
           <thead className="bg-surface2 text-left text-xs text-ink-2">
             <tr>
               <th className="px-2 py-2 font-medium">Fabricante</th>
-              <th className="px-2 py-2 font-medium">SKU</th>
+              <th className="px-2 py-2 font-medium">Part N°</th>
+              <th className="px-2 py-2 font-medium">SKU (GBP)</th>
               <th className="px-2 py-2 font-medium">Descripción</th>
               <th className="px-2 py-2 font-medium">Cant.</th>
               <th className="px-2 py-2 font-medium">P. unit.</th>
@@ -276,6 +323,7 @@ export default function ArmadorPresupuestoPage() {
             {rows.map((r) => (
               <tr key={r.key} className="border-t border-line">
                 <td className="p-1"><Input value={r.fabricante} onChange={(e) => setCampo(r.key, "fabricante", e.target.value)} /></td>
+                <td className="p-1"><Input value={r.part_number} onChange={(e) => setCampo(r.key, "part_number", e.target.value)} /></td>
                 <td className="p-1"><Input value={r.sku} onChange={(e) => setCampo(r.key, "sku", e.target.value)} /></td>
                 <td className="p-1 min-w-[180px]"><Input value={r.descripcion} onChange={(e) => setCampo(r.key, "descripcion", e.target.value)} placeholder="Producto / servicio" /></td>
                 <td className="p-1 w-20"><Input type="number" value={r.cantidad} onChange={(e) => setCampo(r.key, "cantidad", e.target.value)} className="text-right" /></td>
@@ -349,6 +397,19 @@ export default function ArmadorPresupuestoPage() {
           </Button>
           <Button variant="outline" onClick={() => setEnviando(true)} disabled={updateMut.isPending}>
             <Send size={15} /> Enviar al cliente
+          </Button>
+          <Button
+            variant="outline"
+            onClick={cargarEnGbp}
+            disabled={
+              updateMut.isPending ||
+              cargarGbp.isPending ||
+              presupuesto.estado_carga === "pendiente" ||
+              presupuesto.estado_carga === "en_proceso"
+            }
+          >
+            <UploadCloud size={15} />{" "}
+            {cargarGbp.isPending ? "Enviando…" : "Cargar en GBP"}
           </Button>
           <Button onClick={guardar} disabled={updateMut.isPending}>
             <Save size={15} /> {updateMut.isPending ? "Guardando…" : "Guardar"}

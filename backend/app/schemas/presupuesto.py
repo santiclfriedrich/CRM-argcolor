@@ -58,6 +58,8 @@ class PresupuestoUpdate(PresupuestoBase):
     condicion_pago: str | None = None
     moneda: str | None = None
     estado: EstadoPresupuesto | None = None
+    entrega_por: str | None = None
+    cliente_numero: str | None = None
     items: list[ItemBase] | None = None
 
 
@@ -95,6 +97,7 @@ class PresupuestoRead(PresupuestoBase):
     estado: EstadoPresupuesto
     estado_carga: str | None = None
     id_gbp_pedido: str | None = None
+    gbp_error: str | None = None
     monto_total: Decimal | None = None
     version: int
     pdf_url: str | None = None

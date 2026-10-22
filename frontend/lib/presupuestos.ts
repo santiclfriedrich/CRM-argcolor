@@ -1,9 +1,11 @@
 // API + hooks de React Query para presupuestos (armador de cotizaciones).
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import type { Tone } from "@/components/ui/badge";
 import { api } from "@/lib/api";
 import { oportunidadKeys } from "@/lib/oportunidades";
 import type {
+  EstadoCargaGbp,
   EstadoPresupuesto,
   Presupuesto,
   PresupuestoCreate,
@@ -12,6 +14,19 @@ import type {
 } from "@/lib/types";
 
 const BASE = "/api/v1/presupuestos";
+
+// Opciones de "Entregar por" que ofrece GBP (elegibles en el CRM).
+export const ENTREGA_OPCIONES = ["Retiro TML - Garin", "TML Corpo"] as const;
+
+export const ESTADO_CARGA_GBP: Record<
+  EstadoCargaGbp,
+  { label: string; tono: Tone }
+> = {
+  pendiente: { label: "En cola GBP", tono: "warning" },
+  en_proceso: { label: "Cargando en GBP", tono: "info" },
+  cargado: { label: "Cargado en GBP", tono: "success" },
+  error: { label: "Error en GBP", tono: "danger" },
+};
 
 export const ESTADO_PRESUPUESTO: Record<EstadoPresupuesto, { label: string; color: string }> = {
   borrador: { label: "Borrador", color: "bg-slate-200 text-slate-700" },
@@ -107,6 +122,19 @@ export function useEnviarPresupuesto(id: number) {
       qc.setQueryData(presupuestoKeys.detail(id), data);
       qc.invalidateQueries({ queryKey: presupuestoKeys.all });
       qc.invalidateQueries({ queryKey: oportunidadKeys.all });
+    },
+  });
+}
+
+// Encola el presupuesto para que el bot lo cargue en GBP (acción explícita).
+export function useCargarEnGbp(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      (await api.post<Presupuesto>(`${BASE}/${id}/cargar-gbp`)).data,
+    onSuccess: (data) => {
+      qc.setQueryData(presupuestoKeys.detail(id), data);
+      qc.invalidateQueries({ queryKey: presupuestoKeys.all });
     },
   });
 }

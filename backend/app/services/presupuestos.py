@@ -176,7 +176,15 @@ def actualizar_presupuesto(
     db: Session, presupuesto: Presupuesto, data: PresupuestoUpdate
 ) -> Presupuesto:
     """Actualiza cabecera y/o ítems. Si vienen ítems, reemplazan a los actuales."""
-    for campo in ("condicion_pago", "plazo_entrega", "validez", "moneda", "estado"):
+    for campo in (
+        "condicion_pago",
+        "plazo_entrega",
+        "validez",
+        "moneda",
+        "estado",
+        "entrega_por",
+        "cliente_numero",
+    ):
         valor = getattr(data, campo)
         if valor is not None:
             setattr(presupuesto, campo, valor)
