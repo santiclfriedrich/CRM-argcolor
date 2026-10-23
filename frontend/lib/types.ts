@@ -565,6 +565,7 @@ export interface PresupuestoItem {
   descuento_pct: number;
   iva: number | null;
   subtotal: number;
+  moneda: string;
   sku: string | null;
   fabricante: string | null;
   part_number: string | null;
@@ -607,6 +608,7 @@ export type ItemInput = {
   descripcion: string;
   cantidad: number;
   precio_unitario: number;
+  moneda?: string;
   descuento_pct?: number;
   iva?: number | null;
   sku?: string | null;

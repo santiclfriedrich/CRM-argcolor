@@ -84,6 +84,7 @@ def _items_desde_schema(items: list[ItemBase]) -> list[PresupuestoItem]:
             descripcion=it.descripcion,
             cantidad=Decimal(it.cantidad or 0),
             precio_unitario=Decimal(it.precio_unitario or 0),
+            moneda=(it.moneda or "USD").upper(),
             descuento_pct=Decimal(it.descuento_pct or 0),
             iva=Decimal(it.iva) if it.iva is not None else None,
             sku=it.sku,

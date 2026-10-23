@@ -14,7 +14,8 @@ class ItemBotRead(BaseModel):
     sku: str | None
     descripcion: str
     cantidad: Decimal
-    precio_usd: Decimal
+    precio: Decimal  # precio unitario en la moneda del ítem
+    moneda: str  # "USD" | "ARS" -> el bot setea el dropdown de la línea
     iva: Decimal | None
 
 

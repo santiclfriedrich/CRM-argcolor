@@ -68,3 +68,18 @@ def test_tolera_strings_formato_es_ar() -> None:
     items = parsear_excel(data)
     assert items[0]["cantidad"] == Decimal("3")
     assert items[0]["precio_unitario"] == Decimal("1234.56")
+
+
+def test_moneda_por_item() -> None:
+    data = _xlsx(
+        [
+            ["descripcion", "precio", "moneda"],
+            ["Item USD", 10, "USD"],
+            ["Item ARS", 5000, "ARS"],
+            ["Item sin moneda", 7, None],  # default USD
+        ]
+    )
+    items = parsear_excel(data)
+    assert items[0]["moneda"] == "USD"
+    assert items[1]["moneda"] == "ARS"
+    assert items[2]["moneda"] == "USD"

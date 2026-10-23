@@ -127,7 +127,8 @@ def build_job(presupuesto: Presupuesto) -> JobBotRead:
                 sku=it.sku,
                 descripcion=it.descripcion,
                 cantidad=it.cantidad,
-                precio_usd=it.precio_unitario,
+                precio=it.precio_unitario,
+                moneda=it.moneda or "USD",
                 iva=it.iva if not it.sku else None,
             )
             for it in presupuesto.items

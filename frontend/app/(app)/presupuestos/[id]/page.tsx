@@ -35,6 +35,7 @@ type Row = {
   descripcion: string;
   cantidad: string;
   precio_unitario: string;
+  moneda: string;
   iva: string;
 };
 
@@ -56,6 +57,7 @@ const filaVacia = (): Row => ({
   descripcion: "",
   cantidad: "1",
   precio_unitario: "0",
+  moneda: "USD",
   iva: "",
 });
 
@@ -68,6 +70,7 @@ function toRow(it: ItemInput | Presupuesto["items"][number]): Row {
     descripcion: it.descripcion,
     cantidad: String(it.cantidad ?? 1),
     precio_unitario: String(it.precio_unitario ?? 0),
+    moneda: (it as { moneda?: string }).moneda || "USD",
     iva: it.iva != null ? String(Number(it.iva)) : "",
   };
 }
@@ -102,7 +105,13 @@ export default function ArmadorPresupuestoPage() {
   const setCampo = (key: string, campo: keyof Row, valor: string) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, [campo]: valor } : r)));
 
-  const total = rows.reduce((acc, r) => acc + subtotalRow(r), 0);
+  // Totales por moneda (no se pueden sumar ARS + USD).
+  const totalUSD = rows
+    .filter((r) => (r.moneda || "USD") === "USD")
+    .reduce((acc, r) => acc + subtotalRow(r), 0);
+  const totalARS = rows
+    .filter((r) => r.moneda === "ARS")
+    .reduce((acc, r) => acc + subtotalRow(r), 0);
 
   const payloadItems = (): ItemInput[] =>
     rows
@@ -111,6 +120,7 @@ export default function ArmadorPresupuestoPage() {
         descripcion: r.descripcion.trim(),
         cantidad: num(r.cantidad),
         precio_unitario: num(r.precio_unitario),
+        moneda: r.moneda || "USD",
         iva: r.iva.trim() ? num(r.iva) : null,
         sku: r.sku.trim() || null,
         fabricante: r.fabricante.trim() || null,
@@ -246,7 +256,8 @@ export default function ArmadorPresupuestoPage() {
               <th className="px-2 py-2 font-medium">SKU (GBP)</th>
               <th className="px-2 py-2 font-medium">Descripción</th>
               <th className="px-2 py-2 font-medium">Cant.</th>
-              <th className="px-2 py-2 font-medium">Precio USD</th>
+              <th className="px-2 py-2 font-medium">Precio</th>
+              <th className="px-2 py-2 font-medium">Moneda</th>
               <th className="px-2 py-2 font-medium">IVA%</th>
               <th className="px-2 py-2 text-right font-medium">Subtotal</th>
               <th className="px-2 py-2" />
@@ -269,6 +280,16 @@ export default function ArmadorPresupuestoPage() {
                 </td>
                 <td className="p-1 w-24">
                   <select
+                    value={r.moneda}
+                    onChange={(e) => setCampo(r.key, "moneda", e.target.value)}
+                    className="h-11 w-full rounded-lg border border-line bg-surface px-1.5 text-sm text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                  >
+                    <option value="USD">USD</option>
+                    <option value="ARS">ARS</option>
+                  </select>
+                </td>
+                <td className="p-1 w-24">
+                  <select
                     value={r.iva}
                     onChange={(e) => setCampo(r.key, "iva", e.target.value)}
                     className="h-11 w-full rounded-lg border border-line bg-surface px-1.5 text-sm text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
@@ -282,7 +303,7 @@ export default function ArmadorPresupuestoPage() {
                   </select>
                 </td>
                 <td className="px-2 py-1 text-right tabular-nums text-ink">
-                  {fmtMonto(subtotalRow(r), "USD")}
+                  {fmtMonto(subtotalRow(r), r.moneda || "USD")}
                 </td>
                 <td className="px-1">
                   <Tooltip label="Quitar fila">
@@ -308,7 +329,15 @@ export default function ArmadorPresupuestoPage() {
         </Button>
         <div className="text-right">
           <span className="text-sm text-ink-2">Total</span>
-          <p className="text-xl font-bold tabular-nums text-ink">{fmtMonto(total, "USD")}</p>
+          {totalUSD > 0 && (
+            <p className="text-xl font-bold tabular-nums text-ink">{fmtMonto(totalUSD, "USD")}</p>
+          )}
+          {totalARS > 0 && (
+            <p className="text-xl font-bold tabular-nums text-ink">{fmtMonto(totalARS, "ARS")}</p>
+          )}
+          {totalUSD === 0 && totalARS === 0 && (
+            <p className="text-xl font-bold tabular-nums text-ink">{fmtMonto(0, "USD")}</p>
+          )}
         </div>
       </div>
 

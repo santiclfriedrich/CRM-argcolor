@@ -20,6 +20,7 @@ class ItemBase(BaseModel):
     descripcion: str
     cantidad: Decimal = Decimal(1)
     precio_unitario: Decimal = Decimal(0)
+    moneda: str = "USD"  # moneda del ítem (USD | ARS)
     descuento_pct: Decimal = Decimal(0)
     iva: Decimal | None = None
     sku: str | None = None

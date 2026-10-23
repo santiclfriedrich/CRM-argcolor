@@ -30,6 +30,7 @@ _ALIASES: dict[str, set[str]] = {
         "unitario",
     },
     "iva": {"iva", "iva%", "iva %", "alicuota", "alícuota"},
+    "moneda": {"moneda", "currency", "mon"},
     "fabricante": {"fabricante", "marca"},
     "part_number": {"part_number", "part number", "part n°", "part n", "pn", "part"},
 }
@@ -87,7 +88,7 @@ def parsear_excel(contenido: bytes) -> list[dict[str, object]]:
     if "descripcion" not in cols:
         raise ValueError(
             "No encuentro la columna 'descripcion'. Usá el template "
-            "(sku, descripcion, cantidad, precio_usd, iva, fabricante, part_number)."
+            "(sku, descripcion, cantidad, precio, moneda, iva, fabricante, part_number)."
         )
 
     def celda(fila: tuple, campo: str) -> object:
@@ -107,11 +108,14 @@ def parsear_excel(contenido: bytes) -> list[dict[str, object]]:
         if iva is not None and iva < 1:  # vino como 0.21 -> 21
             iva = iva * 100
         sku = str(celda(fila, "sku") or "").strip() or None
+        mon = str(celda(fila, "moneda") or "").strip().upper()
+        moneda = "ARS" if mon.startswith("AR") or mon in {"$", "PESOS", "PESO"} else "USD"
         items.append(
             {
                 "descripcion": desc,
                 "cantidad": cantidad,
                 "precio_unitario": precio,
+                "moneda": moneda,
                 "iva": iva,
                 "sku": sku,
                 "fabricante": str(celda(fila, "fabricante") or "").strip() or None,

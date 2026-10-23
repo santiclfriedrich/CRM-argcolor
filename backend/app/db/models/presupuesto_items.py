@@ -17,6 +17,8 @@ class PresupuestoItem(Base):
     descripcion: Mapped[str] = mapped_column(Text, nullable=False)
     cantidad: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=1, nullable=False)
     precio_unitario: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=0, nullable=False)
+    # Moneda del ítem (puede diferir entre líneas: GBP tiene el dropdown por línea).
+    moneda: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
     descuento_pct: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=0, nullable=False)
     iva: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))  # % de IVA de la línea
     subtotal: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=0, nullable=False)
