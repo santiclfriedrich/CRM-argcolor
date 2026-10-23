@@ -103,9 +103,31 @@ def sync_inbox_for_user(
         )
     )
 
-    # Batch: una sola bajada para todos los mails de la ventana (no una request
-    # por mail, que colgaba el botón Sincronizar).
-    pendientes = [mid for mid in ids if mid not in eliminados]
+    # Backfill barato (SIN pegarle a Gmail): a los mails ya guardados sin dueño
+    # les seteamos el usuario. No re-bajamos su contenido.
+    for m in existentes.values():
+        if m.usuario_id is None:
+            m.usuario_id = usuario.id
+            resultado["actualizados"] += 1  # type: ignore[operator]
+
+    # Solo bajamos lo NUEVO: los mails que ya están en la base NO se vuelven a
+    # pedir. Antes se re-bajaba el contenido completo de toda la ventana en cada
+    # poll (full = 5 units por mail) y eso agotaba la cuota de Gmail por-usuario-
+    # por-minuto. El "leído" acá es local (no depende del poll), así que saltear
+    # los existentes no cambia nada visible. Un cambio de carpeta hecho DESDE
+    # Gmail en un mail viejo deja de reflejarse (marginal; se puede resolver con
+    # la History API si hiciera falta).
+    pendientes = [mid for mid in ids if mid not in existentes and mid not in eliminados]
+    if not pendientes:
+        try:
+            db.commit()
+        except Exception as exc:  # noqa: BLE001 - un commit fallido no debe romper el poll
+            db.rollback()
+            resultado["errores"] += 1  # type: ignore[operator]
+            resultado["ultimo_error"] = str(exc)[:200]
+            logger.exception("Falló el commit del sync de buzón")
+        return resultado
+
     try:
         mensajes = {m.get("message_id"): m for m in gmail.get_messages_bulk(pendientes)}
     except Exception as exc:  # noqa: BLE001 - frontera con Gmail
@@ -121,38 +143,24 @@ def sync_inbox_for_user(
         labels = msg.get("labels") or []
         carpeta, direccion = _carpeta_y_direccion(labels)
         leido = "UNREAD" not in labels
-
-        existente = existentes.get(mid)
-        if existente is not None:
-            # El "leído" es local al CRM (abrir un mail acá NO saca el label UNREAD
-            # en Gmail). Por eso el sync NUNCA vuelve un mail a NO leído: una vez
-            # leído (acá o en Gmail) queda leído; si no, reflejamos la lectura que
-            # se haya hecho en Gmail. Evita que el mail reaparezca como no leído.
-            existente.leido = existente.leido or leido
-            existente.carpeta = carpeta
-            existente.tiene_adjuntos = bool(msg.get("tiene_adjuntos"))
-            if existente.usuario_id is None:
-                existente.usuario_id = usuario.id
-            resultado["actualizados"] += 1  # type: ignore[operator]
-        else:
-            db.add(
-                Mail(
-                    gmail_message_id=msg.get("message_id"),
-                    gmail_thread_id=msg.get("thread_id"),
-                    rfc_message_id=_trunc(msg.get("rfc_message_id"), 512),
-                    direccion=direccion,
-                    de=_trunc(msg.get("de"), 320),
-                    para=_trunc(msg.get("para"), 500),
-                    asunto=_trunc(msg.get("asunto"), 500),
-                    cuerpo=msg.get("cuerpo") or "",
-                    fecha=msg.get("fecha"),
-                    leido=leido,
-                    carpeta=carpeta,
-                    tiene_adjuntos=bool(msg.get("tiene_adjuntos")),
-                    usuario_id=usuario.id,
-                )
+        db.add(
+            Mail(
+                gmail_message_id=msg.get("message_id"),
+                gmail_thread_id=msg.get("thread_id"),
+                rfc_message_id=_trunc(msg.get("rfc_message_id"), 512),
+                direccion=direccion,
+                de=_trunc(msg.get("de"), 320),
+                para=_trunc(msg.get("para"), 500),
+                asunto=_trunc(msg.get("asunto"), 500),
+                cuerpo=msg.get("cuerpo") or "",
+                fecha=msg.get("fecha"),
+                leido=leido,
+                carpeta=carpeta,
+                tiene_adjuntos=bool(msg.get("tiene_adjuntos")),
+                usuario_id=usuario.id,
             )
-            resultado["nuevos"] += 1  # type: ignore[operator]
+        )
+        resultado["nuevos"] += 1  # type: ignore[operator]
 
     try:
         db.commit()

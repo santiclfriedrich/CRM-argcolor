@@ -38,11 +38,13 @@ class FakeGmail:
 
     def __init__(self, mensajes: dict[str, dict[str, Any]]) -> None:
         self.mensajes = mensajes
+        self.pedidos: list[str] = []  # ids que se bajaron (para medir cuota)
 
     def list_message_ids(self, query: str, max_results: int = 25) -> list[str]:
         return list(self.mensajes.keys())
 
     def get_messages_bulk(self, ids: list[str]) -> list[dict[str, Any]]:
+        self.pedidos.extend(ids)
         return [self.mensajes[mid] for mid in ids if mid in self.mensajes]
 
 
@@ -98,19 +100,21 @@ def test_sync_trae_todo_con_carpeta_y_leido(db: Session, usuario: Usuario) -> No
     assert por_id["m4"].carpeta == "archivo"
 
 
-def test_sync_es_idempotente_y_refresca_estado(db: Session, usuario: Usuario) -> None:
+def test_sync_no_rebaja_los_existentes(db: Session, usuario: Usuario) -> None:
+    # Clave para la cuota de Gmail: un mail ya guardado NO se vuelve a bajar.
     gmail = FakeGmail(
         {"m1": _msg("m1", labels=["INBOX", "UNREAD"], de="cliente@x.com", asunto="Hola")}
     )
     sync_inbox_for_user(db, gmail, usuario)
-    # Segunda corrida: el mismo mail ahora está leído -> no duplica, refresca.
+    assert gmail.pedidos == ["m1"]  # la 1ª vez sí lo baja
+
+    # 2ª corrida: el mail ya existe -> no se vuelve a pedir a Gmail ni se duplica.
+    gmail.pedidos.clear()
     gmail.mensajes["m1"]["labels"] = ["INBOX"]
     r = sync_inbox_for_user(db, gmail, usuario)
     assert r["nuevos"] == 0
-    assert r["actualizados"] == 1
-    mails = list(db.scalars(select(Mail)))
-    assert len(mails) == 1
-    assert mails[0].leido is True
+    assert gmail.pedidos == []  # NO re-bajó el existente (ahorro de cuota)
+    assert len(list(db.scalars(select(Mail)))) == 1
 
 
 def test_sync_no_revierte_leido_local(db: Session, usuario: Usuario) -> None:
