@@ -13,7 +13,7 @@ import { useToast } from "@/components/ui/toast";
 import { useClientes } from "@/lib/clientes";
 import {
   importarExcelPresupuesto,
-  useCreatePresupuesto,
+  useCrearLote,
 } from "@/lib/presupuestos";
 import type { ItemInput } from "@/lib/types";
 import { errorMessage } from "@/lib/utils";
@@ -25,7 +25,7 @@ export function CrearPresupuestoModal({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const { toast } = useToast();
   const { data: clientes } = useClientes();
-  const crear = useCreatePresupuesto();
+  const crear = useCrearLote();
 
   const [clienteId, setClienteId] = useState<number | null>(null);
   const [clienteNumero, setClienteNumero] = useState("");
@@ -74,9 +74,17 @@ export function CrearPresupuestoModal({ onClose }: { onClose: () => void }) {
         items,
       },
       {
-        onSuccess: (p) => {
+        onSuccess: (partes) => {
           onClose();
-          router.push(`/presupuestos/${p.id}`);
+          if (partes.length === 1) {
+            router.push(`/presupuestos/${partes[0].id}`);
+          } else {
+            toast(
+              `Se crearon ${partes.length} presupuestos (partes de 20 ítems)`,
+              "success"
+            );
+            router.push("/presupuestos");
+          }
         },
         onError: (e) => toast(errorMessage(e), "error"),
       }

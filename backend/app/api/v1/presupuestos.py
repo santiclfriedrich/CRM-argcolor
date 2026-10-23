@@ -30,6 +30,7 @@ from app.services.importar_excel import parsear_excel
 from app.services.presupuestos import (
     actualizar_presupuesto,
     crear_desde_solicitud,
+    crear_lote,
     crear_presupuesto,
     enviar_al_cliente,
 )
@@ -106,6 +107,45 @@ def create_presupuesto(
     presupuesto.creado_por_id = current_user.id
     db.commit()
     return _get_loaded(db, presupuesto.id)
+
+
+@router.post("/lote", response_model=list[PresupuestoRead], status_code=201)
+def create_lote(
+    body: PresupuestoCreate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> list[Presupuesto]:
+    """Crea el presupuesto; si tiene más de GBP_MAX_ITEMS ítems lo parte en varias
+    'partes' (cada una = un pedido de GBP). Devuelve la lista (1 o N)."""
+    if body.oportunidad_id is not None and db.get(Oportunidad, body.oportunidad_id) is None:
+        raise HTTPException(status_code=404, detail="La oportunidad no existe")
+    creados = crear_lote(db, body, current_user.id)
+    return [_get_loaded(db, p.id) for p in creados]
+
+
+@router.post("/grupo/{grupo}/cargar-gbp", response_model=list[PresupuestoRead])
+def cargar_grupo_en_gbp(
+    grupo: str,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> list[Presupuesto]:
+    """Encola TODAS las partes de un lote para que el bot las cargue en GBP."""
+    partes = list(
+        db.scalars(
+            select(Presupuesto)
+            .where(Presupuesto.gbp_grupo == grupo)
+            .order_by(Presupuesto.gbp_parte)
+            .options(*_RELATIONS)
+        )
+    )
+    if not partes:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+    try:
+        for p in partes:
+            gbp_svc.encolar(db, p)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return [_get_loaded(db, p.id) for p in partes]
 
 
 @router.post("/importar-excel", response_model=list[ItemBase])

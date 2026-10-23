@@ -112,6 +112,9 @@ class Settings(BaseSettings):
     # Minutos tras los cuales un job tomado por el bot que quedó colgado
     # (en_proceso) se recicla a pendiente (= el bot crasheó en medio de la carga).
     GBP_BOT_JOB_TIMEOUT_MIN: int = 15
+    # Máximo de ítems por pedido de GBP. Un presupuesto con más ítems se parte en
+    # varias "partes" (cada una = un pedido de GBP con su PDF).
+    GBP_MAX_ITEMS: int = 20
     # Solo se sincronizan estos tipos de cliente (ck_id) -> "Clase de cliente".
     # Mapa en app/services/gbp_sync.py (CK_ID_A_CLASE).
 

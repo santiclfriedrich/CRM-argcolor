@@ -584,6 +584,8 @@ export interface Presupuesto {
   estado_carga: EstadoCargaGbp | null;
   id_gbp_pedido: string | null;
   gbp_error: string | null;
+  gbp_grupo: string | null;
+  gbp_parte: number | null;
   codigo: string;
   estado: EstadoPresupuesto;
   monto_total: number | null;

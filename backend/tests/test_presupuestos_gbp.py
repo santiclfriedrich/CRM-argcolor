@@ -197,6 +197,47 @@ def test_cargar_manual_sin_iva_es_400(client: TestClient) -> None:
     assert "iva" in r.json()["detail"].lower()
 
 
+def _items(n: int) -> list[dict]:
+    return [
+        {"sku": f"S{i}", "descripcion": f"item {i}", "cantidad": 1, "precio_unitario": 10}
+        for i in range(n)
+    ]
+
+
+def test_lote_parte_en_tandas_de_20(client: TestClient) -> None:
+    body = {"cliente_numero": "34923", "entrega_por": "Retiro TML - Garin", "items": _items(45)}
+    r = client.post("/api/v1/presupuestos/lote", json=body)
+    assert r.status_code == 201, r.text
+    partes = r.json()
+    assert len(partes) == 3  # 20 + 20 + 5
+    assert [p["gbp_parte"] for p in partes] == [1, 2, 3]
+    grupos = {p["gbp_grupo"] for p in partes}
+    assert len(grupos) == 1 and None not in grupos
+    assert len(partes[0]["items"]) == 20
+    assert len(partes[2]["items"]) == 5
+
+
+def test_lote_chico_no_agrupa(client: TestClient) -> None:
+    r = client.post("/api/v1/presupuestos/lote", json=_payload())  # 2 ítems
+    assert r.status_code == 201
+    partes = r.json()
+    assert len(partes) == 1
+    assert partes[0]["gbp_grupo"] is None
+
+
+def test_cargar_grupo_encola_todas_las_partes(client: TestClient) -> None:
+    body = {"cliente_numero": "34923", "entrega_por": "Retiro TML - Garin", "items": _items(45)}
+    partes = client.post("/api/v1/presupuestos/lote", json=body).json()
+    grupo = partes[0]["gbp_grupo"]
+    r = client.post(f"/api/v1/presupuestos/grupo/{grupo}/cargar-gbp")
+    assert r.status_code == 200
+    assert all(p["estado_carga"] == "pendiente" for p in r.json())
+    # el bot ahora ve 3 jobs (uno por parte)
+    for _ in range(3):
+        assert client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS).status_code == 200
+    assert client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS).status_code == 204
+
+
 def test_job_colgado_se_recicla(client: TestClient) -> None:
     pid = _crear(client)["id"]
     client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")

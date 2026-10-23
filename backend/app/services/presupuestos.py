@@ -10,6 +10,7 @@ import base64
 import html
 import os
 import platform
+import uuid
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
@@ -136,6 +137,38 @@ def crear_presupuesto(db: Session, data: PresupuestoCreate) -> Presupuesto:
     db.commit()
     db.refresh(presupuesto)
     return presupuesto
+
+
+def crear_lote(
+    db: Session, data: PresupuestoCreate, creado_por_id: int | None
+) -> list[Presupuesto]:
+    """Crea el/los presupuestos para un alta. Si los ítems superan GBP_MAX_ITEMS,
+    los parte en varias "partes" (cada una ≤ máx = un pedido de GBP), que comparten
+    `gbp_grupo` y se numeran con `gbp_parte`. Devuelve la lista creada (1 o N)."""
+    items = list(data.items or [])
+    maxi = max(1, settings.GBP_MAX_ITEMS)
+
+    if len(items) <= maxi:
+        presupuesto = crear_presupuesto(db, data)
+        presupuesto.creado_por_id = creado_por_id
+        db.commit()
+        db.refresh(presupuesto)
+        return [presupuesto]
+
+    grupo = uuid.uuid4().hex[:12]
+    chunks = [items[i : i + maxi] for i in range(0, len(items), maxi)]
+    creados: list[Presupuesto] = []
+    for idx, chunk in enumerate(chunks, start=1):
+        parte_data = data.model_copy(update={"items": chunk})
+        presupuesto = crear_presupuesto(db, parte_data)
+        presupuesto.creado_por_id = creado_por_id
+        presupuesto.gbp_grupo = grupo
+        presupuesto.gbp_parte = idx
+        creados.append(presupuesto)
+    db.commit()
+    for p in creados:
+        db.refresh(p)
+    return creados
 
 
 def crear_desde_solicitud(db: Session, solicitud: SolicitudCompras) -> Presupuesto:

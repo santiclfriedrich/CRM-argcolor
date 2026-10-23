@@ -99,6 +99,8 @@ class PresupuestoRead(PresupuestoBase):
     estado_carga: str | None = None
     id_gbp_pedido: str | None = None
     gbp_error: str | None = None
+    gbp_grupo: str | None = None
+    gbp_parte: int | None = None
     monto_total: Decimal | None = None
     version: int
     pdf_url: str | None = None
@@ -125,6 +127,8 @@ class PresupuestoListItem(BaseModel):
     codigo: str
     estado: EstadoPresupuesto
     estado_carga: str | None = None
+    gbp_grupo: str | None = None
+    gbp_parte: int | None = None
     monto_total: Decimal | None = None
     moneda: str = "USD"
     created_at: datetime

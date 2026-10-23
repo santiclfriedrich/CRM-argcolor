@@ -88,6 +88,30 @@ export function useCreatePresupuesto() {
   });
 }
 
+// Crea el presupuesto; si tiene muchos ítems, el backend lo parte en "partes"
+// (cada una ≤ máx = un pedido de GBP). Devuelve la lista (1 o N).
+export function useCrearLote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: PresupuestoCreate) =>
+      (await api.post<Presupuesto[]>(`${BASE}/lote`, body)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: presupuestoKeys.all });
+      qc.invalidateQueries({ queryKey: oportunidadKeys.all });
+    },
+  });
+}
+
+// Encola TODAS las partes de un lote para que el bot las cargue en GBP.
+export function useCargarGrupoEnGbp() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (grupo: string) =>
+      (await api.post<Presupuesto[]>(`${BASE}/grupo/${grupo}/cargar-gbp`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: presupuestoKeys.all }),
+  });
+}
+
 // Crea un presupuesto pre-llenado con la respuesta de Compras ya parseada.
 export function useCrearDesdeSolicitud() {
   const qc = useQueryClient();

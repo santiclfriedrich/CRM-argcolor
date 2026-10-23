@@ -80,6 +80,10 @@ class Presupuesto(Base, TimestampMixin):
     gbp_intentos: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     gbp_tomado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     gbp_cargado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Lote: un presupuesto con muchos ítems se parte en N "partes" (cada una = un
+    # pedido de GBP). Las partes comparten `gbp_grupo` y se numeran con `gbp_parte`.
+    gbp_grupo: Mapped[str | None] = mapped_column(String(40), index=True)
+    gbp_parte: Mapped[int | None] = mapped_column(Integer)
 
     # Auditoría: quién lo creó y quién lo editó por última vez.
     creado_por_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))

@@ -1,7 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Building2, FileText, Plus, Target, Trash2, User } from "lucide-react";
+import { Building2, FileText, Plus, Target, Trash2, UploadCloud, User } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -16,16 +16,19 @@ import {
 } from "@/components/ui/orden-entrada";
 import { useResizableColumns } from "@/components/ui/resizable-columns";
 import { useSeccion } from "@/components/ui/seccion";
+import { useToast } from "@/components/ui/toast";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   abrirPdf,
   ESTADO_CARGA_GBP,
   ESTADO_PRESUPUESTO,
   fmtMonto,
+  useCargarGrupoEnGbp,
   useDeletePresupuesto,
   usePresupuestos,
 } from "@/lib/presupuestos";
 import type { EstadoPresupuesto, Presupuesto } from "@/lib/types";
+import { errorMessage } from "@/lib/utils";
 
 import { CrearPresupuestoModal } from "./crear-modal";
 
@@ -45,8 +48,16 @@ export default function PresupuestosPage() {
     seccion
   );
   const deleteMut = useDeletePresupuesto();
+  const cargarGrupo = useCargarGrupoEnGbp();
   const confirm = useConfirm();
+  const { toast } = useToast();
   const [crearOpen, setCrearOpen] = useState(false);
+
+  // Cuántas partes tiene cada lote (para mostrar "Parte i/N").
+  const partesPorGrupo: Record<string, number> = {};
+  for (const p of data ?? []) {
+    if (p.gbp_grupo) partesPorGrupo[p.gbp_grupo] = (partesPorGrupo[p.gbp_grupo] ?? 0) + 1;
+  }
 
   const { data: session } = useSession();
   const currentUserId = Number(session?.usuario?.id) || null;
@@ -212,21 +223,30 @@ export default function PresupuestosPage() {
                       >
                         {p.codigo}
                       </Link>
+                      {p.gbp_grupo && p.gbp_parte != null && (
+                        <span className="ml-2 rounded bg-surface2 px-1.5 py-0.5 text-xs text-ink-2">
+                          Parte {p.gbp_parte}/{partesPorGrupo[p.gbp_grupo] ?? "?"}
+                        </span>
+                      )}
                     </td>
                     <td className="truncate px-3 py-2">
-                      <Link
-                        href={`/oportunidades?op=${p.oportunidad_id}`}
-                        className="inline-flex max-w-full"
-                      >
-                        <RefChip
-                          icon={
-                            <Target size={12} className="shrink-0 text-ink-3" />
-                          }
+                      {p.oportunidad_id != null ? (
+                        <Link
+                          href={`/oportunidades?op=${p.oportunidad_id}`}
+                          className="inline-flex max-w-full"
                         >
-                          {p.oportunidad?.asunto ??
-                            `Oportunidad ${p.oportunidad_id}`}
-                        </RefChip>
-                      </Link>
+                          <RefChip
+                            icon={
+                              <Target size={12} className="shrink-0 text-ink-3" />
+                            }
+                          >
+                            {p.oportunidad?.asunto ??
+                              `Oportunidad ${p.oportunidad_id}`}
+                          </RefChip>
+                        </Link>
+                      ) : (
+                        <span className="text-ink-3">—</span>
+                      )}
                     </td>
                     <td className="truncate px-3 py-2">
                       {p.oportunidad?.cliente?.razon_social ? (
@@ -239,6 +259,14 @@ export default function PresupuestosPage() {
                           }
                         >
                           {p.oportunidad.cliente.razon_social}
+                        </RefChip>
+                      ) : p.cliente_numero ? (
+                        <RefChip
+                          icon={
+                            <Building2 size={12} className="shrink-0 text-ink-3" />
+                          }
+                        >
+                          Cliente N° {p.cliente_numero}
                         </RefChip>
                       ) : (
                         <span className="text-ink-3">—</span>
@@ -275,13 +303,36 @@ export default function PresupuestosPage() {
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => abrirPdf(p.id)}
-                        >
-                          <FileText size={14} /> PDF
-                        </Button>
+                        {p.gbp_grupo &&
+                          p.gbp_parte === 1 &&
+                          !p.estado_carga && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={cargarGrupo.isPending}
+                              onClick={() =>
+                                cargarGrupo.mutate(p.gbp_grupo as string, {
+                                  onSuccess: (r) =>
+                                    toast(
+                                      `${r.length} partes enviadas a GBP`,
+                                      "success"
+                                    ),
+                                  onError: (e) => toast(errorMessage(e), "error"),
+                                })
+                              }
+                            >
+                              <UploadCloud size={14} /> Cargar grupo
+                            </Button>
+                          )}
+                        {p.estado_carga === "cargado" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => abrirPdf(p.id)}
+                          >
+                            <FileText size={14} /> PDF
+                          </Button>
+                        )}
                         <Tooltip label="Eliminar">
                           <Button
                             size="sm"
