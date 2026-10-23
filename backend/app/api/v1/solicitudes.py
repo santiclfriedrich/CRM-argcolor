@@ -21,6 +21,7 @@ from app.db.models.solicitudes_compras import EstadoSolicitud, SolicitudCompras
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.integrations.ai.base import AIProvider
+from app.integrations.gmail.errors import clasificar_error_gmail
 from app.schemas.solicitud import (
     ParseRespuestaRequest,
     ResponderComprasBody,
@@ -195,10 +196,14 @@ def enviar_solicitud(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001 - frontera con Gmail
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"No se pudo enviar a Compras: {exc}",
-        ) from exc
+        logger.warning(
+            "Falló enviar a Compras (solicitud=%s, usuario=%s): %s",
+            solicitud_id,
+            current_user.id,
+            exc,
+        )
+        code, msg = clasificar_error_gmail(exc)
+        raise HTTPException(status_code=code, detail=msg) from exc
     return _get_loaded(db, solicitud_id)
 
 

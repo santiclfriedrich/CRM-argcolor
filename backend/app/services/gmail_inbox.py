@@ -21,6 +21,15 @@ from app.db.models.usuarios import Usuario
 
 logger = logging.getLogger(__name__)
 
+
+def _trunc(valor: str | None, limite: int) -> str | None:
+    """Recorta al límite de la columna. Algunos mails (circulares con cientos de
+    destinatarios) traen `para`/`asunto` larguísimos que, sin esto, rompen el
+    INSERT (StringDataRightTruncation) y tiran todo el commit del sync abajo."""
+    if valor is None:
+        return None
+    return valor[:limite]
+
 # Ventana de sincronización (días). Configurable por usuario en
 # preferencias.inbox_sync_dias; se acota a [1, 7] para no inflar la DB.
 _DIAS_DEFAULT = 3
@@ -130,11 +139,11 @@ def sync_inbox_for_user(
                 Mail(
                     gmail_message_id=msg.get("message_id"),
                     gmail_thread_id=msg.get("thread_id"),
-                    rfc_message_id=msg.get("rfc_message_id"),
+                    rfc_message_id=_trunc(msg.get("rfc_message_id"), 512),
                     direccion=direccion,
-                    de=msg.get("de"),
-                    para=msg.get("para"),
-                    asunto=msg.get("asunto"),
+                    de=_trunc(msg.get("de"), 320),
+                    para=_trunc(msg.get("para"), 500),
+                    asunto=_trunc(msg.get("asunto"), 500),
                     cuerpo=msg.get("cuerpo") or "",
                     fecha=msg.get("fecha"),
                     leido=leido,

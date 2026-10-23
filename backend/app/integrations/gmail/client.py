@@ -608,7 +608,14 @@ class GmailClient:
         raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
 
         def _send(body: dict[str, Any]) -> dict[str, str | None]:
-            sent = self._service.users().messages().send(userId=self._user, body=body).execute()
+            # num_retries: backoff exponencial automático ante rate-limit (403
+            # rateLimitExceeded / 429) y errores 5xx transitorios de Gmail.
+            sent = (
+                self._service.users()
+                .messages()
+                .send(userId=self._user, body=body)
+                .execute(num_retries=5)
+            )
             return {"message_id": sent.get("id"), "thread_id": sent.get("threadId")}
 
         if thread_id:

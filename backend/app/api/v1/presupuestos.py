@@ -1,5 +1,6 @@
 """Presupuestos: armador de cotizaciones y generación del PDF."""
 
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
@@ -15,6 +16,7 @@ from app.db.models.presupuestos import Presupuesto
 from app.db.models.solicitudes_compras import SolicitudCompras
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
+from app.integrations.gmail.errors import clasificar_error_gmail
 from app.schemas.presupuesto import (
     EnviarPresupuestoRequest,
     ItemBase,
@@ -32,6 +34,8 @@ from app.services.presupuestos import (
     enviar_al_cliente,
 )
 from app.services.storage import get_storage
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/presupuestos", tags=["presupuestos"])
 
@@ -222,10 +226,14 @@ def enviar_presupuesto(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
         ) from exc
     except Exception as exc:  # noqa: BLE001 - frontera con Gmail
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"No se pudo enviar el presupuesto: {exc}",
-        ) from exc
+        logger.warning(
+            "Falló enviar presupuesto (id=%s, usuario=%s): %s",
+            presupuesto_id,
+            current_user.id,
+            exc,
+        )
+        code, msg = clasificar_error_gmail(exc)
+        raise HTTPException(status_code=code, detail=msg) from exc
     return _get_loaded(db, presupuesto_id)
 
 
