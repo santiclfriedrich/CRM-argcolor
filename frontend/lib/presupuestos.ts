@@ -7,6 +7,7 @@ import { oportunidadKeys } from "@/lib/oportunidades";
 import type {
   EstadoCargaGbp,
   EstadoPresupuesto,
+  ItemInput,
   Presupuesto,
   PresupuestoCreate,
   PresupuestoUpdate,
@@ -147,6 +148,14 @@ export function useDeletePresupuesto() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: presupuestoKeys.all }),
   });
+}
+
+// Sube el Excel de productos (template fijo) y devuelve los ítems parseados para
+// precargar el armador. No crea nada en el backend.
+export async function importarExcelPresupuesto(file: File): Promise<ItemInput[]> {
+  const fd = new FormData();
+  fd.append("archivo", file);
+  return (await api.post<ItemInput[]>(`${BASE}/importar-excel`, fd)).data;
 }
 
 // Descarga el PDF (autenticado con el JWT) y lo abre en una pestaña nueva.

@@ -214,15 +214,11 @@ def test_eliminar_comentario_de_bitacora(client: TestClient) -> None:
     assert comentarios[0]["texto"] == "segundo"
 
 
-def test_generar_pdf_devuelve_un_pdf(client: TestClient) -> None:
+def test_pdf_requiere_carga_en_gbp(client: TestClient) -> None:
+    # El PDF oficial lo genera GBP: sin cargar, no hay PDF (404).
     pid = client.post("/api/v1/presupuestos", json=_payload()).json()["id"]
     resp = client.get(f"/api/v1/presupuestos/{pid}/pdf")
-    # weasyprint puede no estar disponible (libs nativas): en ese caso es 503.
-    if resp.status_code == 503:
-        pytest.skip("weasyprint sin libs nativas en este entorno")
-    assert resp.status_code == 200
-    assert resp.headers["content-type"] == "application/pdf"
-    assert resp.content[:5] == b"%PDF-"
+    assert resp.status_code == 404
 
 
 def test_calcular_subtotal_con_descuento() -> None:

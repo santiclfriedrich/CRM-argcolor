@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -17,18 +17,19 @@ from app.db.models.usuarios import Usuario
 from app.db.session import get_db
 from app.schemas.presupuesto import (
     EnviarPresupuestoRequest,
+    ItemBase,
     PresupuestoCreate,
     PresupuestoListItem,
     PresupuestoRead,
     PresupuestoUpdate,
 )
 from app.services import presupuestos_gbp as gbp_svc
+from app.services.importar_excel import parsear_excel
 from app.services.presupuestos import (
     actualizar_presupuesto,
     crear_desde_solicitud,
     crear_presupuesto,
     enviar_al_cliente,
-    render_pdf,
 )
 from app.services.storage import get_storage
 
@@ -101,6 +102,21 @@ def create_presupuesto(
     presupuesto.creado_por_id = current_user.id
     db.commit()
     return _get_loaded(db, presupuesto.id)
+
+
+@router.post("/importar-excel", response_model=list[ItemBase])
+async def importar_excel(
+    archivo: UploadFile = File(...),
+    _: Usuario = Depends(get_current_user),
+) -> list[ItemBase]:
+    """Parsea el Excel de productos (template fijo) y devuelve los ítems para
+    precargar el armador. No crea nada: el frontend arma el presupuesto con esto."""
+    contenido = await archivo.read()
+    try:
+        items = parsear_excel(contenido)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return [ItemBase.model_validate(it) for it in items]
 
 
 @router.post("/desde-solicitud/{solicitud_id}", response_model=PresupuestoRead, status_code=201)
@@ -236,25 +252,18 @@ def descargar_pdf(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> Response:
-    """Devuelve el PDF para descargar/ver. Si el presupuesto ya se cargó en GBP,
-    sirve el PDF OFICIAL que generó GBP; si no, genera el del CRM al vuelo."""
+    """Devuelve el PDF OFICIAL del presupuesto, que genera GBP. Si todavía no se
+    cargó en GBP, no hay PDF (404): el documento sale del ERP, no del CRM."""
     presupuesto = _get_loaded(db, presupuesto_id)
     _assert_owner(presupuesto, current_user)
-    if presupuesto.pdf_gbp_key:
-        data = get_storage().get(presupuesto.pdf_gbp_key)
-        return Response(
-            content=data,
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'inline; filename="{presupuesto.codigo}.pdf"'},
-        )
-    try:
-        contenido = render_pdf(db, presupuesto)
-    except RuntimeError as exc:
+    if not presupuesto.pdf_gbp_key:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
-        ) from exc
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Todavía no hay PDF: el presupuesto aún no se cargó en GBP.",
+        )
+    data = get_storage().get(presupuesto.pdf_gbp_key)
     return Response(
-        content=contenido,
+        content=data,
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{presupuesto.codigo}.pdf"'},
     )

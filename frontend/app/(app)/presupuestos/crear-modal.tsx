@@ -1,7 +1,8 @@
 "use client";
 
+import { Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { ClientePicker } from "@/components/clientes/cliente-picker";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { useClientes } from "@/lib/clientes";
-import { useCreatePresupuesto } from "@/lib/presupuestos";
+import {
+  importarExcelPresupuesto,
+  useCreatePresupuesto,
+} from "@/lib/presupuestos";
+import type { ItemInput } from "@/lib/types";
 import { errorMessage } from "@/lib/utils";
 
 // Alta de un presupuesto standalone (sin pasar por una solicitud/oportunidad):
@@ -25,8 +30,24 @@ export function CrearPresupuestoModal({ onClose }: { onClose: () => void }) {
   const [clienteId, setClienteId] = useState<number | null>(null);
   const [clienteNumero, setClienteNumero] = useState("");
   const [oportunidadId, setOportunidadId] = useState("");
+  const [items, setItems] = useState<ItemInput[]>([]);
+  const [importando, setImportando] = useState(false);
+  const excelRef = useRef<HTMLInputElement>(null);
 
   const lista = useMemo(() => clientes ?? [], [clientes]);
+
+  const importarExcel = async (file: File) => {
+    setImportando(true);
+    try {
+      const parsed = await importarExcelPresupuesto(file);
+      setItems(parsed);
+      toast(`${parsed.length} ítem(s) cargados del Excel`, "success");
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setImportando(false);
+    }
+  };
 
   // Al elegir un cliente del CRM, autocompletamos su N° (lo que el bot tipea en
   // GBP). Igual se puede editar a mano (cliente que no está en el CRM).
@@ -50,7 +71,7 @@ export function CrearPresupuestoModal({ onClose }: { onClose: () => void }) {
         cliente_id: clienteId,
         cliente_numero: clienteNumero.trim(),
         oportunidad_id: opId,
-        items: [],
+        items,
       },
       {
         onSuccess: (p) => {
@@ -96,6 +117,35 @@ export function CrearPresupuestoModal({ onClose }: { onClose: () => void }) {
             }
             inputMode="numeric"
           />
+        </div>
+
+        <div>
+          <Label>Excel de productos (opcional)</Label>
+          <input
+            ref={excelRef}
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) importarExcel(f);
+              e.target.value = "";
+            }}
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => excelRef.current?.click()}
+              disabled={importando}
+            >
+              <Upload size={15} /> {importando ? "Importando…" : "Cargar Excel"}
+            </Button>
+            {items.length > 0 && (
+              <span className="text-sm text-success">
+                {items.length} ítem(s) cargados
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
