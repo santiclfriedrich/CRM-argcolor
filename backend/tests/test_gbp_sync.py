@@ -257,3 +257,37 @@ def test_traer_cliente_por_id_tipo_no_sincronizable(db: Session) -> None:
     r = sincronizar_cliente_por_id(db, erp, 600)
     assert r["status"] == "tipo_no_sincronizable"
     assert r["ck_id"] == "5"
+
+
+def test_traer_cliente_reintenta_ante_hipo_de_gbp(db: Session, monkeypatch) -> None:  # noqa: ANN001
+    # Un transitorio de GBP no debe tirar el intento: reintenta y crea.
+    monkeypatch.setattr("app.services.gbp_sync.time.sleep", lambda *_: None)
+
+    class FlakyERP:
+        def __init__(self, row: dict) -> None:
+            self.row = row
+            self.n = 0
+
+        def fetch_customer(self, cid: int) -> dict | None:
+            self.n += 1
+            if self.n < 3:
+                raise RuntimeError("timeout GBP")
+            return self.row
+
+    erp = FlakyERP(
+        {"ck_id": "16", "cust_id": "500", "cust_name": "OK", "cust_taxNumber": "30-12345678-9"}
+    )
+    r = sincronizar_cliente_por_id(db, erp, 500)
+    assert r["status"] == "creado"
+    assert erp.n == 3
+
+
+def test_traer_cliente_falla_tras_reintentos(db: Session, monkeypatch) -> None:  # noqa: ANN001
+    monkeypatch.setattr("app.services.gbp_sync.time.sleep", lambda *_: None)
+
+    class DeadERP:
+        def fetch_customer(self, cid: int) -> dict | None:
+            raise RuntimeError("GBP caído")
+
+    with pytest.raises(RuntimeError):
+        sincronizar_cliente_por_id(db, DeadERP(), 1)

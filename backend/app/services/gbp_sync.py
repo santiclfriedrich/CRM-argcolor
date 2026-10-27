@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from dataclasses import dataclass, field
 
 from sqlalchemy import select
@@ -314,7 +315,24 @@ def sincronizar_cliente_por_id(
     con `status`: creado | ya_existe | no_encontrado | tipo_no_sincronizable |
     sin_cuit | error.
     """
-    row = erp.fetch_customer(cust_id)
+    # GBP puede tener hipos (lento, limitando, timeout). Reintentamos con backoff
+    # para que un transitorio no tire el intento con un 500 (antes pasaba: a un
+    # usuario le fallaba y al siguiente, con GBP "caliente", le salía al toque).
+    row = None
+    ultimo_error: Exception | None = None
+    for intento in range(3):
+        try:
+            row = erp.fetch_customer(cust_id)
+            break
+        except Exception as exc:  # noqa: BLE001 - frontera con GBP (red/SOAP)
+            ultimo_error = exc
+            logger.warning(
+                "GBP traer cliente %s: intento %s falló: %s", cust_id, intento + 1, exc
+            )
+            time.sleep(0.5 * (intento + 1))
+    else:
+        raise RuntimeError(f"GBP no respondió tras 3 intentos: {ultimo_error}")
+
     if row is None:
         return {"status": "no_encontrado", "cust_id": cust_id}
 

@@ -10,12 +10,16 @@ Es incremental: dedup por CUIT, solo da de alta clientes nuevos.
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import get_current_user
 from app.config import get_settings
 from app.db.models.usuarios import Usuario
 from app.services.gbp_runner import estado_con_conteo, lanzar_sync
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sync", tags=["sync-gbp"])
 
@@ -77,6 +81,12 @@ def traer_cliente(cust_id: int, _: Usuario = Depends(get_current_user)) -> dict:
     erp = GBPClient()
     try:
         return sincronizar_cliente_por_id(db, erp, cust_id)
+    except Exception as exc:  # noqa: BLE001 - frontera con GBP (red/SOAP)
+        logger.warning("Traer cliente GBP %s falló: %s", cust_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="GBP no respondió en este momento. Esperá unos segundos y reintentá.",
+        ) from exc
     finally:
         erp.close()
         db.close()
