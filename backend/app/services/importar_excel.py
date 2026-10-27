@@ -28,6 +28,8 @@ _ALIASES: dict[str, set[str]] = {
         "precio unitario",
         "venta unitario usd sin iva",
         "unitario",
+        "costo",
+        "costo unitario",
     },
     "iva": {"iva", "iva%", "iva %", "alicuota", "alícuota"},
     "moneda": {"moneda", "currency", "mon"},
