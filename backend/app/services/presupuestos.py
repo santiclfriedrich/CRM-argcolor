@@ -106,6 +106,8 @@ def crear_presupuesto(db: Session, data: PresupuestoCreate) -> Presupuesto:
         cliente_id=data.cliente_id,
         cliente_numero=data.cliente_numero,
         entrega_por=data.entrega_por,
+        documento=data.documento or "Presupuesto USD",
+        sucursal=data.sucursal or "1",
         codigo=generar_codigo(db),
         moneda=data.moneda or "USD",
         condicion_pago=data.condicion_pago,
@@ -218,6 +220,8 @@ def actualizar_presupuesto(
         "estado",
         "entrega_por",
         "cliente_numero",
+        "documento",
+        "sucursal",
     ):
         valor = getattr(data, campo)
         if valor is not None:

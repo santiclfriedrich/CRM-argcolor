@@ -25,7 +25,9 @@ class EstadoCargaGbp(str, enum.Enum):
     pendiente = "pendiente"  # encolado; el bot lo puede tomar
     en_proceso = "en_proceso"  # el bot lo está cargando
     cargado = "cargado"  # ok: con numero (id_gbp_pedido) + PDF de GBP
-    error = "error"  # falló: con gbp_error
+    error = "error"  # falló sin guardar: con gbp_error
+    prueba = "prueba"  # DRY-RUN del bot: anduvo pero NO guardó en GBP
+    revisar = "revisar"  # puede haber quedado GUARDADO en GBP: verificar antes de reencolar
 
 
 # "Entregar por" que ofrece GBP (elegible en el CRM).
@@ -51,6 +53,10 @@ class Presupuesto(Base, TimestampMixin):
     codigo: Mapped[str] = mapped_column(String(20), unique=True, index=True, nullable=False)
     monto_total: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     moneda: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
+    # Documento a emitir en GBP ("Presupuesto USD" | "Presupuesto ARS").
+    documento: Mapped[str] = mapped_column(String(40), default="Presupuesto USD", nullable=False)
+    # Sucursal de GBP (1 = 01.ARG. COLOR). El bot la usa al crear el pedido.
+    sucursal: Mapped[str] = mapped_column(String(10), default="1", nullable=False)
     condicion_pago: Mapped[str | None] = mapped_column(String(40))
     plazo_entrega: Mapped[str | None] = mapped_column(String(120))
     validez: Mapped[str | None] = mapped_column(String(120))

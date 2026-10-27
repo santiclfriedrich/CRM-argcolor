@@ -50,6 +50,8 @@ class PresupuestoCreate(PresupuestoBase):
     cliente_id: int | None = None
     cliente_numero: str | None = None
     entrega_por: str | None = None
+    documento: str = "Presupuesto USD"
+    sucursal: str = "1"
     items: list[ItemBase] = []
 
 
@@ -61,6 +63,8 @@ class PresupuestoUpdate(PresupuestoBase):
     estado: EstadoPresupuesto | None = None
     entrega_por: str | None = None
     cliente_numero: str | None = None
+    documento: str | None = None
+    sucursal: str | None = None
     items: list[ItemBase] | None = None
 
 
@@ -94,6 +98,8 @@ class PresupuestoRead(PresupuestoBase):
     oportunidad_id: int | None = None
     cliente_numero: str | None = None
     entrega_por: str | None = None
+    documento: str = "Presupuesto USD"
+    sucursal: str = "1"
     codigo: str
     estado: EstadoPresupuesto
     estado_carga: str | None = None

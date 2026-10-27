@@ -3,13 +3,14 @@
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user, get_user_gmail, resolver_duenio
 from app.api.listing import scalars_capped
+from app.config import get_settings
 from app.core.exceptions import NotFoundError
 from app.db.models.oportunidades import AmbitoOportunidad, Oportunidad
 from app.db.models.presupuestos import Presupuesto
@@ -26,7 +27,7 @@ from app.schemas.presupuesto import (
     PresupuestoUpdate,
 )
 from app.services import presupuestos_gbp as gbp_svc
-from app.services.importar_excel import parsear_excel
+from app.services.importar_excel import parsear_y_validar
 from app.services.presupuestos import (
     actualizar_presupuesto,
     crear_desde_solicitud,
@@ -142,25 +143,58 @@ def cargar_grupo_en_gbp(
         raise HTTPException(status_code=404, detail="Grupo no encontrado")
     try:
         for p in partes:
-            gbp_svc.encolar(db, p)
+            try:
+                gbp_svc.encolar(db, p)
+            except (gbp_svc.YaCargadoError, gbp_svc.RequiereConfirmacionError):
+                continue  # cargado o 'revisar': no se toca (se reencola por parte)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return [_get_loaded(db, p.id) for p in partes]
 
 
-@router.post("/importar-excel", response_model=list[ItemBase])
-async def importar_excel(
+@router.post("/importar-lote", response_model=list[PresupuestoRead], status_code=201)
+async def importar_lote(
     archivo: UploadFile = File(...),
-    _: Usuario = Depends(get_current_user),
-) -> list[ItemBase]:
-    """Parsea el Excel de productos (template fijo) y devuelve los ítems para
-    precargar el armador. No crea nada: el frontend arma el presupuesto con esto."""
+    cliente_numero: str = Form(...),
+    entrega_por: str = Form(...),
+    documento: str = Form("Presupuesto USD"),
+    sucursal: str = Form("1"),
+    cliente_id: int | None = Form(None),
+    oportunidad_id: int | None = Form(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> list[Presupuesto]:
+    """Sube el Excel, valida TODO el archivo y, si no hay errores, crea el lote
+    (partes de GBP_MAX_ITEMS). Si hay errores, devuelve 422 con la lista
+    (fila + mensaje) y NO crea/encola nada."""
     contenido = await archivo.read()
     try:
-        items = parsear_excel(contenido)
+        items, errores = parsear_y_validar(
+            contenido, umbral_usd=get_settings().GBP_PRECIO_USD_MAX
+        )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    return [ItemBase.model_validate(it) for it in items]
+    if errores:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "mensaje": f"{len(errores)} fila(s) con errores. No se encoló nada.",
+                "errores": errores,
+            },
+        )
+    if oportunidad_id is not None and db.get(Oportunidad, oportunidad_id) is None:
+        raise HTTPException(status_code=404, detail="La oportunidad no existe")
+    data = PresupuestoCreate(
+        oportunidad_id=oportunidad_id,
+        cliente_id=cliente_id,
+        cliente_numero=cliente_numero,
+        entrega_por=entrega_por,
+        documento=documento,
+        sucursal=sucursal,
+        items=[ItemBase.model_validate(it) for it in items],
+    )
+    creados = crear_lote(db, data, current_user.id)
+    return [_get_loaded(db, p.id) for p in creados]
 
 
 @router.post("/desde-solicitud/{solicitud_id}", response_model=PresupuestoRead, status_code=201)
@@ -280,15 +314,21 @@ def enviar_presupuesto(
 @router.post("/{presupuesto_id}/cargar-gbp", response_model=PresupuestoRead)
 def cargar_en_gbp(
     presupuesto_id: int,
+    confirmar: bool = False,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> Presupuesto:
-    """Encola el presupuesto para que el bot lo cargue en GBP (acción explícita).
-    Requiere N° de cliente, forma de entrega e ítems válidos (IVA en los manuales)."""
+    """Encola la parte para el bot ('Cargar en GBP' / reencolar por parte).
+    Rechaza si ya está 'cargado' (409) y, si quedó en 'revisar' (pudo haber
+    quedado guardado en GBP), exige `confirmar=true` para no duplicar."""
     presupuesto = _get_loaded(db, presupuesto_id)
     _assert_owner(presupuesto, current_user)
     try:
-        gbp_svc.encolar(db, presupuesto)
+        gbp_svc.encolar(db, presupuesto, confirmar=confirmar)
+    except gbp_svc.YaCargadoError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except gbp_svc.RequiereConfirmacionError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return _get_loaded(db, presupuesto_id)

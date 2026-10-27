@@ -574,13 +574,21 @@ export interface PresupuestoItem {
 }
 
 // Estado de la carga del presupuesto en GBP (por el bot). null = nunca fue a GBP.
-export type EstadoCargaGbp = "pendiente" | "en_proceso" | "cargado" | "error";
+export type EstadoCargaGbp =
+  | "pendiente"
+  | "en_proceso"
+  | "cargado"
+  | "error"
+  | "prueba"
+  | "revisar";
 
 export interface Presupuesto {
   id: number;
   oportunidad_id: number | null;
   cliente_numero: string | null;
   entrega_por: string | null;
+  documento: string;
+  sucursal: string;
   estado_carga: EstadoCargaGbp | null;
   id_gbp_pedido: string | null;
   gbp_error: string | null;
@@ -625,6 +633,8 @@ export type PresupuestoCreate = {
   cliente_id?: number | null;
   cliente_numero?: string | null;
   entrega_por?: string | null;
+  documento?: string;
+  sucursal?: string;
   condicion_pago?: string | null;
   plazo_entrega?: string | null;
   validez?: string | null;
@@ -640,5 +650,7 @@ export type PresupuestoUpdate = {
   estado?: EstadoPresupuesto;
   entrega_por?: string | null;
   cliente_numero?: string | null;
+  documento?: string | null;
+  sucursal?: string | null;
   items?: ItemInput[];
 };

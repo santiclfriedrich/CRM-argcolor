@@ -64,8 +64,28 @@ def validar_para_gbp(presupuesto: Presupuesto) -> None:
             )
 
 
-def encolar(db: Session, presupuesto: Presupuesto) -> Presupuesto:
-    """Manda el presupuesto a la cola del bot (acción explícita 'Cargar en GBP')."""
+class YaCargadoError(Exception):
+    """La parte ya está cargada en GBP: no se reencola (evita duplicar)."""
+
+
+class RequiereConfirmacionError(Exception):
+    """La parte quedó en 'revisar' (puede existir en GBP): reencolar pide confirmar."""
+
+
+def encolar(db: Session, presupuesto: Presupuesto, *, confirmar: bool = False) -> Presupuesto:
+    """Encola el presupuesto para el bot ('Cargar en GBP' / reencolar por parte).
+
+    Reglas de seguridad para no duplicar en GBP:
+    - Si ya está `cargado`, no se reencola.
+    - Si está `revisar` (pudo haber quedado guardado), pide `confirmar=True`.
+    """
+    if presupuesto.estado_carga == EstadoCargaGbp.cargado.value:
+        raise YaCargadoError("Esta parte ya está cargada en GBP.")
+    if presupuesto.estado_carga == EstadoCargaGbp.revisar.value and not confirmar:
+        raise RequiereConfirmacionError(
+            "Esta parte puede haber quedado guardada en GBP. Verificá en GBP antes "
+            "de reencolar para no duplicar."
+        )
     validar_para_gbp(presupuesto)
     presupuesto.estado_carga = EstadoCargaGbp.pendiente.value
     presupuesto.gbp_error = None
@@ -114,13 +134,30 @@ def tomar_siguiente(db: Session) -> Presupuesto | None:
     return job
 
 
-def build_job(presupuesto: Presupuesto) -> JobBotRead:
+def datos_lote(db: Session, presupuesto: Presupuesto) -> tuple[int, int, int]:
+    """(lote_id, parte, total_partes). Standalone = (su id, 1, 1)."""
+    if presupuesto.gbp_grupo:
+        ids = sorted(
+            db.scalars(
+                select(Presupuesto.id).where(Presupuesto.gbp_grupo == presupuesto.gbp_grupo)
+            )
+        )
+        if ids:
+            return ids[0], (presupuesto.gbp_parte or 1), len(ids)
+    return presupuesto.id, 1, 1
+
+
+def build_job(db: Session, presupuesto: Presupuesto) -> JobBotRead:
+    lote_id, parte, total_partes = datos_lote(db, presupuesto)
     return JobBotRead(
         id=presupuesto.id,
+        lote_id=lote_id,
+        parte=parte,
+        total_partes=total_partes,
         cliente_numero=presupuesto.cliente_numero or "",
         entrega_por=presupuesto.entrega_por or "",
-        moneda=presupuesto.moneda or "USD",
-        documento="Presupuesto USD",
+        documento=presupuesto.documento or "Presupuesto USD",
+        sucursal=presupuesto.sucursal or "1",
         items=[
             ItemBotRead(
                 tipo=_item_tipo(it.sku),
@@ -155,11 +192,27 @@ def registrar_resultado(
     return presupuesto
 
 
+def _clasificar_estado_error(mensaje: str) -> str:
+    """DRY-RUN -> prueba (anduvo, no guardó); 'GUARDADO en GBP' / 'pudo haber
+    quedado GUARDADO' -> revisar (puede existir en GBP, ojo al reencolar); resto
+    -> error (falló sin guardar)."""
+    m = mensaje.strip()
+    if m.upper().startswith("DRY-RUN:"):
+        return EstadoCargaGbp.prueba.value
+    low = m.lower()
+    if "guardado en gbp" in low or "pudo haber quedado guardado" in low:
+        return EstadoCargaGbp.revisar.value
+    return EstadoCargaGbp.error.value
+
+
 def registrar_error(db: Session, presupuesto_id: int, mensaje: str) -> Presupuesto:
     presupuesto = obtener(db, presupuesto_id)
-    presupuesto.estado_carga = EstadoCargaGbp.error.value
+    presupuesto.estado_carga = _clasificar_estado_error(mensaje)
     presupuesto.gbp_error = mensaje[:2000]
     db.commit()
     db.refresh(presupuesto)
-    logger.warning("GBP bot: presupuesto %s con error: %s", presupuesto_id, mensaje[:200])
+    logger.warning(
+        "GBP bot: presupuesto %s -> %s: %s",
+        presupuesto_id, presupuesto.estado_carga, mensaje[:200],
+    )
     return presupuesto

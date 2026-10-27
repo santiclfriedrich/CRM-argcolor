@@ -238,6 +238,122 @@ def test_cargar_grupo_encola_todas_las_partes(client: TestClient) -> None:
     assert client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS).status_code == 204
 
 
+def _xlsx_bytes(rows: list[list]) -> bytes:
+    from io import BytesIO
+
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    for r in rows:
+        ws.append(r)
+    buf = BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+_HDR = ["SKU", "Descripción", "Part Number", "Cantidad", "Precio", "Moneda", "IVA %"]
+
+
+def _subir_excel(client: TestClient, rows: list[list]):  # noqa: ANN202
+    return client.post(
+        "/api/v1/presupuestos/importar-lote",
+        data={
+            "cliente_numero": "34923",
+            "entrega_por": "Retiro TML - Garin",
+            "documento": "Presupuesto USD",
+            "sucursal": "1",
+        },
+        files={
+            "archivo": (
+                "p.xlsx",
+                _xlsx_bytes(rows),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
+    )
+
+
+def test_importar_lote_crea_y_el_job_trae_lote(client: TestClient) -> None:
+    rows = [_HDR] + [[f"SK{i:03d}", f"item {i}", None, 1, 10, "USD", 0.21] for i in range(25)]
+    r = _subir_excel(client, rows)
+    assert r.status_code == 201, r.text
+    partes = r.json()
+    assert len(partes) == 2  # 20 + 5
+    client.post(f"/api/v1/presupuestos/grupo/{partes[0]['gbp_grupo']}/cargar-gbp")
+    job = client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS).json()
+    assert job["total_partes"] == 2 and job["parte"] in (1, 2)
+    assert job["sucursal"] == "1" and job["documento"] == "Presupuesto USD"
+    assert isinstance(job["lote_id"], int)
+
+
+def test_importar_lote_errores_422_no_crea(client: TestClient) -> None:
+    rows = [_HDR, [None, "", None, 0, -5, "EUR", 0.3]]  # fila 2: todo mal
+    r = _subir_excel(client, rows)
+    assert r.status_code == 422
+    assert r.json()["detail"]["errores"][0]["fila"] == 2
+    # no se creó nada
+    assert client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS).status_code == 204
+
+
+def test_importar_lote_rechaza_costo(client: TestClient) -> None:
+    rows = [["SKU", "Descripción", "Cantidad", "Costo", "Moneda", "IVA %"],
+            ["X", "y", 1, 10, "USD", 0.21]]
+    r = _subir_excel(client, rows)
+    assert r.status_code == 400
+    assert "Costo" in r.json()["detail"]
+
+
+def test_error_dry_run_y_guardado(client: TestClient) -> None:
+    pid = _crear(client)["id"]
+    client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")
+    client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS)
+    r = client.post(
+        f"/api/v1/gbp-bot/jobs/{pid}/error",
+        headers=BOT_HEADERS,
+        json={"mensaje": "DRY-RUN: todo OK, no se guardó"},
+    )
+    assert r.json()["estado_carga"] == "prueba"
+
+    pid2 = _crear(client)["id"]
+    client.post(f"/api/v1/presupuestos/{pid2}/cargar-gbp")
+    client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS)
+    r2 = client.post(
+        f"/api/v1/gbp-bot/jobs/{pid2}/error",
+        headers=BOT_HEADERS,
+        json={"mensaje": "Timeout; el pedido pudo haber quedado GUARDADO en GBP"},
+    )
+    assert r2.json()["estado_carga"] == "revisar"
+
+
+def test_reencolar_cargado_409_y_revisar_requiere_confirmar(client: TestClient) -> None:
+    # cargado -> 409
+    pid = _crear(client)["id"]
+    client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")
+    client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS)
+    client.post(
+        f"/api/v1/gbp-bot/jobs/{pid}/resultado",
+        headers=BOT_HEADERS,
+        data={"numero_gbp": "#1-1"},
+        files={"pdf": ("p.pdf", b"%PDF-1.4 x", "application/pdf")},
+    )
+    assert client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp").status_code == 409
+
+    # revisar -> 409 sin confirmar, 200 con confirmar
+    pid2 = _crear(client)["id"]
+    client.post(f"/api/v1/presupuestos/{pid2}/cargar-gbp")
+    client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS)
+    client.post(
+        f"/api/v1/gbp-bot/jobs/{pid2}/error",
+        headers=BOT_HEADERS,
+        json={"mensaje": "pudo haber quedado GUARDADO"},
+    )
+    assert client.post(f"/api/v1/presupuestos/{pid2}/cargar-gbp").status_code == 409
+    assert client.post(
+        f"/api/v1/presupuestos/{pid2}/cargar-gbp?confirmar=true"
+    ).status_code == 200
+
+
 def test_job_colgado_se_recicla(client: TestClient) -> None:
     pid = _crear(client)["id"]
     client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")

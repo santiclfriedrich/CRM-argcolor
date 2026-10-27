@@ -23,10 +23,13 @@ class JobBotRead(BaseModel):
     """Lo que el bot necesita para cargar el presupuesto en GBP."""
 
     id: int
+    lote_id: int
+    parte: int
+    total_partes: int
     cliente_numero: str
     entrega_por: str
-    moneda: str
     documento: str
+    sucursal: str
     fecha_entrega: str = "today"
     items: list[ItemBotRead]
 

@@ -26,6 +26,7 @@ import {
   useCargarGrupoEnGbp,
   useDeletePresupuesto,
   usePresupuestos,
+  useReencolarParte,
 } from "@/lib/presupuestos";
 import type { EstadoPresupuesto, Presupuesto } from "@/lib/types";
 import { errorMessage } from "@/lib/utils";
@@ -49,6 +50,7 @@ export default function PresupuestosPage() {
   );
   const deleteMut = useDeletePresupuesto();
   const cargarGrupo = useCargarGrupoEnGbp();
+  const reencolar = useReencolarParte();
   const confirm = useConfirm();
   const { toast } = useToast();
   const [crearOpen, setCrearOpen] = useState(false);
@@ -119,6 +121,23 @@ export default function PresupuestosPage() {
     ) {
       deleteMut.mutate(p.id);
     }
+  };
+
+  const reencolarParte = async (p: Presupuesto) => {
+    if (p.estado_carga === "revisar") {
+      const ok = await confirm({
+        title: "Reencolar parte",
+        message:
+          "Esta parte pudo haber quedado guardada en GBP. Verificá en GBP antes: " +
+          "reencolar puede duplicar el presupuesto. ¿Reencolar igual?",
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    reencolar.mutate(
+      { id: p.id, confirmar: p.estado_carga === "revisar" },
+      { onError: (e) => toast(errorMessage(e), "error") }
+    );
   };
 
   return (
@@ -324,6 +343,18 @@ export default function PresupuestosPage() {
                               <UploadCloud size={14} /> Cargar grupo
                             </Button>
                           )}
+                        {(p.estado_carga === "error" ||
+                          p.estado_carga === "prueba" ||
+                          p.estado_carga === "revisar") && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={reencolar.isPending}
+                            onClick={() => reencolarParte(p)}
+                          >
+                            <UploadCloud size={14} /> Reencolar
+                          </Button>
+                        )}
                         {p.estado_carga === "cargado" && (
                           <Button
                             size="sm"

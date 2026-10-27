@@ -43,7 +43,7 @@ def proximo_job(db: Session = Depends(get_db)) -> JobBotRead | Response:
     job = svc.tomar_siguiente(db)
     if job is None:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
-    return svc.build_job(job)
+    return svc.build_job(db, job)
 
 
 @router.post(

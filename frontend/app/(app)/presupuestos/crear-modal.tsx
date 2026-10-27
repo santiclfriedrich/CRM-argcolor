@@ -9,18 +9,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
+import { SelectMenu } from "@/components/ui/select-menu";
 import { useToast } from "@/components/ui/toast";
 import { useClientes } from "@/lib/clientes";
 import {
-  importarExcelPresupuesto,
+  ENTREGA_OPCIONES,
+  type ErrorFilaExcel,
+  importarLote,
   useCrearLote,
 } from "@/lib/presupuestos";
-import type { ItemInput } from "@/lib/types";
 import { errorMessage } from "@/lib/utils";
 
-// Alta de un presupuesto standalone (sin pasar por una solicitud/oportunidad):
-// se elige el cliente y, opcional, se vincula a una oportunidad. Al crear, se
-// navega al armador para cargar los ítems.
+// Alta de presupuesto: se elige cliente + entrega + documento + sucursal y,
+// opcional, se sube el Excel. Con Excel, el backend valida TODO y parte en tandas
+// de 20 (si hay errores, los muestra por fila y no crea nada). Sin Excel, crea uno
+// vacío y navega al armador para cargar a mano.
 export function CrearPresupuestoModal({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -30,89 +33,146 @@ export function CrearPresupuestoModal({ onClose }: { onClose: () => void }) {
   const [clienteId, setClienteId] = useState<number | null>(null);
   const [clienteNumero, setClienteNumero] = useState("");
   const [oportunidadId, setOportunidadId] = useState("");
-  const [items, setItems] = useState<ItemInput[]>([]);
-  const [importando, setImportando] = useState(false);
+  const [entrega, setEntrega] = useState("");
+  const [documento, setDocumento] = useState("Presupuesto USD");
+  const [sucursal, setSucursal] = useState("1");
+  const [file, setFile] = useState<File | null>(null);
+  const [errores, setErrores] = useState<ErrorFilaExcel[]>([]);
+  const [enviando, setEnviando] = useState(false);
   const excelRef = useRef<HTMLInputElement>(null);
 
   const lista = useMemo(() => clientes ?? [], [clientes]);
 
-  const importarExcel = async (file: File) => {
-    setImportando(true);
-    try {
-      const parsed = await importarExcelPresupuesto(file);
-      setItems(parsed);
-      toast(`${parsed.length} ítem(s) cargados del Excel`, "success");
-    } catch (e) {
-      toast(errorMessage(e), "error");
-    } finally {
-      setImportando(false);
-    }
-  };
-
-  // Al elegir un cliente del CRM, autocompletamos su N° (lo que el bot tipea en
-  // GBP). Igual se puede editar a mano (cliente que no está en el CRM).
   const elegirCliente = (id: number | null) => {
     setClienteId(id);
     const c = lista.find((x) => x.id === id);
     if (c?.numero_cliente) setClienteNumero(c.numero_cliente);
   };
 
-  const puedeCrear = clienteNumero.trim() !== "" && !crear.isPending;
+  const opId = () => {
+    const n = oportunidadId.trim() ? Number(oportunidadId.trim()) : undefined;
+    return n;
+  };
 
-  const submit = () => {
-    if (!puedeCrear) return;
-    const opId = oportunidadId.trim() ? Number(oportunidadId.trim()) : undefined;
-    if (opId !== undefined && !Number.isFinite(opId)) {
-      toast("El N° de oportunidad no es válido", "error");
+  const irATerminar = (partes: { id: number }[]) => {
+    onClose();
+    if (partes.length === 1) {
+      router.push(`/presupuestos/${partes[0].id}`);
+    } else {
+      toast(`Se crearon ${partes.length} presupuestos (partes de 20 ítems)`, "success");
+      router.push("/presupuestos");
+    }
+  };
+
+  const submit = async () => {
+    if (!clienteNumero.trim()) {
+      toast("Falta el N° de cliente", "error");
       return;
     }
+    setErrores([]);
+
+    if (file) {
+      if (!entrega) {
+        toast("Elegí la forma de entrega", "error");
+        return;
+      }
+      setEnviando(true);
+      try {
+        const partes = await importarLote(file, {
+          cliente_numero: clienteNumero.trim(),
+          entrega_por: entrega,
+          documento,
+          sucursal: sucursal.trim() || "1",
+          cliente_id: clienteId,
+          oportunidad_id: opId(),
+        });
+        irATerminar(partes);
+      } catch (e) {
+        const det = (
+          e as { response?: { data?: { detail?: { errores?: ErrorFilaExcel[] } } } }
+        )?.response?.data?.detail;
+        if (det?.errores?.length) {
+          setErrores(det.errores);
+          toast(`El Excel tiene ${det.errores.length} error(es)`, "error");
+        } else {
+          toast(errorMessage(e), "error");
+        }
+      } finally {
+        setEnviando(false);
+      }
+      return;
+    }
+
+    // Sin Excel: crea uno vacío y abre el armador para cargar a mano.
     crear.mutate(
       {
         cliente_id: clienteId,
         cliente_numero: clienteNumero.trim(),
-        oportunidad_id: opId,
-        items,
+        entrega_por: entrega || null,
+        documento,
+        sucursal: sucursal.trim() || "1",
+        oportunidad_id: opId(),
+        items: [],
       },
       {
-        onSuccess: (partes) => {
-          onClose();
-          if (partes.length === 1) {
-            router.push(`/presupuestos/${partes[0].id}`);
-          } else {
-            toast(
-              `Se crearon ${partes.length} presupuestos (partes de 20 ítems)`,
-              "success"
-            );
-            router.push("/presupuestos");
-          }
-        },
+        onSuccess: irATerminar,
         onError: (e) => toast(errorMessage(e), "error"),
       }
     );
   };
+
+  const ocupado = enviando || crear.isPending;
 
   return (
     <Modal open onClose={onClose} title="Crear nuevo presupuesto" size="md">
       <div className="space-y-4">
         <div>
           <Label>Cliente</Label>
-          <ClientePicker
-            clientes={lista}
-            value={clienteId}
-            onChange={elegirCliente}
-          />
+          <ClientePicker clientes={lista} value={clienteId} onChange={elegirCliente} />
         </div>
 
-        <div>
-          <Label htmlFor="cp-numero">N° de cliente</Label>
-          <Input
-            id="cp-numero"
-            value={clienteNumero}
-            onChange={(e) =>
-              setClienteNumero(e.target.value.replace(/[^0-9]/g, ""))
-            }
-            inputMode="numeric"
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor="cp-numero">N° de cliente</Label>
+            <Input
+              id="cp-numero"
+              value={clienteNumero}
+              onChange={(e) => setClienteNumero(e.target.value.replace(/[^0-9]/g, ""))}
+              inputMode="numeric"
+            />
+          </div>
+          <div>
+            <Label htmlFor="cp-suc">Sucursal</Label>
+            <Input
+              id="cp-suc"
+              value={sucursal}
+              onChange={(e) => setSucursal(e.target.value.replace(/[^0-9]/g, ""))}
+              inputMode="numeric"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Entregar por</Label>
+            <SelectMenu
+              value={entrega}
+              onChange={setEntrega}
+              placeholder="— Elegir —"
+              options={ENTREGA_OPCIONES.map((o) => ({ value: o, label: o }))}
+            />
+          </div>
+          <div>
+            <Label>Documento</Label>
+            <SelectMenu
+              value={documento}
+              onChange={setDocumento}
+              options={[
+                { value: "Presupuesto USD", label: "Presupuesto USD" },
+                { value: "Presupuesto ARS", label: "Presupuesto ARS" },
+              ]}
+            />
+          </div>
         </div>
 
         <div>
@@ -120,9 +180,7 @@ export function CrearPresupuestoModal({ onClose }: { onClose: () => void }) {
           <Input
             id="cp-op"
             value={oportunidadId}
-            onChange={(e) =>
-              setOportunidadId(e.target.value.replace(/[^0-9]/g, ""))
-            }
+            onChange={(e) => setOportunidadId(e.target.value.replace(/[^0-9]/g, ""))}
             inputMode="numeric"
           />
         </div>
@@ -135,33 +193,43 @@ export function CrearPresupuestoModal({ onClose }: { onClose: () => void }) {
             accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             className="hidden"
             onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) importarExcel(f);
+              setFile(e.target.files?.[0] ?? null);
+              setErrores([]);
               e.target.value = "";
             }}
           />
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => excelRef.current?.click()}
-              disabled={importando}
-            >
-              <Upload size={15} /> {importando ? "Importando…" : "Cargar Excel"}
+            <Button variant="outline" onClick={() => excelRef.current?.click()}>
+              <Upload size={15} /> {file ? "Cambiar Excel" : "Cargar Excel"}
             </Button>
-            {items.length > 0 && (
-              <span className="text-sm text-success">
-                {items.length} ítem(s) cargados
-              </span>
-            )}
+            {file && <span className="text-sm text-ink-2">{file.name}</span>}
           </div>
+          <p className="mt-1 text-xs text-ink-3">
+            Con Excel se parte en tandas de 20. Sin Excel, cargás los ítems a mano.
+          </p>
         </div>
+
+        {errores.length > 0 && (
+          <div className="max-h-40 overflow-auto rounded-lg border border-danger/40 bg-danger/5 p-3">
+            <p className="mb-1 text-sm font-semibold text-danger">
+              Errores en el Excel (no se creó nada):
+            </p>
+            <ul className="space-y-0.5 text-xs text-ink">
+              {errores.map((e) => (
+                <li key={e.fila}>
+                  <span className="font-medium">Fila {e.fila}:</span> {e.mensaje}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button onClick={submit} disabled={!puedeCrear}>
-            {crear.isPending ? "Creando…" : "Crear y armar"}
+          <Button onClick={submit} disabled={ocupado || !clienteNumero.trim()}>
+            {ocupado ? "Procesando…" : file ? "Importar Excel" : "Crear y armar"}
           </Button>
         </div>
       </div>

@@ -110,11 +110,15 @@ class Settings(BaseSettings):
     # deshabilitados (403).
     GBP_BOT_TOKEN: str = ""
     # Minutos tras los cuales un job tomado por el bot que quedó colgado
-    # (en_proceso) se recicla a pendiente (= el bot crasheó en medio de la carga).
-    GBP_BOT_JOB_TIMEOUT_MIN: int = 15
+    # (en_proceso) se recicla a pendiente. Una parte de 20 ítems tarda ~6-7 min y
+    # el bot procesa varias seguidas, así que damos holgura.
+    GBP_BOT_JOB_TIMEOUT_MIN: int = 30
     # Máximo de ítems por pedido de GBP. Un presupuesto con más ítems se parte en
     # varias "partes" (cada una = un pedido de GBP con su PDF).
     GBP_MAX_ITEMS: int = 20
+    # Control de rango al importar: un precio en USD por encima de esto se marca
+    # como error ("¿precio en pesos marcado como USD?").
+    GBP_PRECIO_USD_MAX: int = 20000
     # Solo se sincronizan estos tipos de cliente (ck_id) -> "Clase de cliente".
     # Mapa en app/services/gbp_sync.py (CK_ID_A_CLASE).
 

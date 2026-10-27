@@ -7,7 +7,6 @@ import { oportunidadKeys } from "@/lib/oportunidades";
 import type {
   EstadoCargaGbp,
   EstadoPresupuesto,
-  ItemInput,
   Presupuesto,
   PresupuestoCreate,
   PresupuestoUpdate,
@@ -27,6 +26,8 @@ export const ESTADO_CARGA_GBP: Record<
   en_proceso: { label: "Cargando en GBP", tono: "info" },
   cargado: { label: "Cargado en GBP", tono: "success" },
   error: { label: "Error en GBP", tono: "danger" },
+  prueba: { label: "Prueba OK (no guardado)", tono: "info" },
+  revisar: { label: "Requiere verificación", tono: "warning" },
 };
 
 export const ESTADO_PRESUPUESTO: Record<EstadoPresupuesto, { label: string; color: string }> = {
@@ -102,6 +103,20 @@ export function useCrearLote() {
   });
 }
 
+// Reencola UNA parte (desde el listado). confirmar=true para partes en "revisar".
+export function useReencolarParte() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, confirmar }: { id: number; confirmar?: boolean }) =>
+      (
+        await api.post<Presupuesto>(`${BASE}/${id}/cargar-gbp`, null, {
+          params: confirmar ? { confirmar: true } : undefined,
+        })
+      ).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: presupuestoKeys.all }),
+  });
+}
+
 // Encola TODAS las partes de un lote para que el bot las cargue en GBP.
 export function useCargarGrupoEnGbp() {
   const qc = useQueryClient();
@@ -155,8 +170,13 @@ export function useEnviarPresupuesto(id: number) {
 export function useCargarEnGbp(id: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () =>
-      (await api.post<Presupuesto>(`${BASE}/${id}/cargar-gbp`)).data,
+    // confirmar=true reencola una parte en estado "revisar" (pudo quedar guardada).
+    mutationFn: async (confirmar?: boolean) =>
+      (
+        await api.post<Presupuesto>(`${BASE}/${id}/cargar-gbp`, null, {
+          params: confirmar ? { confirmar: true } : undefined,
+        })
+      ).data,
     onSuccess: (data) => {
       qc.setQueryData(presupuestoKeys.detail(id), data);
       qc.invalidateQueries({ queryKey: presupuestoKeys.all });
@@ -174,12 +194,35 @@ export function useDeletePresupuesto() {
   });
 }
 
-// Sube el Excel de productos (template fijo) y devuelve los ítems parseados para
-// precargar el armador. No crea nada en el backend.
-export async function importarExcelPresupuesto(file: File): Promise<ItemInput[]> {
+// Error de validación del Excel: una fila con su número y el mensaje.
+export interface ErrorFilaExcel {
+  fila: number;
+  mensaje: string;
+}
+
+// Sube el Excel + datos de cabecera: el backend valida TODO y, si no hay errores,
+// crea el lote (partes de 20). Si hay errores, lanza (los errores vienen en
+// error.response.data.detail.errores). No crea nada si hay errores.
+export async function importarLote(
+  file: File,
+  header: {
+    cliente_numero: string;
+    entrega_por: string;
+    documento: string;
+    sucursal: string;
+    cliente_id?: number | null;
+    oportunidad_id?: number | null;
+  }
+): Promise<Presupuesto[]> {
   const fd = new FormData();
   fd.append("archivo", file);
-  return (await api.post<ItemInput[]>(`${BASE}/importar-excel`, fd)).data;
+  fd.append("cliente_numero", header.cliente_numero);
+  fd.append("entrega_por", header.entrega_por);
+  fd.append("documento", header.documento);
+  fd.append("sucursal", header.sucursal);
+  if (header.cliente_id != null) fd.append("cliente_id", String(header.cliente_id));
+  if (header.oportunidad_id != null) fd.append("oportunidad_id", String(header.oportunidad_id));
+  return (await api.post<Presupuesto[]>(`${BASE}/importar-lote`, fd)).data;
 }
 
 // Descarga el PDF (autenticado con el JWT) y lo abre en una pestaña nueva.

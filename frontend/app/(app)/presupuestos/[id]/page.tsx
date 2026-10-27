@@ -1,12 +1,13 @@
 "use client";
 
-import { ArrowLeft, FileText, Plus, Save, Trash2, Upload, UploadCloud } from "lucide-react";
+import { ArrowLeft, FileText, Plus, Save, Trash2, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectMenu } from "@/components/ui/select-menu";
@@ -17,7 +18,6 @@ import {
   ENTREGA_OPCIONES,
   ESTADO_CARGA_GBP,
   fmtMonto,
-  importarExcelPresupuesto,
   useCargarEnGbp,
   usePresupuesto,
   useUpdatePresupuesto,
@@ -82,18 +82,21 @@ export default function ArmadorPresupuestoPage() {
   const updateMut = useUpdatePresupuesto(id);
   const cargarGbp = useCargarEnGbp(id);
   const { toast } = useToast();
+  const confirm = useConfirm();
 
   const [rows, setRows] = useState<Row[]>([]);
   const [entrega, setEntrega] = useState("");
+  const [documento, setDocumento] = useState("Presupuesto USD");
+  const [sucursal, setSucursal] = useState("1");
   const [cargado, setCargado] = useState(false);
-  const [importando, setImportando] = useState(false);
-  const excelRef = useRef<HTMLInputElement>(null);
 
   // Hidrata el formulario una vez cuando llega el presupuesto.
   useEffect(() => {
     if (presupuesto && !cargado) {
       setRows(presupuesto.items.length ? presupuesto.items.map(toRow) : [filaVacia()]);
       setEntrega(presupuesto.entrega_por ?? "");
+      setDocumento(presupuesto.documento ?? "Presupuesto USD");
+      setSucursal(presupuesto.sucursal ?? "1");
       setCargado(true);
     }
   }, [presupuesto, cargado]);
@@ -128,38 +131,34 @@ export default function ArmadorPresupuestoPage() {
       }));
 
   const cuerpo = () => ({
-    moneda: "USD",
     entrega_por: entrega || null,
+    documento,
+    sucursal: sucursal || "1",
     items: payloadItems(),
   });
 
   const guardar = () => updateMut.mutate(cuerpo());
 
-  const cargarEnGbp = () =>
+  const cargarEnGbp = async () => {
+    const esRevisar = presupuesto.estado_carga === "revisar";
+    if (esRevisar) {
+      const ok = await confirm({
+        title: "Reencolar parte",
+        message:
+          "Esta parte pudo haber quedado guardada en GBP. Verificá en GBP antes de " +
+          "reencolar: puede duplicar el presupuesto. ¿Reencolar igual?",
+        danger: true,
+      });
+      if (!ok) return;
+    }
     updateMut.mutate(cuerpo(), {
       onSuccess: () =>
-        cargarGbp.mutate(undefined, {
+        cargarGbp.mutate(esRevisar, {
           onSuccess: () => toast("Enviado a la cola de GBP", "success"),
           onError: (e) => toast(errorMessage(e), "error"),
         }),
       onError: (e) => toast(errorMessage(e), "error"),
     });
-
-  const importarExcel = async (file: File) => {
-    setImportando(true);
-    try {
-      const items = await importarExcelPresupuesto(file);
-      // Reemplaza las filas vacías; si ya había ítems cargados, los suma al final.
-      setRows((rs) => {
-        const conDatos = rs.filter((r) => r.descripcion.trim());
-        return [...conDatos, ...items.map(toRow)];
-      });
-      toast(`${items.length} ítem(s) importados del Excel`, "success");
-    } catch (e) {
-      toast(errorMessage(e), "error");
-    } finally {
-      setImportando(false);
-    }
   };
 
   const cliente =
@@ -168,7 +167,8 @@ export default function ArmadorPresupuestoPage() {
 
   const yaEnCola =
     presupuesto.estado_carga === "pendiente" ||
-    presupuesto.estado_carga === "en_proceso";
+    presupuesto.estado_carga === "en_proceso" ||
+    presupuesto.estado_carga === "cargado";
 
   return (
     <div className="mx-auto w-full max-w-5xl">
@@ -206,8 +206,8 @@ export default function ArmadorPresupuestoPage() {
               {ESTADO_CARGA_GBP[presupuesto.estado_carga].label}
               {presupuesto.id_gbp_pedido ? ` · ${presupuesto.id_gbp_pedido}` : ""}
             </Badge>
-            {presupuesto.estado_carga === "error" && presupuesto.gbp_error && (
-              <span className="max-w-xs text-right text-xs text-danger">
+            {presupuesto.gbp_error && (
+              <span className="max-w-xs text-right text-xs text-ink-2">
                 {presupuesto.gbp_error}
               </span>
             )}
@@ -216,7 +216,7 @@ export default function ArmadorPresupuestoPage() {
       </div>
 
       {/* Datos de carga a GBP */}
-      <div className="mt-5 grid grid-cols-1 gap-3 rounded-lg border border-line bg-surface2 p-4 sm:grid-cols-2">
+      <div className="mt-5 grid grid-cols-1 gap-3 rounded-lg border border-line bg-surface2 p-4 sm:grid-cols-3">
         <div>
           <Label>Entregar por</Label>
           <SelectMenu
@@ -226,25 +226,25 @@ export default function ArmadorPresupuestoPage() {
             options={ENTREGA_OPCIONES.map((o) => ({ value: o, label: o }))}
           />
         </div>
-        <div className="flex items-end">
-          <input
-            ref={excelRef}
-            type="file"
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) importarExcel(f);
-              e.target.value = "";
-            }}
+        <div>
+          <Label>Documento</Label>
+          <SelectMenu
+            value={documento}
+            onChange={setDocumento}
+            options={[
+              { value: "Presupuesto USD", label: "Presupuesto USD" },
+              { value: "Presupuesto ARS", label: "Presupuesto ARS" },
+            ]}
           />
-          <Button
-            variant="outline"
-            onClick={() => excelRef.current?.click()}
-            disabled={importando}
-          >
-            <Upload size={15} /> {importando ? "Importando…" : "Cargar Excel de productos"}
-          </Button>
+        </div>
+        <div>
+          <Label htmlFor="ed-suc">Sucursal</Label>
+          <Input
+            id="ed-suc"
+            value={sucursal}
+            onChange={(e) => setSucursal(e.target.value.replace(/[^0-9]/g, ""))}
+            inputMode="numeric"
+          />
         </div>
       </div>
 
