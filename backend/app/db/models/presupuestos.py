@@ -32,6 +32,11 @@ class EstadoCargaGbp(str, enum.Enum):
 
 # "Entregar por" que ofrece GBP (elegible en el CRM).
 ENTREGA_OPCIONES = ("Retiro TML - Garin", "TML Corpo")
+
+# Sucursales de GBP: valor (lo que usa el ERP/bot) -> nombre visible. FUENTE ÚNICA:
+# agregar una sucursal = tocar solo este dict. Default = "1".
+SUCURSALES_GBP: dict[str, str] = {"1": "ARG COLOR", "30": "SKOP TRADER"}
+SUCURSAL_DEFAULT = "1"
 # IVA válidos (el dropdown de GBP solo tiene estos dos). Para ítems manuales.
 IVA_OPCIONES = (Decimal("21"), Decimal("10.5"))
 

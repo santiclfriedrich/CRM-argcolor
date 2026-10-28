@@ -14,7 +14,7 @@ from app.config import get_settings
 from app.core.exceptions import NotFoundError
 from app.db.models.oportunidades import AmbitoOportunidad, Oportunidad
 from app.db.models.presupuesto_items import PresupuestoItem
-from app.db.models.presupuestos import Presupuesto
+from app.db.models.presupuestos import SUCURSALES_GBP, Presupuesto
 from app.db.models.solicitudes_compras import SolicitudCompras
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
@@ -143,6 +143,12 @@ def create_presupuesto(
     return _get_loaded(db, presupuesto.id)
 
 
+@router.get("/sucursales")
+def listar_sucursales(_: Usuario = Depends(get_current_user)) -> list[dict[str, str]]:
+    """Opciones de sucursal de GBP (fuente única: SUCURSALES_GBP)."""
+    return [{"valor": v, "nombre": n} for v, n in SUCURSALES_GBP.items()]
+
+
 @router.post("/lote", response_model=list[PresupuestoRead], status_code=201)
 def create_lote(
     body: PresupuestoCreate,
@@ -200,6 +206,11 @@ async def importar_lote(
     """Sube el Excel, valida TODO el archivo y, si no hay errores, crea el lote
     (partes de GBP_MAX_ITEMS). Si hay errores, devuelve 422 con la lista
     (fila + mensaje) y NO crea/encola nada."""
+    if sucursal not in SUCURSALES_GBP:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Sucursal inválida. Opciones: {', '.join(SUCURSALES_GBP)}",
+        )
     contenido = await archivo.read()
     try:
         items, errores = parsear_y_validar(

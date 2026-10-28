@@ -23,10 +23,12 @@ import {
   ESTADO_CARGA_GBP,
   ESTADO_PRESUPUESTO,
   fmtMonto,
+  nombreSucursal,
   useCargarGrupoEnGbp,
   useDeletePresupuesto,
   usePresupuestos,
   useReencolarParte,
+  useSucursales,
 } from "@/lib/presupuestos";
 import type { EstadoPresupuesto, Presupuesto } from "@/lib/types";
 import { errorMessage } from "@/lib/utils";
@@ -51,6 +53,7 @@ export default function PresupuestosPage() {
   const deleteMut = useDeletePresupuesto();
   const cargarGrupo = useCargarGrupoEnGbp();
   const reencolar = useReencolarParte();
+  const { data: sucursales } = useSucursales();
   const confirm = useConfirm();
   const { toast } = useToast();
   const [crearOpen, setCrearOpen] = useState(false);
@@ -290,6 +293,9 @@ export default function PresupuestosPage() {
                       ) : (
                         <span className="text-ink-3">—</span>
                       )}
+                      <div className="mt-0.5 text-xs text-ink-3">
+                        {nombreSucursal(sucursales, p.sucursal)}
+                      </div>
                     </td>
                     <td className="truncate px-3 py-2 tabular-nums text-ink">
                       {p.totales_por_moneda &&

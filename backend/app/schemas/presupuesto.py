@@ -3,9 +3,15 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
-from app.db.models.presupuestos import EstadoPresupuesto
+from app.db.models.presupuestos import SUCURSALES_GBP, EstadoPresupuesto
+
+
+def _validar_sucursal(v: str | None) -> str | None:
+    if v is not None and v not in SUCURSALES_GBP:
+        raise ValueError(f"Sucursal inválida. Opciones: {', '.join(SUCURSALES_GBP)}")
+    return v
 
 
 class EnviarPresupuestoRequest(BaseModel):
@@ -54,6 +60,8 @@ class PresupuestoCreate(PresupuestoBase):
     sucursal: str = "1"
     items: list[ItemBase] = []
 
+    _suc = field_validator("sucursal")(_validar_sucursal)
+
 
 class PresupuestoUpdate(PresupuestoBase):
     # Todo opcional: solo se pisa lo que venga. Si mandás items, reemplazan a los
@@ -66,6 +74,8 @@ class PresupuestoUpdate(PresupuestoBase):
     documento: str | None = None
     sucursal: str | None = None
     items: list[ItemBase] | None = None
+
+    _suc = field_validator("sucursal")(_validar_sucursal)
 
 
 class ClienteMini(BaseModel):
@@ -135,6 +145,7 @@ class PresupuestoListItem(BaseModel):
     estado_carga: str | None = None
     gbp_grupo: str | None = None
     gbp_parte: int | None = None
+    sucursal: str = "1"
     monto_total: Decimal | None = None
     moneda: str = "USD"
     # Totales reales por moneda de los ítems ({"ARS": "123.00", "USD": "45.00"}).

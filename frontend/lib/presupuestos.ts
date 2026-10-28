@@ -51,6 +51,26 @@ export const presupuestoKeys = {
   detail: (id: number) => ["presupuestos", id] as const,
 };
 
+export interface SucursalOpcion {
+  valor: string;
+  nombre: string;
+}
+
+// Opciones de sucursal de GBP (fuente única: el backend). Casi estático.
+export function useSucursales() {
+  return useQuery({
+    queryKey: ["presupuestos", "sucursales"],
+    queryFn: async () =>
+      (await api.get<SucursalOpcion[]>(`${BASE}/sucursales`)).data,
+    staleTime: Infinity,
+  });
+}
+
+// Nombre visible de una sucursal a partir de su valor (fallback: el valor).
+export function nombreSucursal(opciones: SucursalOpcion[] | undefined, valor: string | null) {
+  return opciones?.find((o) => o.valor === valor)?.nombre ?? valor ?? "—";
+}
+
 export function usePresupuestos(
   oportunidadId?: number,
   usuarioId?: number,

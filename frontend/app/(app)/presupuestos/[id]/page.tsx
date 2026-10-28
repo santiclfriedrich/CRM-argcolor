@@ -18,8 +18,10 @@ import {
   ENTREGA_OPCIONES,
   ESTADO_CARGA_GBP,
   fmtMonto,
+  nombreSucursal,
   useCargarEnGbp,
   usePresupuesto,
+  useSucursales,
   useUpdatePresupuesto,
 } from "@/lib/presupuestos";
 import type { ItemInput, Presupuesto } from "@/lib/types";
@@ -81,6 +83,7 @@ export default function ArmadorPresupuestoPage() {
   const { data: presupuesto, isLoading } = usePresupuesto(id, Number.isFinite(id));
   const updateMut = useUpdatePresupuesto(id);
   const cargarGbp = useCargarEnGbp(id);
+  const { data: sucursales } = useSucursales();
   const { toast } = useToast();
   const confirm = useConfirm();
 
@@ -187,6 +190,7 @@ export default function ArmadorPresupuestoPage() {
           <p className="text-sm text-ink-2">
             {cliente}
             {presupuesto.cliente_numero ? ` · N° ${presupuesto.cliente_numero}` : ""}
+            {` · ${nombreSucursal(sucursales, presupuesto.sucursal)}`}
             {presupuesto.oportunidad_id != null && (
               <>
                 {" · "}
@@ -238,12 +242,11 @@ export default function ArmadorPresupuestoPage() {
           />
         </div>
         <div>
-          <Label htmlFor="ed-suc">Sucursal</Label>
-          <Input
-            id="ed-suc"
+          <Label>Sucursal GBP</Label>
+          <SelectMenu
             value={sucursal}
-            onChange={(e) => setSucursal(e.target.value.replace(/[^0-9]/g, ""))}
-            inputMode="numeric"
+            onChange={setSucursal}
+            options={(sucursales ?? []).map((s) => ({ value: s.valor, label: s.nombre }))}
           />
         </div>
       </div>

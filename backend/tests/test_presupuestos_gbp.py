@@ -363,6 +363,25 @@ def test_standalone_aparece_en_listado_con_filtro_de_seccion(client: TestClient)
     assert pid in [p["id"] for p in r.json()]
 
 
+def test_sucursales_endpoint_validacion_y_job(client: TestClient) -> None:
+    r = client.get("/api/v1/presupuestos/sucursales")
+    assert r.status_code == 200
+    assert {s["valor"] for s in r.json()} == {"1", "30"}
+
+    # sucursal inválida -> 422 (validación del schema)
+    mal = _payload()
+    mal["sucursal"] = "999"
+    assert client.post("/api/v1/presupuestos/lote", json=mal).status_code == 422
+
+    # sucursal válida -> viaja en el job
+    ok = _payload()
+    ok["sucursal"] = "30"
+    pid = client.post("/api/v1/presupuestos/lote", json=ok).json()[0]["id"]
+    client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")
+    job = client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS).json()
+    assert job["sucursal"] == "30"
+
+
 def test_job_colgado_se_recicla(client: TestClient) -> None:
     pid = _crear(client)["id"]
     client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")

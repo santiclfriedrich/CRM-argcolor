@@ -19,6 +19,7 @@ import {
   importarLote,
   presupuestoKeys,
   useCrearLote,
+  useSucursales,
 } from "@/lib/presupuestos";
 import { errorMessage } from "@/lib/utils";
 
@@ -31,6 +32,7 @@ export function CrearPresupuestoModal({ onClose }: { onClose: () => void }) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const { data: clientes } = useClientes();
+  const { data: sucursales } = useSucursales();
   const crear = useCrearLote();
 
   const [clienteId, setClienteId] = useState<number | null>(null);
@@ -147,12 +149,11 @@ export function CrearPresupuestoModal({ onClose }: { onClose: () => void }) {
             />
           </div>
           <div>
-            <Label htmlFor="cp-suc">Sucursal</Label>
-            <Input
-              id="cp-suc"
+            <Label>Sucursal GBP</Label>
+            <SelectMenu
               value={sucursal}
-              onChange={(e) => setSucursal(e.target.value.replace(/[^0-9]/g, ""))}
-              inputMode="numeric"
+              onChange={setSucursal}
+              options={(sucursales ?? []).map((s) => ({ value: s.valor, label: s.nombre }))}
             />
           </div>
         </div>
