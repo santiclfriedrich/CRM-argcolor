@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
@@ -16,6 +17,7 @@ import {
   ENTREGA_OPCIONES,
   type ErrorFilaExcel,
   importarLote,
+  presupuestoKeys,
   useCrearLote,
 } from "@/lib/presupuestos";
 import { errorMessage } from "@/lib/utils";
@@ -27,6 +29,7 @@ import { errorMessage } from "@/lib/utils";
 export function CrearPresupuestoModal({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const { toast } = useToast();
+  const qc = useQueryClient();
   const { data: clientes } = useClientes();
   const crear = useCrearLote();
 
@@ -55,6 +58,8 @@ export function CrearPresupuestoModal({ onClose }: { onClose: () => void }) {
   };
 
   const irATerminar = (partes: { id: number }[]) => {
+    // Refresca el listado (el import es una función suelta que no invalida solo).
+    qc.invalidateQueries({ queryKey: presupuestoKeys.all });
     onClose();
     if (partes.length === 1) {
       router.push(`/presupuestos/${partes[0].id}`);
