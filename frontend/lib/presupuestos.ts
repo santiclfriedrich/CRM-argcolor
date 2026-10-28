@@ -284,6 +284,22 @@ export async function descargarOmitidosExcel(grupo: string): Promise<void> {
   setTimeout(() => window.URL.revokeObjectURL(url), 10_000);
 }
 
+// Descarga el Excel ORIGINAL del lote con el resultado de GBP (omitidos en naranja,
+// 3 columnas nuevas). Disponible en cualquier momento.
+export async function descargarResultadoExcel(grupo: string): Promise<void> {
+  const res = await api.get(`${BASE}/grupo/${grupo}/resultado.xlsx`, {
+    responseType: "blob",
+  });
+  const cd = (res.headers["content-disposition"] as string) || "";
+  const m = /filename="?([^"]+)"?/.exec(cd);
+  const url = window.URL.createObjectURL(res.data as Blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = m?.[1] ?? `resultado-${grupo}.xlsx`;
+  a.click();
+  setTimeout(() => window.URL.revokeObjectURL(url), 10_000);
+}
+
 // Descarga el PDF (autenticado con el JWT) y lo abre en una pestaña nueva.
 export async function abrirPdf(id: number): Promise<void> {
   const res = await api.get(`${BASE}/${id}/pdf`, { responseType: "blob" });

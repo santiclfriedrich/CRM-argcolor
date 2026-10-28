@@ -32,6 +32,7 @@ class ItemBase(BaseModel):
     sku: str | None = None
     fabricante: str | None = None
     part_number: str | None = None
+    fila_excel: int | None = None
     observaciones: str | None = None
 
 

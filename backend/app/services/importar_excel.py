@@ -152,6 +152,7 @@ def parsear_y_validar(
                 "sku": sku,
                 "fabricante": None,
                 "part_number": str(celda(fila, "part_number") or "").strip() or None,
+                "fila_excel": idx,  # fila real del Excel (1-based, encabezado = 1)
             }
         )
 

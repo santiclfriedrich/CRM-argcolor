@@ -1,6 +1,7 @@
 """Presupuestos: armador de cotizaciones y generación del PDF."""
 
 import logging
+import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
@@ -262,6 +263,93 @@ def exportar_omitidos_grupo(
     )
 
 
+@router.get("/grupo/{grupo}/resultado.xlsx")
+def exportar_resultado_grupo(
+    grupo: str,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> Response:
+    """Devuelve el Excel ORIGINAL del lote con el resultado de GBP: 3 columnas
+    nuevas (Estado GBP / Presupuesto GBP / Motivo), filas de ítems no cargados en
+    naranja y filas de partes en error en rojo claro. Se puede bajar en cualquier
+    momento (refleja lo que haya hasta ahí)."""
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+    from openpyxl.styles import PatternFill
+
+    partes = list(
+        db.scalars(
+            select(Presupuesto)
+            .where(Presupuesto.gbp_grupo == grupo)
+            .order_by(Presupuesto.gbp_parte)
+            .options(selectinload(Presupuesto.items))
+        )
+    )
+    if not partes:
+        raise HTTPException(status_code=404, detail="Lote no encontrado")
+    xlsx_key = next((p.lote_xlsx_key for p in partes if p.lote_xlsx_key), None)
+    if not xlsx_key:
+        raise HTTPException(
+            status_code=404, detail="Este lote no tiene el Excel original guardado."
+        )
+    nombre = next((p.lote_nombre for p in partes if p.lote_nombre), None) or f"lote-{grupo}"
+
+    # fila_excel -> (estado, numero_gbp, motivo, color)
+    naranja = PatternFill(fill_type="solid", fgColor="FFC000")
+    rojo = PatternFill(fill_type="solid", fgColor="F4CCCC")
+    _ESTADO = {
+        "cargado": "Cargado",
+        "error": "Error",
+        "pendiente": "Pendiente",
+        "en_proceso": "Pendiente",
+        "cancelado": "Cancelado",
+        None: "Pendiente",
+    }
+    filas_res: dict[int, tuple] = {}
+    for p in partes:
+        omit = {o.get("linea"): o.get("motivo") for o in (p.items_omitidos or [])}
+        for pos, item in enumerate(p.items, start=1):  # pos = "linea" (1-based)
+            if item.fila_excel is None:
+                continue
+            if p.estado_carga == "error":
+                filas_res[item.fila_excel] = ("Error", p.id_gbp_pedido, p.gbp_error, rojo)
+            elif pos in omit:
+                filas_res[item.fila_excel] = (
+                    "NO cargado", p.id_gbp_pedido, omit[pos], naranja,
+                )
+            else:
+                filas_res[item.fila_excel] = (
+                    _ESTADO.get(p.estado_carga, "Pendiente"), p.id_gbp_pedido, None, None,
+                )
+
+    data = get_storage().get(xlsx_key)
+    wb = load_workbook(BytesIO(data))
+    ws = wb.active
+    base = ws.max_column
+    for off, titulo in enumerate(("Estado GBP", "Presupuesto GBP", "Motivo"), start=1):
+        ws.cell(row=1, column=base + off, value=titulo)
+    ultima = base + 3
+    for fila, (estado, numero, motivo, fill) in filas_res.items():
+        ws.cell(row=fila, column=base + 1, value=estado)
+        ws.cell(row=fila, column=base + 2, value=numero)
+        ws.cell(row=fila, column=base + 3, value=motivo)
+        if fill is not None:
+            for col in range(1, ultima + 1):
+                ws.cell(row=fila, column=col).fill = fill
+
+    buf = BytesIO()
+    wb.save(buf)
+    base_nombre = nombre[:-5] if nombre.lower().endswith(".xlsx") else nombre
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{base_nombre}_resultado_GBP.xlsx"'
+        },
+    )
+
+
 @router.post("/importar-lote", response_model=list[PresupuestoRead], status_code=201)
 async def importar_lote(
     archivo: UploadFile = File(...),
@@ -308,7 +396,23 @@ async def importar_lote(
         sucursal=sucursal,
         items=[ItemBase.model_validate(it) for it in items],
     )
-    creados = crear_lote(db, data, current_user.id)
+    # Guardamos el .xlsx original del lote para poder regenerar el "Excel con
+    # resultado" (resaltando los ítems que GBP no cargó).
+    grupo = uuid.uuid4().hex[:12]
+    xlsx_key = f"presupuestos_gbp/lote/{grupo}.xlsx"
+    get_storage().put(
+        xlsx_key,
+        contenido,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    creados = crear_lote(
+        db,
+        data,
+        current_user.id,
+        grupo=grupo,
+        xlsx_key=xlsx_key,
+        nombre_archivo=archivo.filename,
+    )
     return [_get_loaded(db, p.id) for p in creados]
 
 

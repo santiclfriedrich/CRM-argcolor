@@ -496,6 +496,44 @@ def test_omitidos_grupo_consolidado(client: TestClient) -> None:
     assert "spreadsheet" in xls.headers["content-type"]
 
 
+def test_resultado_xlsx_resalta_omitidos(client: TestClient) -> None:
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    rows = [
+        _HDR,
+        ["A1", "desc1", None, 1, 10, "USD", 0.21],
+        ["A2", "desc2", None, 1, 10, "USD", 0.21],
+        ["A3", "desc3", None, 1, 10, "USD", 0.21],
+    ]
+    partes = _subir_excel(client, rows).json()
+    grupo = partes[0]["gbp_grupo"]
+    assert grupo  # el import siempre crea grupo
+    client.post(f"/api/v1/presupuestos/grupo/{grupo}/cargar-gbp")
+    job = client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS).json()
+    omit = json.dumps([{"linea": 2, "sku": "A2", "descripcion": "desc2", "motivo": "no existe"}])
+    client.post(
+        f"/api/v1/gbp-bot/jobs/{job['id']}/resultado",
+        headers=BOT_HEADERS,
+        data={"numero_gbp": "#1-7", "items_omitidos": omit},
+        files={"pdf": ("p.pdf", b"%PDF-1.4 x", "application/pdf")},
+    )
+    r = client.get(f"/api/v1/presupuestos/grupo/{grupo}/resultado.xlsx")
+    assert r.status_code == 200
+    ws = load_workbook(BytesIO(r.content)).active
+    base = 7  # columnas originales del template
+    assert ws.cell(row=1, column=base + 1).value == "Estado GBP"
+    # linea 1 -> fila excel 2 -> Cargado
+    assert ws.cell(row=2, column=base + 1).value == "Cargado"
+    assert ws.cell(row=2, column=base + 2).value == "#1-7"
+    assert ws.cell(row=2, column=1).fill.fill_type in (None, "none")
+    # linea 2 (omitido) -> fila excel 3 -> NO cargado + relleno + motivo
+    assert ws.cell(row=3, column=base + 1).value == "NO cargado"
+    assert ws.cell(row=3, column=base + 3).value == "no existe"
+    assert ws.cell(row=3, column=1).fill.fill_type == "solid"
+
+
 def test_job_colgado_se_recicla(client: TestClient) -> None:
     pid = _crear(client)["id"]
     client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")

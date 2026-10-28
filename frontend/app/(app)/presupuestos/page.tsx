@@ -33,6 +33,7 @@ import {
   ESTADO_CARGA_GBP,
   ESTADO_PRESUPUESTO,
   descargarOmitidosExcel,
+  descargarResultadoExcel,
   fmtMonto,
   nombreSucursal,
   useCargarGrupoEnGbp,
@@ -72,6 +73,14 @@ function OmitidosLoteModal({ grupo, onClose }: { grupo: string; onClose: () => v
     }
   };
 
+  const bajarResultado = async () => {
+    try {
+      await descargarResultadoExcel(grupo);
+    } catch {
+      toast("No se pudo generar el Excel con resultado", "error");
+    }
+  };
+
   return (
     <Modal open onClose={onClose} title="Ítems no cargados del lote" size="lg">
       {isLoading ? (
@@ -80,11 +89,16 @@ function OmitidosLoteModal({ grupo, onClose }: { grupo: string; onClose: () => v
         <p className="text-sm text-ink-2">Este lote no tiene ítems omitidos.</p>
       ) : (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-ink-2">{data.length} ítem(s) no cargados</p>
-            <Button variant="outline" onClick={exportar} disabled={bajando}>
-              <FileSpreadsheet size={15} /> {bajando ? "Generando…" : "Exportar Excel"}
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={exportar} disabled={bajando}>
+                <FileSpreadsheet size={15} /> {bajando ? "Generando…" : "Exportar omitidos"}
+              </Button>
+              <Button variant="outline" onClick={bajarResultado} disabled={bajando}>
+                <FileSpreadsheet size={15} /> Excel con resultado
+              </Button>
+            </div>
           </div>
           <div className="max-h-[60vh] overflow-auto rounded-lg border border-line">
             <table className="w-full text-sm">
@@ -131,11 +145,26 @@ export default function PresupuestosPage() {
   const { toast } = useToast();
   const [crearOpen, setCrearOpen] = useState(false);
 
-  // Cuántas partes tiene cada lote (para mostrar "Parte i/N").
+  // Por lote: cuántas partes tiene y cuántas terminaron (para "Parte i/N" y el
+  // aviso de "lote completo").
   const partesPorGrupo: Record<string, number> = {};
+  const terminadasPorGrupo: Record<string, number> = {};
+  const TERMINALES = new Set(["cargado", "error", "cancelado"]);
   for (const p of data ?? []) {
-    if (p.gbp_grupo) partesPorGrupo[p.gbp_grupo] = (partesPorGrupo[p.gbp_grupo] ?? 0) + 1;
+    if (!p.gbp_grupo) continue;
+    partesPorGrupo[p.gbp_grupo] = (partesPorGrupo[p.gbp_grupo] ?? 0) + 1;
+    if (p.estado_carga && TERMINALES.has(p.estado_carga)) {
+      terminadasPorGrupo[p.gbp_grupo] = (terminadasPorGrupo[p.gbp_grupo] ?? 0) + 1;
+    }
   }
+
+  const bajarResultado = async (grupo: string) => {
+    try {
+      await descargarResultadoExcel(grupo);
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    }
+  };
 
   const { data: session } = useSession();
   const currentUserId = Number(session?.usuario?.id) || null;
@@ -339,6 +368,14 @@ export default function PresupuestosPage() {
                           Parte {p.gbp_parte}/{partesPorGrupo[p.gbp_grupo] ?? "?"}
                         </span>
                       )}
+                      {p.gbp_grupo &&
+                        p.gbp_parte === 1 &&
+                        (terminadasPorGrupo[p.gbp_grupo] ?? 0) ===
+                          (partesPorGrupo[p.gbp_grupo] ?? 0) && (
+                          <span className="ml-1 text-xs font-medium text-success">
+                            · lote completo
+                          </span>
+                        )}
                     </td>
                     <td className="truncate px-3 py-2">
                       {p.oportunidad_id != null ? (
@@ -487,6 +524,15 @@ export default function PresupuestosPage() {
                             onClick={() => abrirPdf(p.id)}
                           >
                             <FileText size={14} /> PDF
+                          </Button>
+                        )}
+                        {p.gbp_grupo && p.gbp_parte === 1 && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => bajarResultado(p.gbp_grupo as string)}
+                          >
+                            <FileSpreadsheet size={14} /> Resultado
                           </Button>
                         )}
                         <Tooltip label="Eliminar">

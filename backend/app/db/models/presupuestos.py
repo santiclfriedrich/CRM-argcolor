@@ -100,6 +100,10 @@ class Presupuesto(Base, TimestampMixin):
     # Ítems que GBP NO dejó cargar (el pedido se guardó igual con el resto). Lista
     # de {linea, sku, descripcion, motivo}. Lo manda el bot en /resultado.
     items_omitidos: Mapped[list | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
+    # Lote importado de Excel: key del .xlsx original en storage + nombre, para poder
+    # regenerar el "Excel con resultado". Igual en todas las partes del grupo.
+    lote_xlsx_key: Mapped[str | None] = mapped_column(String(500))
+    lote_nombre: Mapped[str | None] = mapped_column(String(255))
 
     # Auditoría: quién lo creó y quién lo editó por última vez.
     creado_por_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))

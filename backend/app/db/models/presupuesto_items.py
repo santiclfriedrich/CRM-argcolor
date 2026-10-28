@@ -25,6 +25,9 @@ class PresupuestoItem(Base):
     sku: Mapped[str | None] = mapped_column(String(120))
     fabricante: Mapped[str | None] = mapped_column(String(120))
     part_number: Mapped[str | None] = mapped_column(String(120))  # código del fabricante
+    # Fila original en el Excel importado (1-based, incluye el encabezado). Sirve para
+    # resaltar en el Excel de resultado los ítems que GBP no cargó, sin mapear por SKU.
+    fila_excel: Mapped[int | None] = mapped_column(Integer)
     observaciones: Mapped[str | None] = mapped_column(Text)
     orden: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
