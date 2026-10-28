@@ -251,6 +251,35 @@ export default function ArmadorPresupuestoPage() {
         </div>
       </div>
 
+      {/* Ítems que GBP no dejó cargar (el pedido se guardó igual con el resto) */}
+      {presupuesto.items_omitidos && presupuesto.items_omitidos.length > 0 && (
+        <div className="mt-5 overflow-hidden rounded-lg border border-warning/50 bg-warning/5">
+          <div className="border-b border-warning/40 px-4 py-2 text-sm font-semibold text-ink">
+            ⚠ {presupuesto.items_omitidos.length} ítem(s) no cargados en GBP
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-surface2 text-left text-xs text-ink-2">
+                <tr>
+                  <th className="px-2 py-2 font-medium">SKU</th>
+                  <th className="px-2 py-2 font-medium">Descripción</th>
+                  <th className="px-2 py-2 font-medium">Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {presupuesto.items_omitidos.map((o, i) => (
+                  <tr key={i} className="border-t border-line align-top">
+                    <td className="px-2 py-1.5 font-mono">{o.sku ?? "—"}</td>
+                    <td className="px-2 py-1.5">{o.descripcion ?? "—"}</td>
+                    <td className="px-2 py-1.5 text-ink-2">{o.motivo ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Ítems */}
       <div className="mt-5 overflow-x-auto rounded-lg border border-line">
         <table className="w-full text-sm">

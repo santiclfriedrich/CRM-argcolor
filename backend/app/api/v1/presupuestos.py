@@ -76,6 +76,7 @@ def list_presupuestos(
     oportunidad_id: int | None = None,
     usuario_id: int | None = None,
     ambito: AmbitoOportunidad | None = None,
+    con_omitidos: bool = False,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> list[Presupuesto]:
@@ -121,8 +122,12 @@ def list_presupuestos(
 
     salida = []
     for p in presupuestos:
+        cant_omitidos = len(p.items_omitidos or [])
+        if con_omitidos and cant_omitidos == 0:
+            continue
         item = PresupuestoListItem.model_validate(p)
         item.totales_por_moneda = totales.get(p.id, {})
+        item.cant_omitidos = cant_omitidos
         salida.append(item)
     return salida
 
@@ -193,6 +198,68 @@ def cargar_grupo_en_gbp(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return [_get_loaded(db, p.id) for p in partes]
+
+
+def _omitidos_del_grupo(db: Session, grupo: str) -> list[dict]:
+    """Vista consolidada de los ítems omitidos de todas las partes de un lote."""
+    partes = db.scalars(
+        select(Presupuesto)
+        .where(Presupuesto.gbp_grupo == grupo)
+        .order_by(Presupuesto.gbp_parte)
+    ).all()
+    filas: list[dict] = []
+    for p in partes:
+        for it in p.items_omitidos or []:
+            filas.append(
+                {
+                    "parte": p.gbp_parte,
+                    "numero_gbp": p.id_gbp_pedido,
+                    "linea": it.get("linea"),
+                    "sku": it.get("sku"),
+                    "descripcion": it.get("descripcion"),
+                    "motivo": it.get("motivo"),
+                }
+            )
+    return filas
+
+
+@router.get("/grupo/{grupo}/omitidos")
+def omitidos_grupo(
+    grupo: str,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> list[dict]:
+    """Ítems no cargados de todas las partes del lote (SKU + parte + N° de GBP)."""
+    return _omitidos_del_grupo(db, grupo)
+
+
+@router.get("/grupo/{grupo}/omitidos.xlsx")
+def exportar_omitidos_grupo(
+    grupo: str,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+) -> Response:
+    """Exporta a Excel los ítems no cargados del lote."""
+    from io import BytesIO
+
+    from openpyxl import Workbook
+
+    filas = _omitidos_del_grupo(db, grupo)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Ítems no cargados"
+    ws.append(["Parte", "N° GBP", "Línea", "SKU", "Descripción", "Motivo"])
+    for f in filas:
+        ws.append(
+            [f["parte"], f["numero_gbp"], f["linea"], f["sku"], f["descripcion"], f["motivo"]]
+        )
+    buf = BytesIO()
+    wb.save(buf)
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="omitidos-{grupo}.xlsx"'},
+    )
 
 
 @router.post("/importar-lote", response_model=list[PresupuestoRead], status_code=201)

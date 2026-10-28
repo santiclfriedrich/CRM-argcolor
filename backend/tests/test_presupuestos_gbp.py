@@ -1,5 +1,6 @@
 """Tests de la carga de presupuestos en GBP (sobre el Presupuesto del CRM)."""
 
+import json
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -433,6 +434,66 @@ def test_reencolar_cancelado_da_409(client: TestClient) -> None:
     client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")
     client.delete(f"/api/v1/presupuestos/{pid}")  # cancelado
     assert client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp").status_code == 409
+
+
+def test_resultado_con_items_omitidos(client: TestClient) -> None:
+    pid = _crear(client)["id"]
+    client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")
+    client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS)
+    omit = json.dumps([{"linea": 2, "sku": "X9", "descripcion": None, "motivo": "no existe"}])
+    r = client.post(
+        f"/api/v1/gbp-bot/jobs/{pid}/resultado",
+        headers=BOT_HEADERS,
+        data={"numero_gbp": "#1-9", "items_omitidos": omit},
+        files={"pdf": ("p.pdf", b"%PDF-1.4 x", "application/pdf")},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["estado_carga"] == "cargado"  # con omitidos SIGUE cargado
+    assert len(body["items_omitidos"]) == 1
+    assert body["items_omitidos"][0]["sku"] == "X9"
+    # filtro con_omitidos + cant_omitidos en el listado
+    con = client.get("/api/v1/presupuestos?con_omitidos=true").json()
+    assert any(p["id"] == pid and p["cant_omitidos"] == 1 for p in con)
+
+
+def test_items_omitidos_malformado_no_rompe(client: TestClient) -> None:
+    pid = _crear(client)["id"]
+    client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")
+    client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS)
+    r = client.post(
+        f"/api/v1/gbp-bot/jobs/{pid}/resultado",
+        headers=BOT_HEADERS,
+        data={"numero_gbp": "#1-1", "items_omitidos": "no-es-json"},
+        files={"pdf": ("p.pdf", b"%PDF-1.4 x", "application/pdf")},
+    )
+    assert r.status_code == 200  # no rechaza
+    assert r.json()["items_omitidos"] == []
+
+
+def test_omitidos_grupo_consolidado(client: TestClient) -> None:
+    body = {"cliente_numero": "34923", "entrega_por": "Retiro TML - Garin", "items": _items(25)}
+    partes = client.post("/api/v1/presupuestos/lote", json=body).json()
+    grupo = partes[0]["gbp_grupo"]
+    client.post(f"/api/v1/presupuestos/grupo/{grupo}/cargar-gbp")
+    # el bot carga las 2 partes, cada una con un omitido
+    for _ in range(2):
+        job = client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS).json()
+        omit = json.dumps([{"linea": 1, "sku": "OM", "descripcion": "d", "motivo": "x"}])
+        client.post(
+            f"/api/v1/gbp-bot/jobs/{job['id']}/resultado",
+            headers=BOT_HEADERS,
+            data={"numero_gbp": f"#1-{job['parte']}", "items_omitidos": omit},
+            files={"pdf": ("p.pdf", b"%PDF-1.4 x", "application/pdf")},
+        )
+    cons = client.get(f"/api/v1/presupuestos/grupo/{grupo}/omitidos").json()
+    assert len(cons) == 2
+    assert {r["parte"] for r in cons} == {1, 2}
+    assert all(r["sku"] == "OM" and r["numero_gbp"] for r in cons)
+    # export xlsx
+    xls = client.get(f"/api/v1/presupuestos/grupo/{grupo}/omitidos.xlsx")
+    assert xls.status_code == 200
+    assert "spreadsheet" in xls.headers["content-type"]
 
 
 def test_job_colgado_se_recicla(client: TestClient) -> None:

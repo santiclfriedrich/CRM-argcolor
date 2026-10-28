@@ -35,6 +35,15 @@ class ItemBase(BaseModel):
     observaciones: str | None = None
 
 
+class ItemOmitido(BaseModel):
+    """Un ítem que GBP no dejó cargar (lo reporta el bot en /resultado)."""
+
+    linea: int | None = None
+    sku: str | None = None
+    descripcion: str | None = None
+    motivo: str | None = None
+
+
 class ItemRead(ItemBase):
     model_config = ConfigDict(from_attributes=True)
 
@@ -117,8 +126,14 @@ class PresupuestoRead(PresupuestoBase):
     gbp_error: str | None = None
     gbp_grupo: str | None = None
     gbp_parte: int | None = None
+    items_omitidos: list[ItemOmitido] = []
     monto_total: Decimal | None = None
     version: int
+
+    @field_validator("items_omitidos", mode="before")
+    @classmethod
+    def _omitidos_no_none(cls, v: object) -> object:
+        return v or []  # la columna puede ser None (presupuestos viejos)
     pdf_url: str | None = None
     fecha_envio: datetime | None = None
     fecha_respuesta_cliente: datetime | None = None
@@ -148,6 +163,7 @@ class PresupuestoListItem(BaseModel):
     gbp_grupo: str | None = None
     gbp_parte: int | None = None
     sucursal: str = "1"
+    cant_omitidos: int = 0
     monto_total: Decimal | None = None
     moneda: str = "USD"
     # Totales reales por moneda de los ítems ({"ARS": "123.00", "USD": "45.00"}).

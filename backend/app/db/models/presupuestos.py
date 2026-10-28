@@ -4,7 +4,8 @@ import enum
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import JSON, Date, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -96,6 +97,9 @@ class Presupuesto(Base, TimestampMixin):
     # pedido de GBP). Las partes comparten `gbp_grupo` y se numeran con `gbp_parte`.
     gbp_grupo: Mapped[str | None] = mapped_column(String(40), index=True)
     gbp_parte: Mapped[int | None] = mapped_column(Integer)
+    # Ítems que GBP NO dejó cargar (el pedido se guardó igual con el resto). Lista
+    # de {linea, sku, descripcion, motivo}. Lo manda el bot en /resultado.
+    items_omitidos: Mapped[list | None] = mapped_column(JSONB().with_variant(JSON(), "sqlite"))
 
     # Auditoría: quién lo creó y quién lo editó por última vez.
     creado_por_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))

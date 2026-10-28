@@ -1,13 +1,23 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Building2, FileText, Plus, Target, Trash2, UploadCloud, User } from "lucide-react";
+import {
+  Building2,
+  FileSpreadsheet,
+  FileText,
+  Plus,
+  Target,
+  Trash2,
+  UploadCloud,
+  User,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { RefChip } from "@/components/ui/ref-chip";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
@@ -22,10 +32,12 @@ import {
   abrirPdf,
   ESTADO_CARGA_GBP,
   ESTADO_PRESUPUESTO,
+  descargarOmitidosExcel,
   fmtMonto,
   nombreSucursal,
   useCargarGrupoEnGbp,
   useDeletePresupuesto,
+  useOmitidosGrupo,
   usePresupuestos,
   useReencolarParte,
   useSucursales,
@@ -42,6 +54,67 @@ const TONO_PRESUPUESTO = {
   rechazado: "danger",
   negociando: "warning",
 } as const satisfies Record<EstadoPresupuesto, string>;
+
+// Vista consolidada de los ítems no cargados de un lote (todas sus partes).
+function OmitidosLoteModal({ grupo, onClose }: { grupo: string; onClose: () => void }) {
+  const { data, isLoading } = useOmitidosGrupo(grupo);
+  const { toast } = useToast();
+  const [bajando, setBajando] = useState(false);
+
+  const exportar = async () => {
+    setBajando(true);
+    try {
+      await descargarOmitidosExcel(grupo);
+    } catch {
+      toast("No se pudo exportar", "error");
+    } finally {
+      setBajando(false);
+    }
+  };
+
+  return (
+    <Modal open onClose={onClose} title="Ítems no cargados del lote" size="lg">
+      {isLoading ? (
+        <p className="text-sm text-ink-2">Cargando…</p>
+      ) : !data || data.length === 0 ? (
+        <p className="text-sm text-ink-2">Este lote no tiene ítems omitidos.</p>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-ink-2">{data.length} ítem(s) no cargados</p>
+            <Button variant="outline" onClick={exportar} disabled={bajando}>
+              <FileSpreadsheet size={15} /> {bajando ? "Generando…" : "Exportar Excel"}
+            </Button>
+          </div>
+          <div className="max-h-[60vh] overflow-auto rounded-lg border border-line">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-surface2 text-left text-xs text-ink-2">
+                <tr>
+                  <th className="px-2 py-2 font-medium">Parte</th>
+                  <th className="px-2 py-2 font-medium">N° GBP</th>
+                  <th className="px-2 py-2 font-medium">SKU</th>
+                  <th className="px-2 py-2 font-medium">Descripción</th>
+                  <th className="px-2 py-2 font-medium">Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((o, i) => (
+                  <tr key={i} className="border-t border-line align-top">
+                    <td className="px-2 py-1.5 tabular-nums">{o.parte ?? "—"}</td>
+                    <td className="px-2 py-1.5 font-mono">{o.numero_gbp ?? "—"}</td>
+                    <td className="px-2 py-1.5 font-mono">{o.sku ?? "—"}</td>
+                    <td className="px-2 py-1.5">{o.descripcion ?? "—"}</td>
+                    <td className="px-2 py-1.5 text-ink-2">{o.motivo ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
 
 export default function PresupuestosPage() {
   const { seccion } = useSeccion();
@@ -80,8 +153,13 @@ export default function PresupuestosPage() {
     setFiltro(rol === "vendedor" ? "mias" : "todas");
   }, [rol]);
 
+  const [soloOmitidos, setSoloOmitidos] = useState(false);
+  const [omitidosGrupo, setOmitidosGrupo] = useState<string | null>(null);
+
   const visibles = (data ?? []).filter(
-    (p) => filtro === "todas" || p.creado_por?.id === currentUserId
+    (p) =>
+      (filtro === "todas" || p.creado_por?.id === currentUserId) &&
+      (!soloOmitidos || (p.cant_omitidos ?? 0) > 0)
   );
 
   // Orden de entrada (default: nuevas arriba, como viene del backend id desc).
@@ -166,6 +244,14 @@ export default function PresupuestosPage() {
             {visibles.length}{" "}
             {visibles.length === 1 ? "presupuesto" : "presupuestos"}
           </p>
+          <label className="flex cursor-pointer items-center gap-1.5 text-sm text-ink-2">
+            <input
+              type="checkbox"
+              checked={soloOmitidos}
+              onChange={(e) => setSoloOmitidos(e.target.checked)}
+            />
+            Con ítems omitidos
+          </label>
           <div className="ml-auto flex items-center gap-2">
             <Button onClick={() => setCrearOpen(true)}>
               <Plus size={16} /> Crear nuevo presupuesto
@@ -179,6 +265,9 @@ export default function PresupuestosPage() {
       )}
 
       {crearOpen && <CrearPresupuestoModal onClose={() => setCrearOpen(false)} />}
+      {omitidosGrupo && (
+        <OmitidosLoteModal grupo={omitidosGrupo} onClose={() => setOmitidosGrupo(null)} />
+      )}
 
       {isLoading && <p className="mt-4 text-ink-2">Cargando…</p>}
       {isError && <p className="mt-4 text-danger">No se pudo cargar.</p>}
@@ -324,6 +413,23 @@ export default function PresupuestosPage() {
                               {p.gbp_error}
                             </span>
                           )}
+                        {(p.cant_omitidos ?? 0) > 0 &&
+                          (p.gbp_grupo ? (
+                            <button
+                              type="button"
+                              onClick={() => setOmitidosGrupo(p.gbp_grupo)}
+                              className="text-xs font-medium text-warning hover:underline"
+                            >
+                              ⚠ {p.cant_omitidos} no cargados (ver lote)
+                            </button>
+                          ) : (
+                            <Link
+                              href={`/presupuestos/${p.id}`}
+                              className="text-xs font-medium text-warning hover:underline"
+                            >
+                              ⚠ {p.cant_omitidos} no cargados
+                            </Link>
+                          ))}
                       </div>
                     </td>
                     <td className="truncate px-3 py-2">

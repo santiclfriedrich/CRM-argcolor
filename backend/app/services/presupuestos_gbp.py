@@ -180,7 +180,11 @@ def build_job(db: Session, presupuesto: Presupuesto) -> JobBotRead:
 
 
 def registrar_resultado(
-    db: Session, presupuesto_id: int, numero_gbp: str, pdf: bytes
+    db: Session,
+    presupuesto_id: int,
+    numero_gbp: str,
+    pdf: bytes,
+    items_omitidos: list | None = None,
 ) -> Presupuesto:
     presupuesto = obtener(db, presupuesto_id)
     if not pdf.startswith(b"%PDF"):
@@ -190,6 +194,7 @@ def registrar_resultado(
     get_storage().put(key, pdf, "application/pdf")
     presupuesto.id_gbp_pedido = numero
     presupuesto.pdf_gbp_key = key
+    presupuesto.items_omitidos = items_omitidos or []
     presupuesto.gbp_cargado_en = datetime.now(timezone.utc)
 
     if presupuesto.estado_carga == EstadoCargaGbp.cancelado.value:

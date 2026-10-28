@@ -10,6 +10,9 @@ Las altas/consultas de presupuestos (incluido el standalone y el botón
 
 from __future__ import annotations
 
+import json
+import logging
+
 from fastapi import (
     APIRouter,
     Depends,
@@ -28,6 +31,8 @@ from app.db.session import get_db
 from app.schemas.presupuesto import PresupuestoRead
 from app.schemas.presupuesto_gbp import ErrorBotIn, JobBotRead
 from app.services import presupuestos_gbp as svc
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/gbp-bot", tags=["gbp-bot"])
 
@@ -55,11 +60,25 @@ async def registrar_resultado(
     presupuesto_id: int,
     numero_gbp: str = Form(...),
     pdf: UploadFile = File(...),
+    items_omitidos: str = Form("[]"),
     db: Session = Depends(get_db),
 ) -> PresupuestoRead:
+    # Ítems que GBP no dejó cargar (el pedido se guardó igual). Si viene mal
+    # formado NO rechazamos el resultado: logueamos y seguimos con lista vacía.
+    try:
+        omitidos = json.loads(items_omitidos)
+        if not isinstance(omitidos, list):
+            raise ValueError("items_omitidos no es una lista")
+    except (ValueError, TypeError) as exc:
+        logger.warning(
+            "items_omitidos mal formado en presupuesto %s: %s", presupuesto_id, exc
+        )
+        omitidos = []
     contenido = await pdf.read()
     try:
-        presupuesto = svc.registrar_resultado(db, presupuesto_id, numero_gbp, contenido)
+        presupuesto = svc.registrar_resultado(
+            db, presupuesto_id, numero_gbp, contenido, items_omitidos=omitidos
+        )
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     return PresupuestoRead.model_validate(presupuesto)

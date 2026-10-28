@@ -7,6 +7,7 @@ import { oportunidadKeys } from "@/lib/oportunidades";
 import type {
   EstadoCargaGbp,
   EstadoPresupuesto,
+  ItemOmitido,
   Presupuesto,
   PresupuestoCreate,
   PresupuestoUpdate,
@@ -252,6 +253,35 @@ export async function importarLote(
   if (header.cliente_id != null) fd.append("cliente_id", String(header.cliente_id));
   if (header.oportunidad_id != null) fd.append("oportunidad_id", String(header.oportunidad_id));
   return (await api.post<Presupuesto[]>(`${BASE}/importar-lote`, fd)).data;
+}
+
+// Fila consolidada de ítems no cargados de un lote (con su parte y N° de GBP).
+export interface OmitidoLote extends ItemOmitido {
+  parte: number | null;
+  numero_gbp: string | null;
+}
+
+// Vista consolidada de los ítems no cargados de todas las partes de un lote.
+export function useOmitidosGrupo(grupo: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ["presupuestos", "omitidos", grupo],
+    queryFn: async () =>
+      (await api.get<OmitidoLote[]>(`${BASE}/grupo/${grupo}/omitidos`)).data,
+    enabled: enabled && !!grupo,
+  });
+}
+
+// Descarga el Excel de ítems no cargados del lote (autenticado) y lo baja.
+export async function descargarOmitidosExcel(grupo: string): Promise<void> {
+  const res = await api.get(`${BASE}/grupo/${grupo}/omitidos.xlsx`, {
+    responseType: "blob",
+  });
+  const url = window.URL.createObjectURL(res.data as Blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `omitidos-${grupo}.xlsx`;
+  a.click();
+  setTimeout(() => window.URL.revokeObjectURL(url), 10_000);
 }
 
 // Descarga el PDF (autenticado con el JWT) y lo abre en una pestaña nueva.

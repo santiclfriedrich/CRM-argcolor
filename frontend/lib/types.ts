@@ -573,6 +573,14 @@ export interface PresupuestoItem {
   orden: number;
 }
 
+// Ítem que GBP no dejó cargar (el pedido se guardó igual con el resto).
+export interface ItemOmitido {
+  linea: number | null;
+  sku: string | null;
+  descripcion: string | null;
+  motivo: string | null;
+}
+
 // Estado de la carga del presupuesto en GBP (por el bot). null = nunca fue a GBP.
 export type EstadoCargaGbp =
   | "pendiente"
@@ -595,6 +603,8 @@ export interface Presupuesto {
   gbp_error: string | null;
   gbp_grupo: string | null;
   gbp_parte: number | null;
+  items_omitidos?: ItemOmitido[];
+  cant_omitidos?: number;
   codigo: string;
   estado: EstadoPresupuesto;
   monto_total: number | null;
