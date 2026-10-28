@@ -86,11 +86,18 @@ def list_presupuestos(
         query = query.where(Presupuesto.oportunidad_id == oportunidad_id)
     duenio_id = resolver_duenio(current_user, usuario_id)
     if duenio_id is not None or ambito is not None:
-        query = query.join(Oportunidad, Presupuesto.oportunidad_id == Oportunidad.id)
-        if duenio_id is not None:
-            query = query.where(Oportunidad.vendedor_id == duenio_id)
+        # OUTER join: los presupuestos STANDALONE (sin oportunidad, p.ej. los que
+        # vienen de un Excel) no tienen ámbito ni vendedor, pero igual tienen que
+        # verse. Por eso se incluyen aunque haya filtro de sección/dueño.
+        sin_op = Presupuesto.oportunidad_id.is_(None)
+        query = query.outerjoin(Oportunidad, Presupuesto.oportunidad_id == Oportunidad.id)
         if ambito is not None:
-            query = query.where(Oportunidad.ambito == ambito.value)
+            query = query.where((Oportunidad.ambito == ambito.value) | sin_op)
+        if duenio_id is not None:
+            query = query.where(
+                (Oportunidad.vendedor_id == duenio_id)
+                | (sin_op & (Presupuesto.creado_por_id == duenio_id))
+            )
     return scalars_capped(db, query, "presupuestos")
 
 

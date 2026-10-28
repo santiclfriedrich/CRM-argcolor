@@ -354,6 +354,15 @@ def test_reencolar_cargado_409_y_revisar_requiere_confirmar(client: TestClient) 
     ).status_code == 200
 
 
+def test_standalone_aparece_en_listado_con_filtro_de_seccion(client: TestClient) -> None:
+    # Un presupuesto standalone (sin oportunidad) tiene que verse aunque el listado
+    # filtre por sección/ámbito (si no, no se puede encolar ni seguir).
+    pid = _crear(client)["id"]
+    r = client.get("/api/v1/presupuestos?ambito=corporativo")
+    assert r.status_code == 200, r.text
+    assert pid in [p["id"] for p in r.json()]
+
+
 def test_job_colgado_se_recicla(client: TestClient) -> None:
     pid = _crear(client)["id"]
     client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")
