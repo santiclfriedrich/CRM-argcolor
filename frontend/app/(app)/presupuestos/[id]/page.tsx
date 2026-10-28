@@ -83,7 +83,7 @@ export default function ArmadorPresupuestoPage() {
   const { data: presupuesto, isLoading } = usePresupuesto(id, Number.isFinite(id));
   const updateMut = useUpdatePresupuesto(id);
   const cargarGbp = useCargarEnGbp(id);
-  const { data: sucursales } = useSucursales();
+  const sucursales = useSucursales();
   const { toast } = useToast();
   const confirm = useConfirm();
 
@@ -246,7 +246,7 @@ export default function ArmadorPresupuestoPage() {
           <SelectMenu
             value={sucursal}
             onChange={setSucursal}
-            options={(sucursales ?? []).map((s) => ({ value: s.valor, label: s.nombre }))}
+            options={sucursales.map((s) => ({ value: s.valor, label: s.nombre }))}
           />
         </div>
       </div>

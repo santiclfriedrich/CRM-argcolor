@@ -56,14 +56,22 @@ export interface SucursalOpcion {
   nombre: string;
 }
 
-// Opciones de sucursal de GBP (fuente única: el backend). Casi estático.
-export function useSucursales() {
-  return useQuery({
+// Fallback para que el desplegable NUNCA quede vacío (mientras carga el fetch o si
+// falla). El backend sigue siendo la fuente para agregar sucursales nuevas.
+const SUCURSALES_FALLBACK: SucursalOpcion[] = [
+  { valor: "1", nombre: "ARG COLOR" },
+  { valor: "30", nombre: "SKOP TRADER" },
+];
+
+// Opciones de sucursal de GBP. Las trae del backend (fuente única) y, hasta que
+// respondan, usa el fallback. Devuelve SIEMPRE una lista no vacía.
+export function useSucursales(): SucursalOpcion[] {
+  const { data } = useQuery({
     queryKey: ["presupuestos", "sucursales"],
-    queryFn: async () =>
-      (await api.get<SucursalOpcion[]>(`${BASE}/sucursales`)).data,
-    staleTime: Infinity,
+    queryFn: async () => (await api.get<SucursalOpcion[]>(`${BASE}/sucursales`)).data,
+    staleTime: 60 * 60 * 1000,
   });
+  return data?.length ? data : SUCURSALES_FALLBACK;
 }
 
 // Nombre visible de una sucursal a partir de su valor (fallback: el valor).

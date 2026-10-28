@@ -32,7 +32,7 @@ export function CrearPresupuestoModal({ onClose }: { onClose: () => void }) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const { data: clientes } = useClientes();
-  const { data: sucursales } = useSucursales();
+  const sucursales = useSucursales();
   const crear = useCrearLote();
 
   const [clienteId, setClienteId] = useState<number | null>(null);
@@ -153,7 +153,7 @@ export function CrearPresupuestoModal({ onClose }: { onClose: () => void }) {
             <SelectMenu
               value={sucursal}
               onChange={setSucursal}
-              options={(sucursales ?? []).map((s) => ({ value: s.valor, label: s.nombre }))}
+              options={sucursales.map((s) => ({ value: s.valor, label: s.nombre }))}
             />
           </div>
         </div>

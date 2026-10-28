@@ -53,7 +53,7 @@ export default function PresupuestosPage() {
   const deleteMut = useDeletePresupuesto();
   const cargarGrupo = useCargarGrupoEnGbp();
   const reencolar = useReencolarParte();
-  const { data: sucursales } = useSucursales();
+  const sucursales = useSucursales();
   const confirm = useConfirm();
   const { toast } = useToast();
   const [crearOpen, setCrearOpen] = useState(false);
