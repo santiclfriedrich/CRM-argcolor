@@ -14,7 +14,7 @@ from app.config import get_settings
 from app.core.exceptions import NotFoundError
 from app.db.models.oportunidades import AmbitoOportunidad, Oportunidad
 from app.db.models.presupuesto_items import PresupuestoItem
-from app.db.models.presupuestos import SUCURSALES_GBP, Presupuesto
+from app.db.models.presupuestos import SUCURSALES_GBP, EstadoCargaGbp, Presupuesto
 from app.db.models.solicitudes_compras import SolicitudCompras
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
@@ -184,8 +184,12 @@ def cargar_grupo_en_gbp(
         for p in partes:
             try:
                 gbp_svc.encolar(db, p)
-            except (gbp_svc.YaCargadoError, gbp_svc.RequiereConfirmacionError):
-                continue  # cargado o 'revisar': no se toca (se reencola por parte)
+            except (
+                gbp_svc.YaCargadoError,
+                gbp_svc.RequiereConfirmacionError,
+                gbp_svc.CanceladoError,
+            ):
+                continue  # cargado/'revisar'/cancelado: no se toca (se reencola por parte)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return [_get_loaded(db, p.id) for p in partes]
@@ -309,6 +313,19 @@ def delete_presupuesto(
 ) -> Response:
     presupuesto = _get_loaded(db, presupuesto_id)
     _assert_owner(presupuesto, current_user)
+    # Si está en la cola del bot (pendiente/en_proceso), NO se borra de verdad: se
+    # marca "cancelado" (terminal). Así el bot lo ignora, el reciclado no lo vuelve
+    # a encolar, y si el bot ya lo estaba cargando podemos capturar su resultado
+    # (ver registrar_resultado). Para el resto (nunca encolado o ya terminado),
+    # borrado normal.
+    en_cola = presupuesto.estado_carga in (
+        EstadoCargaGbp.pendiente.value,
+        EstadoCargaGbp.en_proceso.value,
+    )
+    if en_cola:
+        presupuesto.estado_carga = EstadoCargaGbp.cancelado.value
+        db.commit()
+        return Response(status_code=204)
     for item in list(presupuesto.items):
         db.delete(item)
     db.delete(presupuesto)
@@ -369,7 +386,7 @@ def cargar_en_gbp(
     _assert_owner(presupuesto, current_user)
     try:
         gbp_svc.encolar(db, presupuesto, confirmar=confirmar)
-    except gbp_svc.YaCargadoError as exc:
+    except (gbp_svc.YaCargadoError, gbp_svc.CanceladoError) as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except gbp_svc.RequiereConfirmacionError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc

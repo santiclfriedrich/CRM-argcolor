@@ -580,7 +580,8 @@ export type EstadoCargaGbp =
   | "cargado"
   | "error"
   | "prueba"
-  | "revisar";
+  | "revisar"
+  | "cancelado";
 
 export interface Presupuesto {
   id: number;

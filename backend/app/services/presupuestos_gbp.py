@@ -68,6 +68,10 @@ class YaCargadoError(Exception):
     """La parte ya está cargada en GBP: no se reencola (evita duplicar)."""
 
 
+class CanceladoError(Exception):
+    """La parte está cancelada (terminal): no se reencola."""
+
+
 class RequiereConfirmacionError(Exception):
     """La parte quedó en 'revisar' (puede existir en GBP): reencolar pide confirmar."""
 
@@ -79,6 +83,8 @@ def encolar(db: Session, presupuesto: Presupuesto, *, confirmar: bool = False) -
     - Si ya está `cargado`, no se reencola.
     - Si está `revisar` (pudo haber quedado guardado), pide `confirmar=True`.
     """
+    if presupuesto.estado_carga == EstadoCargaGbp.cancelado.value:
+        raise CanceladoError("Este presupuesto está cancelado. Creá uno nuevo para cargarlo.")
     if presupuesto.estado_carga == EstadoCargaGbp.cargado.value:
         raise YaCargadoError("Esta parte ya está cargada en GBP.")
     if presupuesto.estado_carga == EstadoCargaGbp.revisar.value and not confirmar:
@@ -179,16 +185,29 @@ def registrar_resultado(
     presupuesto = obtener(db, presupuesto_id)
     if not pdf.startswith(b"%PDF"):
         raise ValueError("El archivo subido no es un PDF")
+    numero = numero_gbp.strip() or None
     key = _pdf_key(presupuesto)
     get_storage().put(key, pdf, "application/pdf")
-    presupuesto.id_gbp_pedido = numero_gbp.strip() or None
+    presupuesto.id_gbp_pedido = numero
     presupuesto.pdf_gbp_key = key
-    presupuesto.estado_carga = EstadoCargaGbp.cargado.value
     presupuesto.gbp_cargado_en = datetime.now(timezone.utc)
-    presupuesto.gbp_error = None
+
+    if presupuesto.estado_carga == EstadoCargaGbp.cancelado.value:
+        # Se canceló mientras el bot lo cargaba: quedó CARGADO en GBP igual. No
+        # lo marcamos "cargado" (sigue cancelado/terminal), pero guardamos el PDF y
+        # el número y avisamos que hay que borrarlo a mano en GBP.
+        presupuesto.gbp_error = (
+            f"Cancelado pero CARGADO en GBP — borrar en GBP: {numero or '(sin número)'}"
+        )
+        logger.warning(
+            "GBP bot: presupuesto %s CANCELADO pero cargado en GBP (%s)", presupuesto_id, numero
+        )
+    else:
+        presupuesto.estado_carga = EstadoCargaGbp.cargado.value
+        presupuesto.gbp_error = None
+        logger.info("GBP bot: presupuesto %s cargado (GBP %s)", presupuesto_id, numero)
     db.commit()
     db.refresh(presupuesto)
-    logger.info("GBP bot: presupuesto %s cargado (GBP %s)", presupuesto_id, numero_gbp)
     return presupuesto
 
 
@@ -207,6 +226,15 @@ def _clasificar_estado_error(mensaje: str) -> str:
 
 def registrar_error(db: Session, presupuesto_id: int, mensaje: str) -> Presupuesto:
     presupuesto = obtener(db, presupuesto_id)
+    if presupuesto.estado_carga == EstadoCargaGbp.cancelado.value:
+        # Error de un job que ya se canceló: no lo reabrimos, solo lo registramos.
+        presupuesto.gbp_error = f"(cancelado) {mensaje}"[:2000]
+        db.commit()
+        db.refresh(presupuesto)
+        logger.info(
+            "GBP bot: error de presupuesto %s ya cancelado: %s", presupuesto_id, mensaje[:200]
+        )
+        return presupuesto
     presupuesto.estado_carga = _clasificar_estado_error(mensaje)
     presupuesto.gbp_error = mensaje[:2000]
     db.commit()

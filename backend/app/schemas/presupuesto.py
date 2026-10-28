@@ -143,6 +143,8 @@ class PresupuestoListItem(BaseModel):
     codigo: str
     estado: EstadoPresupuesto
     estado_carga: str | None = None
+    id_gbp_pedido: str | None = None
+    gbp_error: str | None = None
     gbp_grupo: str | None = None
     gbp_parte: int | None = None
     sucursal: str = "1"

@@ -28,6 +28,7 @@ class EstadoCargaGbp(str, enum.Enum):
     error = "error"  # falló sin guardar: con gbp_error
     prueba = "prueba"  # DRY-RUN del bot: anduvo pero NO guardó en GBP
     revisar = "revisar"  # puede haber quedado GUARDADO en GBP: verificar antes de reencolar
+    cancelado = "cancelado"  # se borró estando en la cola: terminal, el bot lo ignora
 
 
 # "Entregar por" que ofrece GBP (elegible en el CRM).

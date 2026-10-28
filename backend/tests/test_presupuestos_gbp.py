@@ -382,6 +382,59 @@ def test_sucursales_endpoint_validacion_y_job(client: TestClient) -> None:
     assert job["sucursal"] == "30"
 
 
+def test_borrar_en_cola_cancela_y_el_bot_lo_ignora(client: TestClient) -> None:
+    pid = _crear(client)["id"]
+    client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")  # pendiente
+    assert client.delete(f"/api/v1/presupuestos/{pid}").status_code == 204
+    # sigue existiendo, pero cancelado
+    r = client.get(f"/api/v1/presupuestos/{pid}")
+    assert r.status_code == 200 and r.json()["estado_carga"] == "cancelado"
+    # el bot NO lo toma
+    assert client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS).status_code == 204
+
+
+def test_resultado_de_cancelado_se_captura_para_borrar_en_gbp(client: TestClient) -> None:
+    pid = _crear(client)["id"]
+    client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")
+    client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS)  # en_proceso
+    client.delete(f"/api/v1/presupuestos/{pid}")  # cancelado estando en_proceso
+    r = client.post(
+        f"/api/v1/gbp-bot/jobs/{pid}/resultado",
+        headers=BOT_HEADERS,
+        data={"numero_gbp": "#1-598171"},
+        files={"pdf": ("p.pdf", b"%PDF-1.4 x", "application/pdf")},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["estado_carga"] == "cancelado"  # NO pasa a cargado
+    assert body["id_gbp_pedido"] == "#1-598171"
+    assert "borrar en GBP" in body["gbp_error"]
+
+
+def test_error_de_cancelado_responde_200(client: TestClient) -> None:
+    pid = _crear(client)["id"]
+    client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")
+    client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS)
+    client.delete(f"/api/v1/presupuestos/{pid}")
+    r = client.post(
+        f"/api/v1/gbp-bot/jobs/{pid}/error", headers=BOT_HEADERS, json={"mensaje": "falló"}
+    )
+    assert r.status_code == 200 and r.json()["estado_carga"] == "cancelado"
+
+
+def test_borrar_no_encolado_elimina_de_verdad(client: TestClient) -> None:
+    pid = _crear(client)["id"]  # estado_carga None (nunca encolado)
+    assert client.delete(f"/api/v1/presupuestos/{pid}").status_code == 204
+    assert client.get(f"/api/v1/presupuestos/{pid}").status_code == 404
+
+
+def test_reencolar_cancelado_da_409(client: TestClient) -> None:
+    pid = _crear(client)["id"]
+    client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")
+    client.delete(f"/api/v1/presupuestos/{pid}")  # cancelado
+    assert client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp").status_code == 409
+
+
 def test_job_colgado_se_recicla(client: TestClient) -> None:
     pid = _crear(client)["id"]
     client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")

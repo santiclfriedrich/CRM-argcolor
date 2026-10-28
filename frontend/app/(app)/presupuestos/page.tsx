@@ -316,6 +316,14 @@ export default function PresupuestosPage() {
                             {p.id_gbp_pedido ? ` · ${p.id_gbp_pedido}` : ""}
                           </Badge>
                         )}
+                        {(p.estado_carga === "error" ||
+                          p.estado_carga === "revisar" ||
+                          p.estado_carga === "cancelado") &&
+                          p.gbp_error && (
+                            <span className="max-w-[16rem] whitespace-normal text-xs text-ink-2">
+                              {p.gbp_error}
+                            </span>
+                          )}
                       </div>
                     </td>
                     <td className="truncate px-3 py-2">

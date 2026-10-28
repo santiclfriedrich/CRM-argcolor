@@ -28,6 +28,7 @@ export const ESTADO_CARGA_GBP: Record<
   error: { label: "Error en GBP", tono: "danger" },
   prueba: { label: "Prueba OK (no guardado)", tono: "info" },
   revisar: { label: "Requiere verificación", tono: "warning" },
+  cancelado: { label: "Cancelado", tono: "neutral" },
 };
 
 export const ESTADO_PRESUPUESTO: Record<EstadoPresupuesto, { label: string; color: string }> = {
