@@ -292,7 +292,12 @@ export default function PresupuestosPage() {
                       )}
                     </td>
                     <td className="truncate px-3 py-2 tabular-nums text-ink">
-                      {fmtMonto(p.monto_total, p.moneda)}
+                      {p.totales_por_moneda &&
+                      Object.keys(p.totales_por_moneda).length > 0
+                        ? Object.entries(p.totales_por_moneda).map(([m, t]) => (
+                            <div key={m}>{fmtMonto(Number(t), m)}</div>
+                          ))
+                        : fmtMonto(p.monto_total, p.moneda)}
                     </td>
                     <td className="truncate px-3 py-2">
                       <div className="flex flex-col items-start gap-1">

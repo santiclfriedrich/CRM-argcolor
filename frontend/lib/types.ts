@@ -598,6 +598,8 @@ export interface Presupuesto {
   estado: EstadoPresupuesto;
   monto_total: number | null;
   moneda: string;
+  // Totales por moneda real de los ítems (solo en el listado): {"ARS":"123.00"}.
+  totales_por_moneda?: Record<string, string>;
   condicion_pago: string | null;
   plazo_entrega: string | null;
   validez: string | null;

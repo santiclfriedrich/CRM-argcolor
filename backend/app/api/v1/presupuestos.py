@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user, get_user_gmail, resolver_duenio
@@ -13,6 +13,7 @@ from app.api.listing import scalars_capped
 from app.config import get_settings
 from app.core.exceptions import NotFoundError
 from app.db.models.oportunidades import AmbitoOportunidad, Oportunidad
+from app.db.models.presupuesto_items import PresupuestoItem
 from app.db.models.presupuestos import Presupuesto
 from app.db.models.solicitudes_compras import SolicitudCompras
 from app.db.models.usuarios import Usuario
@@ -98,7 +99,32 @@ def list_presupuestos(
                 (Oportunidad.vendedor_id == duenio_id)
                 | (sin_op & (Presupuesto.creado_por_id == duenio_id))
             )
-    return scalars_capped(db, query, "presupuestos")
+    presupuestos = scalars_capped(db, query, "presupuestos")
+
+    # Totales reales por moneda (los ítems pueden ser ARS y/o USD; sumarlos en una
+    # sola cifra con la moneda del documento engaña). Una agregación aparte evita
+    # traer todos los ítems al listado.
+    ids = [p.id for p in presupuestos]
+    totales: dict[int, dict[str, object]] = {}
+    if ids:
+        filas = db.execute(
+            select(
+                PresupuestoItem.presupuesto_id,
+                PresupuestoItem.moneda,
+                func.sum(PresupuestoItem.cantidad * PresupuestoItem.precio_unitario),
+            )
+            .where(PresupuestoItem.presupuesto_id.in_(ids))
+            .group_by(PresupuestoItem.presupuesto_id, PresupuestoItem.moneda)
+        )
+        for pid, moneda, total in filas:
+            totales.setdefault(pid, {})[moneda or "USD"] = total
+
+    salida = []
+    for p in presupuestos:
+        item = PresupuestoListItem.model_validate(p)
+        item.totales_por_moneda = totales.get(p.id, {})
+        salida.append(item)
+    return salida
 
 
 @router.post("", response_model=PresupuestoRead, status_code=201)

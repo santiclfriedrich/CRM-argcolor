@@ -137,6 +137,8 @@ class PresupuestoListItem(BaseModel):
     gbp_parte: int | None = None
     monto_total: Decimal | None = None
     moneda: str = "USD"
+    # Totales reales por moneda de los ítems ({"ARS": "123.00", "USD": "45.00"}).
+    totales_por_moneda: dict[str, Decimal] = {}
     created_at: datetime
     oportunidad: OportunidadMini | None = None
     creado_por: UsuarioMini | None = None
