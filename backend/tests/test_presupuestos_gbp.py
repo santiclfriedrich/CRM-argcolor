@@ -530,8 +530,56 @@ def test_resultado_xlsx_resalta_omitidos(client: TestClient) -> None:
     assert ws.cell(row=2, column=1).fill.fill_type in (None, "none")
     # linea 2 (omitido) -> fila excel 3 -> NO cargado + relleno + motivo
     assert ws.cell(row=3, column=base + 1).value == "NO cargado"
-    assert ws.cell(row=3, column=base + 3).value == "no existe"
+    # el motivo lleva la etiqueta de causa adelante (sin causa -> "Rechazado por GBP")
+    assert ws.cell(row=3, column=base + 3).value == "Rechazado por GBP: no existe"
     assert ws.cell(row=3, column=1).fill.fill_type == "solid"
+
+
+def test_causa_omitido_se_guarda_y_se_deduce(client: TestClient) -> None:
+    pid = _crear(client)["id"]
+    client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")
+    client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS)
+    omit = json.dumps(
+        [
+            {"linea": 1, "sku": "A", "motivo": "Costo en cero", "causa": "rechazado_gbp"},
+            {"linea": 2, "sku": "B", "motivo": "SKU repetido en el presupuesto (línea 1)"},
+        ]
+    )
+    r = client.post(
+        f"/api/v1/gbp-bot/jobs/{pid}/resultado",
+        headers=BOT_HEADERS,
+        data={"numero_gbp": "#1-1", "items_omitidos": omit},
+        files={"pdf": ("p.pdf", b"%PDF-1.4 x", "application/pdf")},
+    )
+    oms = r.json()["items_omitidos"]
+    assert oms[0]["causa"] == "rechazado_gbp"  # vino explícita
+    assert oms[1]["causa"] == "repetido"  # deducida del motivo
+
+
+def test_resultado_reenviado_actualiza_numero_y_omitidos(client: TestClient) -> None:
+    pid = _crear(client)["id"]
+    client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")
+    client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS)
+    # primer resultado
+    client.post(
+        f"/api/v1/gbp-bot/jobs/{pid}/resultado",
+        headers=BOT_HEADERS,
+        data={"numero_gbp": "#1-VIEJO", "items_omitidos": "[]"},
+        files={"pdf": ("p.pdf", b"%PDF-1.4 a", "application/pdf")},
+    )
+    # segundo resultado (corrección de número + omitidos nuevos) sobre un job ya cargado
+    omit = json.dumps([{"linea": 1, "sku": "A", "motivo": "x", "causa": "rechazado_gbp"}])
+    r = client.post(
+        f"/api/v1/gbp-bot/jobs/{pid}/resultado",
+        headers=BOT_HEADERS,
+        data={"numero_gbp": "#1-CORREGIDO", "items_omitidos": omit},
+        files={"pdf": ("p.pdf", b"%PDF-1.4 b", "application/pdf")},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["estado_carga"] == "cargado"
+    assert body["id_gbp_pedido"] == "#1-CORREGIDO"
+    assert len(body["items_omitidos"]) == 1
 
 
 def test_job_colgado_se_recicla(client: TestClient) -> None:

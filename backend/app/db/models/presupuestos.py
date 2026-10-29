@@ -39,6 +39,23 @@ ENTREGA_OPCIONES = ("Retiro TML - Garin", "TML Corpo")
 # agregar una sucursal = tocar solo este dict. Default = "1".
 SUCURSALES_GBP: dict[str, str] = {"1": "ARG COLOR", "30": "SKOP TRADER"}
 SUCURSAL_DEFAULT = "1"
+
+# Causa por la que GBP no cargó un ítem (código fijo -> etiqueta legible).
+CAUSA_OMITIDO_LABEL: dict[str, str] = {
+    "repetido": "Repetido",
+    "rechazado_gbp": "Rechazado por GBP",
+    "dato_invalido": "Dato inválido",
+}
+
+
+def deducir_causa_omitido(omitido: dict) -> str:
+    """Causa de un ítem omitido. Usa el campo `causa` si viene; si no (resultados
+    viejos), la deduce del motivo: 'SKU repetido…' -> repetido; resto -> rechazado_gbp."""
+    causa = omitido.get("causa")
+    if causa in CAUSA_OMITIDO_LABEL:
+        return causa
+    motivo = str(omitido.get("motivo") or "")
+    return "repetido" if motivo.startswith("SKU repetido") else "rechazado_gbp"
 # IVA válidos (el dropdown de GBP solo tiene estos dos). Para ítems manuales.
 IVA_OPCIONES = (Decimal("21"), Decimal("10.5"))
 

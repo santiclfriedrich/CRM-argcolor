@@ -32,9 +32,11 @@ import {
   abrirPdf,
   ESTADO_CARGA_GBP,
   ESTADO_PRESUPUESTO,
+  CAUSA_OMITIDO_LABEL,
   descargarOmitidosExcel,
   descargarResultadoExcel,
   fmtMonto,
+  labelCausa,
   nombreSucursal,
   useCargarGrupoEnGbp,
   useDeletePresupuesto,
@@ -61,6 +63,11 @@ function OmitidosLoteModal({ grupo, onClose }: { grupo: string; onClose: () => v
   const { data, isLoading } = useOmitidosGrupo(grupo);
   const { toast } = useToast();
   const [bajando, setBajando] = useState(false);
+  const [causaFiltro, setCausaFiltro] = useState<string | null>(null);
+
+  const filtrados = (data ?? []).filter(
+    (o) => !causaFiltro || (o.causa || "rechazado_gbp") === causaFiltro
+  );
 
   const exportar = async () => {
     setBajando(true);
@@ -90,7 +97,7 @@ function OmitidosLoteModal({ grupo, onClose }: { grupo: string; onClose: () => v
       ) : (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-ink-2">{data.length} ítem(s) no cargados</p>
+            <p className="text-sm text-ink-2">{filtrados.length} ítem(s) no cargados</p>
             <div className="flex gap-2">
               <Button variant="outline" onClick={exportar} disabled={bajando}>
                 <FileSpreadsheet size={15} /> {bajando ? "Generando…" : "Exportar omitidos"}
@@ -100,6 +107,22 @@ function OmitidosLoteModal({ grupo, onClose }: { grupo: string; onClose: () => v
               </Button>
             </div>
           </div>
+          <div className="flex flex-wrap gap-1.5">
+            {[null, ...Object.keys(CAUSA_OMITIDO_LABEL)].map((c) => (
+              <button
+                key={c ?? "todas"}
+                type="button"
+                onClick={() => setCausaFiltro(c)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                  causaFiltro === c
+                    ? "bg-navy text-white"
+                    : "bg-surface2 text-ink-2 hover:bg-surface"
+                }`}
+              >
+                {c ? CAUSA_OMITIDO_LABEL[c] : "Todas"}
+              </button>
+            ))}
+          </div>
           <div className="max-h-[60vh] overflow-auto rounded-lg border border-line">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-surface2 text-left text-xs text-ink-2">
@@ -108,16 +131,18 @@ function OmitidosLoteModal({ grupo, onClose }: { grupo: string; onClose: () => v
                   <th className="px-2 py-2 font-medium">N° GBP</th>
                   <th className="px-2 py-2 font-medium">SKU</th>
                   <th className="px-2 py-2 font-medium">Descripción</th>
+                  <th className="px-2 py-2 font-medium">Causa</th>
                   <th className="px-2 py-2 font-medium">Motivo</th>
                 </tr>
               </thead>
               <tbody>
-                {data.map((o, i) => (
+                {filtrados.map((o, i) => (
                   <tr key={i} className="border-t border-line align-top">
                     <td className="px-2 py-1.5 tabular-nums">{o.parte ?? "—"}</td>
                     <td className="px-2 py-1.5 font-mono">{o.numero_gbp ?? "—"}</td>
                     <td className="px-2 py-1.5 font-mono">{o.sku ?? "—"}</td>
                     <td className="px-2 py-1.5">{o.descripcion ?? "—"}</td>
+                    <td className="px-2 py-1.5">{labelCausa(o.causa)}</td>
                     <td className="px-2 py-1.5 text-ink-2">{o.motivo ?? "—"}</td>
                   </tr>
                 ))}

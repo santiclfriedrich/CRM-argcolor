@@ -18,6 +18,7 @@ import {
   ENTREGA_OPCIONES,
   ESTADO_CARGA_GBP,
   fmtMonto,
+  labelCausa,
   nombreSucursal,
   useCargarEnGbp,
   usePresupuesto,
@@ -263,6 +264,7 @@ export default function ArmadorPresupuestoPage() {
                 <tr>
                   <th className="px-2 py-2 font-medium">SKU</th>
                   <th className="px-2 py-2 font-medium">Descripción</th>
+                  <th className="px-2 py-2 font-medium">Causa</th>
                   <th className="px-2 py-2 font-medium">Motivo</th>
                 </tr>
               </thead>
@@ -271,6 +273,7 @@ export default function ArmadorPresupuestoPage() {
                   <tr key={i} className="border-t border-line align-top">
                     <td className="px-2 py-1.5 font-mono">{o.sku ?? "—"}</td>
                     <td className="px-2 py-1.5">{o.descripcion ?? "—"}</td>
+                    <td className="px-2 py-1.5">{labelCausa(o.causa)}</td>
                     <td className="px-2 py-1.5 text-ink-2">{o.motivo ?? "—"}</td>
                   </tr>
                 ))}

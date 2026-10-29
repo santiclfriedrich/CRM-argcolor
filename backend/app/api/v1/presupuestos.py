@@ -15,7 +15,13 @@ from app.config import get_settings
 from app.core.exceptions import NotFoundError
 from app.db.models.oportunidades import AmbitoOportunidad, Oportunidad
 from app.db.models.presupuesto_items import PresupuestoItem
-from app.db.models.presupuestos import SUCURSALES_GBP, EstadoCargaGbp, Presupuesto
+from app.db.models.presupuestos import (
+    CAUSA_OMITIDO_LABEL,
+    SUCURSALES_GBP,
+    EstadoCargaGbp,
+    Presupuesto,
+    deducir_causa_omitido,
+)
 from app.db.models.solicitudes_compras import SolicitudCompras
 from app.db.models.usuarios import Usuario
 from app.db.session import get_db
@@ -219,6 +225,7 @@ def _omitidos_del_grupo(db: Session, grupo: str) -> list[dict]:
                     "sku": it.get("sku"),
                     "descripcion": it.get("descripcion"),
                     "motivo": it.get("motivo"),
+                    "causa": deducir_causa_omitido(it),
                 }
             )
     return filas
@@ -249,10 +256,18 @@ def exportar_omitidos_grupo(
     wb = Workbook()
     ws = wb.active
     ws.title = "Ítems no cargados"
-    ws.append(["Parte", "N° GBP", "Línea", "SKU", "Descripción", "Motivo"])
+    ws.append(["Parte", "N° GBP", "Línea", "SKU", "Descripción", "Causa", "Motivo"])
     for f in filas:
         ws.append(
-            [f["parte"], f["numero_gbp"], f["linea"], f["sku"], f["descripcion"], f["motivo"]]
+            [
+                f["parte"],
+                f["numero_gbp"],
+                f["linea"],
+                f["sku"],
+                f["descripcion"],
+                CAUSA_OMITIDO_LABEL.get(f["causa"], f["causa"]),
+                f["motivo"],
+            ]
         )
     buf = BytesIO()
     wb.save(buf)
@@ -308,16 +323,21 @@ def exportar_resultado_grupo(
     }
     filas_res: dict[int, tuple] = {}
     for p in partes:
-        omit = {o.get("linea"): o.get("motivo") for o in (p.items_omitidos or [])}
+        omit = {o.get("linea"): o for o in (p.items_omitidos or [])}
         for pos, item in enumerate(p.items, start=1):  # pos = "linea" (1-based)
             if item.fila_excel is None:
                 continue
             if p.estado_carga == "error":
                 filas_res[item.fila_excel] = ("Error", p.id_gbp_pedido, p.gbp_error, rojo)
             elif pos in omit:
-                filas_res[item.fila_excel] = (
-                    "NO cargado", p.id_gbp_pedido, omit[pos], naranja,
-                )
+                o = omit[pos]
+                causa = deducir_causa_omitido(o)
+                motivo = f"{CAUSA_OMITIDO_LABEL.get(causa, causa)}: {o.get('motivo') or ''}"
+                # Para los repetidos, dejar claro en qué presupuesto quedó la 1ª
+                # aparición (el precio que quedó cargado).
+                if causa == "repetido" and p.id_gbp_pedido:
+                    motivo += f" (presupuesto {p.id_gbp_pedido})"
+                filas_res[item.fila_excel] = ("NO cargado", p.id_gbp_pedido, motivo, naranja)
             else:
                 filas_res[item.fila_excel] = (
                     _ESTADO.get(p.estado_carga, "Pendiente"), p.id_gbp_pedido, None, None,

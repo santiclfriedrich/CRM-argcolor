@@ -3,9 +3,13 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator, model_validator
 
-from app.db.models.presupuestos import SUCURSALES_GBP, EstadoPresupuesto
+from app.db.models.presupuestos import (
+    SUCURSALES_GBP,
+    EstadoPresupuesto,
+    deducir_causa_omitido,
+)
 
 
 def _validar_sucursal(v: str | None) -> str | None:
@@ -43,6 +47,12 @@ class ItemOmitido(BaseModel):
     sku: str | None = None
     descripcion: str | None = None
     motivo: str | None = None
+    causa: str | None = None  # repetido | rechazado_gbp | dato_invalido
+
+    @model_validator(mode="after")
+    def _deducir_causa(self) -> "ItemOmitido":
+        self.causa = deducir_causa_omitido({"causa": self.causa, "motivo": self.motivo})
+        return self
 
 
 class ItemRead(ItemBase):

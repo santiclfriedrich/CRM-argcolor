@@ -579,6 +579,7 @@ export interface ItemOmitido {
   sku: string | null;
   descripcion: string | null;
   motivo: string | null;
+  causa?: string | null; // repetido | rechazado_gbp | dato_invalido
 }
 
 // Estado de la carga del presupuesto en GBP (por el bot). null = nunca fue a GBP.

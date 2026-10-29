@@ -53,6 +53,17 @@ export const presupuestoKeys = {
   detail: (id: number) => ["presupuestos", id] as const,
 };
 
+// Causa por la que GBP no cargó un ítem (código -> etiqueta legible).
+export const CAUSA_OMITIDO_LABEL: Record<string, string> = {
+  repetido: "Repetido",
+  rechazado_gbp: "Rechazado por GBP",
+  dato_invalido: "Dato inválido",
+};
+
+export function labelCausa(causa: string | null | undefined): string {
+  return (causa && CAUSA_OMITIDO_LABEL[causa]) || "Rechazado por GBP";
+}
+
 export interface SucursalOpcion {
   valor: string;
   nombre: string;
