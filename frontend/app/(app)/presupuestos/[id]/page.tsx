@@ -112,11 +112,15 @@ export default function ArmadorPresupuestoPage() {
   const setCampo = (key: string, campo: keyof Row, valor: string) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, [campo]: valor } : r)));
 
-  // Totales por moneda (no se pueden sumar ARS + USD).
-  const totalUSD = rows
+  // Totales por moneda (no se pueden sumar ARS + USD). EXCLUYE los ítems que GBP
+  // no cargó (omitidos), para que el total del CRM coincida con el de GBP. El
+  // omitido se ubica por posición (linea 1-based, el orden de los ítems).
+  const omitidas = new Set((presupuesto.items_omitidos ?? []).map((o) => o.linea));
+  const computables = rows.filter((_, i) => !omitidas.has(i + 1));
+  const totalUSD = computables
     .filter((r) => (r.moneda || "USD") === "USD")
     .reduce((acc, r) => acc + subtotalRow(r), 0);
-  const totalARS = rows
+  const totalARS = computables
     .filter((r) => r.moneda === "ARS")
     .reduce((acc, r) => acc + subtotalRow(r), 0);
 

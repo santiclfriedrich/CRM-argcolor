@@ -3,10 +3,11 @@
 import logging
 import uuid
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from pydantic import ValidationError
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user, get_user_gmail, resolver_duenio
@@ -109,23 +110,35 @@ def list_presupuestos(
             )
     presupuestos = scalars_capped(db, query, "presupuestos")
 
-    # Totales reales por moneda (los ítems pueden ser ARS y/o USD; sumarlos en una
-    # sola cifra con la moneda del documento engaña). Una agregación aparte evita
-    # traer todos los ítems al listado.
+    # Totales reales por moneda (ARS y/o USD por separado). EXCLUYE los ítems que
+    # GBP no cargó (omitidos), así el total del CRM coincide con el de GBP. El
+    # "omitido" se identifica por posición (linea 1-based en el orden del job), que
+    # es el orden de los ítems por `orden` -> funciona también para lotes viejos.
     ids = [p.id for p in presupuestos]
-    totales: dict[int, dict[str, object]] = {}
+    omit_pos = {
+        p.id: {o.get("linea") for o in (p.items_omitidos or [])} for p in presupuestos
+    }
+    totales: dict[int, dict[str, Decimal]] = {}
     if ids:
         filas = db.execute(
             select(
                 PresupuestoItem.presupuesto_id,
                 PresupuestoItem.moneda,
-                func.sum(PresupuestoItem.cantidad * PresupuestoItem.precio_unitario),
+                PresupuestoItem.cantidad,
+                PresupuestoItem.precio_unitario,
             )
             .where(PresupuestoItem.presupuesto_id.in_(ids))
-            .group_by(PresupuestoItem.presupuesto_id, PresupuestoItem.moneda)
+            .order_by(PresupuestoItem.presupuesto_id, PresupuestoItem.orden)
         )
-        for pid, moneda, total in filas:
-            totales.setdefault(pid, {})[moneda or "USD"] = total
+        pos_por_presu: dict[int, int] = {}
+        for pid, moneda, cant, precio in filas:
+            pos = pos_por_presu.get(pid, 0) + 1
+            pos_por_presu[pid] = pos
+            if pos in omit_pos.get(pid, set()):
+                continue  # omitido: no suma (coincide con lo que quedó en GBP)
+            sub = (cant or Decimal(0)) * (precio or Decimal(0))
+            m = moneda or "USD"
+            totales.setdefault(pid, {})[m] = totales.setdefault(pid, {}).get(m, Decimal(0)) + sub
 
     salida = []
     for p in presupuestos:

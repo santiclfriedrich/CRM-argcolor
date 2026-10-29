@@ -457,6 +457,28 @@ def test_resultado_con_items_omitidos(client: TestClient) -> None:
     assert any(p["id"] == pid and p["cant_omitidos"] == 1 for p in con)
 
 
+def test_total_excluye_items_omitidos(client: TestClient) -> None:
+    # 2 ítems USD: 1*36 + 1*40 = 76. Si GBP omite el 2°, el total del CRM debe
+    # reflejar SOLO lo cargado (36), para coincidir con GBP.
+    pid = _crear(client)["id"]
+    antes = client.get("/api/v1/presupuestos").json()
+    tot_antes = next(p["totales_por_moneda"] for p in antes if p["id"] == pid)
+    assert Decimal(tot_antes["USD"]) == Decimal(76)
+
+    client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")
+    client.get("/api/v1/gbp-bot/jobs/next", headers=BOT_HEADERS)
+    omit = json.dumps([{"linea": 2, "sku": None, "descripcion": None, "motivo": "no existe"}])
+    client.post(
+        f"/api/v1/gbp-bot/jobs/{pid}/resultado",
+        headers=BOT_HEADERS,
+        data={"numero_gbp": "#1-9", "items_omitidos": omit},
+        files={"pdf": ("p.pdf", b"%PDF-1.4 x", "application/pdf")},
+    )
+    despues = client.get("/api/v1/presupuestos").json()
+    tot = next(p["totales_por_moneda"] for p in despues if p["id"] == pid)
+    assert Decimal(tot["USD"]) == Decimal(36)
+
+
 def test_items_omitidos_malformado_no_rompe(client: TestClient) -> None:
     pid = _crear(client)["id"]
     client.post(f"/api/v1/presupuestos/{pid}/cargar-gbp")
